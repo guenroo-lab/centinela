@@ -1,0 +1,532 @@
+<style>
+  .dis-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .dis-btn-nuevo { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; min-height:44px; font-size:13px; font-weight:700; background:var(--ink-800); color:var(--text-300); transition:transform .15s ease, background .15s ease; white-space:nowrap; }
+  .dis-btn-nuevo:active { transform:scale(.96); background:var(--ink-700); }
+
+  .dis-toolbar { display:grid; grid-template-columns:1fr; gap:8px; margin-bottom:10px; }
+  .dis-input { width:100%; min-height:44px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px 12px; font-size:16px; font-family:inherit; box-sizing:border-box; }
+  .dis-input:focus { outline:none; border-color:var(--accent); }
+  .dis-mono { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing:.03em; }
+
+  .dis-cuentas { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .dis-cuenta { cursor:pointer; min-height:44px; display:inline-flex; align-items:center; gap:7px; padding:8px 13px; border-radius:var(--radius-chip); border:1px solid var(--ink-700); background:var(--ink-900); color:var(--text-300); font-size:12.5px; font-weight:700; font-family:inherit; transition:background .15s ease, border-color .15s ease; }
+  .dis-cuenta b { font-size:13px; color:var(--text-100); font-variant-numeric:tabular-nums; }
+  .dis-cuenta.activo { background:var(--accent-dim); border-color:var(--accent-line); color:var(--accent-text); }
+  .dis-cuenta.activo b { color:inherit; }
+
+  .dis-list { display:flex; flex-direction:column; gap:10px; }
+  .dis-vacio { color:var(--text-500); font-size:13px; margin:6px 0; }
+  .dis-vacio button { cursor:pointer; border:none; background:none; color:var(--accent-text); font-weight:700; font-size:13px; padding:0; text-decoration:underline; font-family:inherit; }
+  @media (min-width: 900px) {
+    .dis-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:12px; align-items:start; }
+    .dis-toolbar { grid-template-columns:minmax(240px, 1fr) minmax(220px, 300px); max-width:720px; }
+  }
+
+  .dis-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-left:4px solid var(--ok); border-radius:var(--radius-card); box-shadow:var(--shadow-card); overflow:hidden; }
+  .dis-card.est-aver { border-left-color:var(--danger-fg); }
+  .dis-card.est-rep { border-left-color:var(--warn-fg); }
+  .dis-card.est-baja { border-left-color:var(--ink-600); }
+  .dis-card-head { padding:13px 14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; transition:background .15s ease; }
+  .dis-card-head:active { background:rgba(255,255,255,.04); }
+  .dis-card-nombre { font-weight:700; font-size:14px; color:var(--text-100); overflow-wrap:anywhere; }
+  .dis-card-meta { font-size:11.5px; color:var(--text-500); margin-top:2px; overflow-wrap:anywhere; }
+  .dis-card-serie { font-size:12px; color:var(--text-300); margin-top:3px; }
+  .dis-card-serie.sin { color:var(--text-600); font-family:inherit; letter-spacing:0; }
+  .dis-anuncio { display:flex; gap:10px; align-items:flex-start; background:var(--warn-bg); color:var(--warn-fg); border:1px solid var(--warn-line); border-radius:var(--radius-btn); padding:10px 12px; font-size:13px; font-weight:600; line-height:1.45; margin:0 0 14px; }
+  .dis-anuncio b { font-family:Consolas, monospace; font-size:14px; letter-spacing:.02em; }
+  .dis-sug.envuelto { flex-wrap:wrap; overflow:visible; }
+  .dis-sug button.on { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .dis-nota { font-size:12px; color:var(--text-500); margin:6px 0 0; line-height:1.45; }
+  .dis-badge { font-size:11px; font-weight:800; padding:4px 11px; border-radius:var(--radius-chip); white-space:nowrap; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .dis-badge-ok { background:var(--ink-800); color:var(--ok); }
+  .dis-badge-aver { background:var(--danger-bg); color:var(--danger-fg); }
+  .dis-badge-rep { background:var(--warn-bg); color:var(--warn-fg); }
+  .dis-badge-baja { background:var(--ink-700); color:var(--text-300); }
+
+  .dis-card-body { max-height:0; opacity:0; overflow:hidden; padding:0 14px; transition:max-height .32s ease, opacity .25s ease, padding .32s ease; }
+  .dis-card-body.abierto { max-height:1800px; opacity:1; padding:2px 14px 14px; border-top:1px solid var(--ink-800); }
+  .dis-desde { font-size:11.5px; color:var(--text-500); margin:10px 0 0; }
+  .dis-editar { display:inline-block; margin:10px 0 2px; min-height:44px; line-height:44px; font-size:12.5px; font-weight:700; color:var(--text-500); cursor:pointer; }
+
+  .dis-estados { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 12px; }
+  @media (min-width: 900px) { .dis-estados { grid-template-columns:repeat(4, 1fr); } }
+  .dis-estado-btn { cursor:pointer; min-height:46px; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:10px 4px; font-size:13px; font-weight:700; font-family:inherit; text-align:center; transition:all .15s ease; }
+  .dis-estado-btn:active { transform:scale(.96); }
+  .dis-estado-btn.sel-ok { border-color:var(--ok); background:var(--ink-900); color:var(--ok); }
+  .dis-estado-btn.sel-aver { border-color:var(--danger-line); background:var(--danger-bg); color:var(--danger-fg); }
+  .dis-estado-btn.sel-rep { border-color:var(--warn-line); background:var(--warn-bg); color:var(--warn-fg); }
+  .dis-estado-btn.sel-baja { border-color:var(--ink-600); background:var(--ink-700); color:var(--text-100); }
+  .dis-textarea { width:100%; min-height:80px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:12px; font-size:16px; font-family:inherit; resize:vertical; margin-bottom:12px; box-sizing:border-box; }
+  .dis-textarea:focus { outline:none; border-color:var(--accent); }
+  .dis-btn-guardar { width:100%; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:14px; min-height:48px; font-size:15px; font-weight:800; font-family:inherit; background:var(--accent); color:var(--accent-ink); box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 55%, transparent), 0 1px 0 rgba(255,255,255,.15) inset; transition:transform .15s ease; }
+  .dis-btn-guardar:active { transform:scale(.98); }
+  .dis-btn-guardar:disabled { opacity:.6; cursor:default; }
+
+  .dis-hist-box { margin-top:16px; }
+  .dis-hist-item { background:var(--ink-950); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:10px 12px; margin-bottom:6px; font-size:12.5px; color:var(--text-300); }
+  .dis-hist-item .fecha { color:var(--text-500); font-size:11px; }
+  .dis-hist-item .obs { white-space:pre-line; overflow-wrap:anywhere; color:var(--text-500); margin-top:2px; }
+
+  /* z-index por debajo del aviso (toast, 1000) para que los mensajes de error se vean sobre el modal. */
+  .dis-overlay { position:fixed; inset:0; background:rgba(5,7,10,.6); display:none; align-items:center; justify-content:center; padding:16px; z-index:999; }
+  .dis-overlay.abierto { display:flex; }
+  .dis-modal { background:var(--ink-900); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:18px; max-width:440px; width:100%; max-height:calc(100vh - 32px); max-height:calc(100dvh - 32px); overflow:auto; box-shadow:var(--shadow-card); }
+  .dis-modal label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-500); margin:12px 0 6px; }
+  .dis-modal label small { text-transform:none; letter-spacing:0; font-weight:600; }
+  .dis-sug { display:flex; gap:6px; margin-top:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+  .dis-sug::-webkit-scrollbar { display:none; }
+  .dis-sug button { flex:none; cursor:pointer; min-height:44px; padding:8px 13px; border-radius:var(--radius-chip); border:1px solid var(--ink-700); background:var(--ink-800); color:var(--text-300); font-size:12.5px; font-weight:600; font-family:inherit; }
+  .dis-sug button:active { background:var(--accent-dim); border-color:var(--accent-line); }
+  @media (min-width: 900px) { .dis-sug { flex-wrap:wrap; overflow:visible; } }
+  .dis-modal-botones { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; }
+  .dis-modal-botones button { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 16px; min-height:44px; font-size:14px; font-weight:700; font-family:inherit; }
+  .dis-btn-cancelar { background:var(--ink-800); color:var(--text-300); }
+  .dis-btn-ok { background:var(--accent); color:var(--accent-ink); }
+  .dis-btn-ok:disabled { opacity:.6; cursor:default; }
+</style>
+
+<div class="dis-top">
+  <div>
+    <h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">📱 Dispositivos</h1>
+    <p style="color:var(--text-500);font-size:13px;margin:0;">Toca un dispositivo para ver o cambiar su estado.</p>
+  </div>
+  <button type="button" class="dis-btn-nuevo" onclick="disAbrirForm(null)">➕ Añadir</button>
+</div>
+
+<div class="dis-anuncio" role="note">
+  <span aria-hidden="true">📱</span>
+  <span><b>Móviles:</b> para revisar el número (IMEI) marca <b>*#06#</b> en el teléfono y comprueba que coincide con el registrado.</span>
+</div>
+
+<div class="dis-toolbar">
+  <input type="search" class="dis-input" id="disBuscar" placeholder="Buscar por tipo, servicio, nº de serie o ID…" autocomplete="off" oninput="disAlBuscar()">
+  <select class="dis-input" id="disFiltroServicio" onchange="disAlFiltrarServicio()" aria-label="Filtrar por servicio">
+    <option value="">Todos los servicios</option>
+  </select>
+</div>
+
+<div class="dis-cuentas" id="disCuentas"></div>
+
+<div class="dis-list" id="disLista"><p class="dis-vacio">Cargando…</p></div>
+
+<div class="dis-overlay" id="disOverlay">
+  <div class="dis-modal">
+    <p style="margin:0;font-size:16px;font-weight:800;color:var(--text-100);" id="disFormTitulo">Nuevo dispositivo</p>
+    <label for="disFTipo">Tipo de dispositivo</label>
+    <input type="text" class="dis-input" id="disFTipo" maxlength="60" placeholder="Ej. PDA / Zebra, Tablet, Impresora…" autocomplete="off">
+    <div class="dis-sug" id="disSugTipo"></div>
+    <label>Servicio <small>(a qué área está asignado)</small></label>
+    <input type="hidden" id="disFServicio">
+    <div class="dis-sug envuelto" id="disSugServicio"></div>
+    <label for="disFSerie">Número de serie <small>(vacío si no tiene)</small></label>
+    <input type="text" class="dis-input dis-mono" id="disFSerie" maxlength="40" placeholder="Ej. SN123456789" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <p class="dis-nota">📱 En un móvil marca <b>*#06#</b> para ver su IMEI y anótalo aquí.</p>
+    <div class="dis-modal-botones">
+      <button type="button" class="dis-btn-cancelar" onclick="disCerrarForm()">Cancelar</button>
+      <button type="button" class="dis-btn-ok" id="disFBtnGuardar" onclick="disGuardarForm()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DIS_TIPOS_BASE = ['PDA / Zebra', 'Tablet', 'Móvil', 'Impresora'];
+  // Mismos valores que DIS_SERVICIOS de Dispositivos.gs
+  const DIS_SERVICIOS = ['Carga/Descarga', 'Recepción', 'Pedido Cliente', 'Arrastre', 'SIE'];
+  const DIS_ESTADOS = ['Operativo', 'Averiado', 'En reparación', 'Baja'];
+  const DIS_CLASE = { 'Operativo': 'ok', 'Averiado': 'aver', 'En reparación': 'rep', 'Baja': 'baja' };
+  const DIS_REFRESCO_MS = 15000;
+
+  let disCache = [];
+  let disAbierta = null;
+  let disEstadoElegido = {};
+  let disBorrador = {};
+  let disHistorialHtml = {};
+  let disFiltroEstado = '';
+  let disEditandoId = null;
+  let disCargado = false;
+  let disCargando = false;
+  let disUltimaCarga = 0;
+
+  function disEsc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function disNorm(t) {
+    return String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+  // Un jefe identificado, o el supervisor si no se eligió jefe. El servidor lo revalida.
+  function disIdentidad() {
+    if (CentinelaState.jefe) return CentinelaState.jefe;
+    return CentinelaState.supervisor ? 'Supervisor' : '';
+  }
+  function disErrorServidor(err) {
+    return '❌ Error del servidor: ' + (err && err.message ? err.message : err);
+  }
+
+  // ── Carga ────────────────────────────────────────────────
+  function disCargar() {
+    if (disCargando) return;
+    disCargando = true;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        disCargando = false;
+        if (!r || !r.ok) {
+          document.getElementById('disLista').innerHTML = '<p class="dis-vacio">No se pudo leer la lista (' + disEsc((r && r.error) || 'error') + '). <button type="button" onclick="disCargar()">Reintentar</button></p>';
+          return;
+        }
+        disCargado = true;
+        disUltimaCarga = Date.now();
+        disCache = r.dispositivos || [];
+        disActualizarServicios();
+        disRender();
+      })
+      .withFailureHandler(function (err) {
+        disCargando = false;
+        document.getElementById('disLista').innerHTML = '<p class="dis-vacio">' + disEsc(disErrorServidor(err)) + ' <button type="button" onclick="disCargar()">Reintentar</button></p>';
+      })
+      .obtenerDispositivos();
+  }
+
+  // Gancho del cascarón: se llama cada vez que se abre la pestaña.
+  function dispositivosAlMostrar() {
+    if (!disCargado || Date.now() - disUltimaCarga > DIS_REFRESCO_MS) disCargar();
+  }
+
+  // ── Filtros ──────────────────────────────────────────────
+  function disAlBuscar() { disRender(); }
+  function disAlFiltrarServicio() { disRender(); }
+  function disFiltrarEstado(estado) {
+    disFiltroEstado = (disFiltroEstado === estado) ? '' : estado;
+    disRender();
+  }
+  function disLimpiarFiltros() {
+    document.getElementById('disBuscar').value = '';
+    document.getElementById('disFiltroServicio').value = '';
+    disFiltroEstado = '';
+    disRender();
+  }
+
+  function disActualizarServicios() {
+    const sel = document.getElementById('disFiltroServicio');
+    const previo = sel.value;
+    const vistos = {};
+    let haySin = false;
+    disCache.forEach(function (d) {
+      if (d.servicio) vistos[d.servicio] = true; else haySin = true;
+    });
+    DIS_SERVICIOS.forEach(function (n) { vistos[n] = true; });
+    const otros = Object.keys(vistos).filter(function (n) { return DIS_SERVICIOS.indexOf(n) === -1; }).sort(function (a, b) { return a.localeCompare(b, 'es'); });
+    const nombres = DIS_SERVICIOS.concat(otros);
+    let html = '<option value="">Todos los servicios</option>';
+    nombres.forEach(function (n) { html += '<option value="' + disEsc(n) + '">' + disEsc(n) + '</option>'; });
+    if (haySin) html += '<option value="__sin__">(Sin servicio)</option>';
+    sel.innerHTML = html;
+    sel.value = (previo === '__sin__' && haySin) || nombres.indexOf(previo) !== -1 ? previo : '';
+  }
+
+  function disCoincide(d) {
+    const servicio = document.getElementById('disFiltroServicio').value;
+    if (servicio === '__sin__') { if (d.servicio) return false; }
+    else if (servicio && d.servicio !== servicio) return false;
+    if (disFiltroEstado && d.estado !== disFiltroEstado) return false;
+    const q = disNorm(document.getElementById('disBuscar').value);
+    if (!q) return true;
+    return disNorm([d.id, d.tipo, d.servicio, d.serie].join(' ')).indexOf(q) !== -1;
+  }
+
+  // ── Pintado ──────────────────────────────────────────────
+  function disPintarCuentas() {
+    const cuenta = { '': disCache.length };
+    DIS_ESTADOS.forEach(function (e) { cuenta[e] = 0; });
+    disCache.forEach(function (d) { cuenta[d.estado] = (cuenta[d.estado] || 0) + 1; });
+    const chips = [{ v: '', t: 'Todos' }].concat(DIS_ESTADOS.map(function (e) { return { v: e, t: e }; }));
+    document.getElementById('disCuentas').innerHTML = chips.map(function (c, i) {
+      return '<button type="button" class="dis-cuenta' + (disFiltroEstado === c.v ? ' activo' : '') + '" data-i="' + i + '">' +
+        disEsc(c.t) + ' <b>' + cuenta[c.v] + '</b></button>';
+    }).join('');
+    const botones = document.querySelectorAll('#disCuentas .dis-cuenta');
+    for (let i = 0; i < botones.length; i++) {
+      (function (idx) { botones[idx].onclick = function () { disFiltrarEstado(chips[idx].v); }; })(i);
+    }
+  }
+
+  function disTarjeta(d) {
+    const abierta = disAbierta === d.id;
+    const clase = DIS_CLASE[d.estado] || 'ok';
+    const elegido = disEstadoElegido[d.id] || d.estado;
+    const obsInicial = d.estado !== 'Operativo' ? d.observacion : '';
+    const texto = disBorrador[d.id] !== undefined ? disBorrador[d.id] : obsInicial;
+    const placeholder = elegido === 'Averiado' ? 'Describe la avería (obligatorio)…' : 'Observación (opcional)…';
+    const serie = d.serie
+      ? '<div class="dis-card-serie dis-mono">N.º serie ' + disEsc(d.serie) + '</div>'
+      : '<div class="dis-card-serie sin">Sin número de serie</div>';
+    return '<div class="dis-card est-' + clase + '">' +
+      '<div class="dis-card-head" onclick="disToggle(' + d.id + ')">' +
+        '<div><div class="dis-card-nombre">#' + d.id + ' · ' + disEsc(d.tipo || 'Sin tipo') + '</div>' +
+        '<div class="dis-card-meta">' + disEsc(d.servicio || 'Sin servicio') + '</div>' + serie + '</div>' +
+        '<span class="dis-badge dis-badge-' + clase + '">' + disEsc(d.estado) + '</span>' +
+      '</div>' +
+      '<div class="dis-card-body' + (abierta ? ' abierto' : '') + '" id="disBody-' + d.id + '">' +
+        (d.fechaEstado ? '<p class="dis-desde">Estado desde ' + disEsc(d.fechaEstado) + '</p>' : '') +
+        '<div class="dis-estados">' +
+          DIS_ESTADOS.map(function (e) {
+            return '<button type="button" class="dis-estado-btn' + (e === elegido ? ' sel-' + DIS_CLASE[e] : '') + '" id="disEstadoBtn-' + d.id + '-' + DIS_CLASE[e] + '" onclick="disElegirEstado(' + d.id + ', ' + DIS_ESTADOS.indexOf(e) + ')">' + disEsc(e) + '</button>';
+          }).join('') +
+        '</div>' +
+        '<textarea class="dis-textarea" id="disObs-' + d.id + '" maxlength="500" placeholder="' + placeholder + '" oninput="disGuardarBorrador(' + d.id + ')">' + disEsc(texto) + '</textarea>' +
+        '<button type="button" class="dis-btn-guardar" id="disBtnGuardar-' + d.id + '" onclick="disGuardarEstado(' + d.id + ')">Guardar estado</button>' +
+        '<span class="dis-editar" onclick="disAbrirForm(' + d.id + ')">✏️ Editar datos del dispositivo</span>' +
+        '<div class="dis-hist-box">' +
+          '<h3 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin:0 0 8px;">Historial</h3>' +
+          '<div id="disHist-' + d.id + '" style="font-size:12.5px;color:var(--text-500);">' + (disHistorialHtml[d.id] || '—') + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function disRender() {
+    disPintarCuentas();
+    const cont = document.getElementById('disLista');
+    if (!disCache.length) {
+      cont.innerHTML = '<p class="dis-vacio">Todavía no hay dispositivos — añade el primero con «➕ Añadir».</p>';
+      return;
+    }
+    const visibles = disCache.filter(disCoincide);
+    if (!visibles.length) {
+      cont.innerHTML = '<p class="dis-vacio">Ningún dispositivo coincide con el filtro. <button type="button" onclick="disLimpiarFiltros()">Quitar filtros</button></p>';
+      return;
+    }
+    cont.innerHTML = visibles.map(disTarjeta).join('');
+    if (disAbierta !== null && document.getElementById('disBody-' + disAbierta) && !disHistorialHtml[disAbierta]) disCargarHistorial(disAbierta);
+  }
+
+  // ── Tarjeta: abrir, estado, guardar ───────────────────────
+  function disPorId(id) {
+    for (let i = 0; i < disCache.length; i++) if (disCache[i].id === id) return disCache[i];
+    return null;
+  }
+
+  function disToggle(id) {
+    const body = document.getElementById('disBody-' + id);
+    if (!body) return;
+    const yaAbierta = body.classList.contains('abierto');
+    if (disAbierta !== null && disAbierta !== id) {
+      const prev = document.getElementById('disBody-' + disAbierta);
+      if (prev) prev.classList.remove('abierto');
+    }
+    body.classList.toggle('abierto', !yaAbierta);
+    disAbierta = yaAbierta ? null : id;
+    if (!yaAbierta) disCargarHistorial(id);
+  }
+
+  function disGuardarBorrador(id) {
+    const ta = document.getElementById('disObs-' + id);
+    if (ta) disBorrador[id] = ta.value;
+  }
+
+  function disElegirEstado(id, idx) {
+    const estado = DIS_ESTADOS[idx];
+    const d = disPorId(id);
+    disEstadoElegido[id] = estado;
+    DIS_ESTADOS.forEach(function (e) {
+      const btn = document.getElementById('disEstadoBtn-' + id + '-' + DIS_CLASE[e]);
+      if (btn) btn.className = 'dis-estado-btn' + (e === estado ? ' sel-' + DIS_CLASE[e] : '');
+    });
+    const ta = document.getElementById('disObs-' + id);
+    if (!ta || !d) return;
+    // Si el texto es el de la observación actual y se cambia de estado, se vacía
+    // (no tiene sentido arrastrar "pantalla rota" a un dispositivo reparado).
+    const actual = d.estado !== 'Operativo' ? d.observacion : '';
+    if (estado !== d.estado && ta.value.trim() === actual) ta.value = '';
+    else if (estado === d.estado && ta.value.trim() === '') ta.value = actual;
+    disBorrador[id] = ta.value;
+    ta.placeholder = estado === 'Averiado' ? 'Describe la avería (obligatorio)…' : 'Observación (opcional)…';
+  }
+
+  function disGuardarEstado(id) {
+    const d = disPorId(id);
+    if (!d) return;
+    const estado = disEstadoElegido[id] || d.estado;
+    const ta = document.getElementById('disObs-' + id);
+    const observacion = ta ? ta.value.trim() : '';
+    if (estado === 'Averiado' && observacion.length < 5) { showToast('❌ Describe la avería (mínimo 5 caracteres)'); return; }
+    const quien = disIdentidad();
+    if (!quien) { showToast('❌ Falta identificarte — recarga la app'); return; }
+
+    const boton = document.getElementById('disBtnGuardar-' + id);
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.success) {
+          showToast(r.sinCambios ? 'ℹ️ Sin cambios' : '✅ Estado guardado');
+          delete disEstadoElegido[id];
+          delete disBorrador[id];
+          delete disHistorialHtml[id];
+          disAbierta = id;
+          disUltimaCarga = 0;
+          disCargando = false;
+          disCargar();
+        } else {
+          boton.disabled = false;
+          boton.textContent = 'Guardar estado';
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Guardar estado';
+        showToast(disErrorServidor(err));
+      })
+      .procesarCambioEstadoDispositivo({ jefe_equipo: quien, id: id, estado: estado, observacion: observacion });
+  }
+
+  function disCargarHistorial(id) {
+    const box = document.getElementById('disHist-' + id);
+    if (!box) return;
+    box.textContent = 'Cargando…';
+    google.script.run
+      .withSuccessHandler(function (historial) {
+        let html;
+        if (!historial || !historial.length) {
+          html = 'Sin cambios registrados.';
+        } else {
+          html = historial.map(function (h) {
+            const cambio = h.estadoAnterior ? disEsc(h.estadoAnterior) + ' → ' + disEsc(h.estadoNuevo) : 'Alta · ' + disEsc(h.estadoNuevo);
+            return '<div class="dis-hist-item"><div class="fecha">' + disEsc(h.fecha) + ' ' + disEsc(h.hora) + ' · ' + disEsc(h.jefe) + '</div>' +
+              '<div><b>' + cambio + '</b></div>' +
+              (h.observacion ? '<div class="obs">' + disEsc(h.observacion) + '</div>' : '') + '</div>';
+          }).join('');
+        }
+        disHistorialHtml[id] = html;
+        const b = document.getElementById('disHist-' + id);
+        if (b) b.innerHTML = html;
+      })
+      .withFailureHandler(function () {
+        const b = document.getElementById('disHist-' + id);
+        if (b) b.textContent = 'No se pudo cargar el historial.';
+      })
+      .obtenerHistorialDispositivo(id);
+  }
+
+  // ── Formulario (alta / edición de datos) ──────────────────
+  // Sugerencias: primero lo ya usado (más frecuente antes), luego los tipos base.
+  function disSugerencias(campo, base) {
+    const cuenta = {};
+    disCache.forEach(function (d) { if (d[campo]) cuenta[d[campo]] = (cuenta[d[campo]] || 0) + 1; });
+    const usados = Object.keys(cuenta).sort(function (a, b) { return cuenta[b] - cuenta[a] || a.localeCompare(b, 'es'); });
+    (base || []).forEach(function (b) {
+      if (!usados.some(function (u) { return disNorm(u) === disNorm(b); })) usados.push(b);
+    });
+    return usados.slice(0, 8);
+  }
+
+  function disPintarSugerencias(idContenedor, valores, idInput) {
+    const cont = document.getElementById(idContenedor);
+    cont.innerHTML = valores.map(function (v, i) {
+      return '<button type="button" data-i="' + i + '">' + disEsc(v) + '</button>';
+    }).join('');
+    const botones = cont.querySelectorAll('button');
+    for (let i = 0; i < botones.length; i++) {
+      (function (idx) {
+        botones[idx].onclick = function () { document.getElementById(idInput).value = valores[idx]; };
+      })(i);
+    }
+  }
+
+  // Servicio: se elige entre los servicios de la lista (tocar el elegido lo quita). Si el dispositivo
+  // tenía un valor antiguo que no está en la lista, se conserva como una opción más.
+  function disPintarServicios() {
+    const cont = document.getElementById('disSugServicio');
+    const actual = document.getElementById('disFServicio').value;
+    const opciones = DIS_SERVICIOS.slice();
+    if (actual && opciones.indexOf(actual) === -1) opciones.push(actual);
+    cont.innerHTML = opciones.map(function (v, i) {
+      return '<button type="button" data-i="' + i + '" class="' + (v === actual ? 'on' : '') + '">' + disEsc(v) + '</button>';
+    }).join('');
+    const botones = cont.querySelectorAll('button');
+    for (let i = 0; i < botones.length; i++) {
+      (function (idx) {
+        botones[idx].onclick = function () {
+          const inp = document.getElementById('disFServicio');
+          inp.value = inp.value === opciones[idx] ? '' : opciones[idx];
+          disPintarServicios();
+        };
+      })(i);
+    }
+  }
+
+  function disAbrirForm(id) {
+    disEditandoId = id;
+    const d = id === null ? null : disPorId(id);
+    document.getElementById('disFormTitulo').textContent = d ? 'Editar dispositivo #' + d.id : 'Nuevo dispositivo';
+    document.getElementById('disFTipo').value = d ? d.tipo : '';
+    document.getElementById('disFServicio').value = d ? d.servicio : '';
+    document.getElementById('disFSerie').value = d ? d.serie : '';
+    disPintarSugerencias('disSugTipo', disSugerencias('tipo', DIS_TIPOS_BASE), 'disFTipo');
+    disPintarServicios();
+    const boton = document.getElementById('disFBtnGuardar');
+    boton.disabled = false;
+    boton.textContent = 'Guardar';
+    document.getElementById('disOverlay').classList.add('abierto');
+    document.getElementById('disFTipo').focus();
+  }
+
+  function disCerrarForm() {
+    document.getElementById('disOverlay').classList.remove('abierto');
+    disEditandoId = null;
+  }
+
+  function disGuardarForm() {
+    const tipo = document.getElementById('disFTipo').value.trim();
+    const servicio = document.getElementById('disFServicio').value.trim();
+    const serie = document.getElementById('disFSerie').value.trim();
+    if (!tipo) { showToast('❌ Indica el tipo de dispositivo'); return; }
+    if (serie && !/^[A-Za-z0-9][A-Za-z0-9 ._\/\-]{1,38}[A-Za-z0-9]$/.test(serie)) { showToast('❌ El número de serie debe tener de 3 a 40 caracteres (letras, números y . - / _) o quedar vacío'); return; }
+    const quien = disIdentidad();
+    if (!quien) { showToast('❌ Falta identificarte — recarga la app'); return; }
+
+    const editando = disEditandoId;
+    const boton = document.getElementById('disFBtnGuardar');
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    const alTerminar = function (r, mensajeOk) {
+      boton.disabled = false;
+      boton.textContent = 'Guardar';
+      if (r && r.success) {
+        showToast(mensajeOk(r));
+        disCerrarForm();
+        if (editando === null && r.id) disAbierta = r.id;
+        disUltimaCarga = 0;
+        disCargando = false;
+        disCargar();
+      } else {
+        showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+      }
+    };
+    const alFallar = function (err) {
+      boton.disabled = false;
+      boton.textContent = 'Guardar';
+      showToast(disErrorServidor(err));
+    };
+
+    if (editando === null) {
+      google.script.run
+        .withSuccessHandler(function (r) { alTerminar(r, function (x) { return '✅ Dispositivo #' + x.id + ' añadido'; }); })
+        .withFailureHandler(alFallar)
+        .crearDispositivo({ jefe_equipo: quien, tipo: tipo, servicio: servicio, serie: serie });
+    } else {
+      google.script.run
+        .withSuccessHandler(function (r) { alTerminar(r, function () { return '✅ Datos actualizados'; }); })
+        .withFailureHandler(alFallar)
+        .actualizarDatosDispositivo({ jefe_equipo: quien, id: editando, tipo: tipo, servicio: servicio, serie: serie });
+    }
+  }
+
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && document.getElementById('disOverlay').classList.contains('abierto')) disCerrarForm();
+  });
+
+  disCargar();
+</script>

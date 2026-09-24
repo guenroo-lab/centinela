@@ -1,0 +1,737 @@
+<style>
+  .tar-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .tar-acciones { display:flex; gap:8px; flex-shrink:0; }
+  .tar-btn-sec { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; min-height:44px; min-width:44px; font-size:13px; font-weight:700; font-family:inherit; background:var(--ink-800); color:var(--text-300); transition:transform .15s ease, background .15s ease; white-space:nowrap; }
+  .tar-btn-sec:active { transform:scale(.96); background:var(--ink-700); }
+
+  .tar-sup-banner { display:none; align-items:center; justify-content:space-between; gap:10px; background:linear-gradient(160deg, var(--warn-bg) 0%, var(--ink-900) 140%); border:1px solid var(--warn-line); border-radius:var(--radius-card); padding:8px 8px 8px 14px; margin-bottom:14px; color:var(--warn-fg); font-size:13px; font-weight:700; }
+  .tar-sup-banner.visible { display:flex; }
+  .tar-sup-banner button { cursor:pointer; border:1px solid var(--warn-line); background:transparent; color:var(--warn-fg); border-radius:var(--radius-btn); padding:8px 12px; min-height:44px; font-size:12.5px; font-weight:700; font-family:inherit; }
+
+  .tar-input, .tar-textarea { width:100%; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px 12px; font-size:16px; font-family:inherit; box-sizing:border-box; color-scheme:dark; }
+  [data-kmode="light"] .tar-input, [data-kmode="light"] .tar-textarea { color-scheme:light; }
+  .tar-input { min-height:44px; }
+  .tar-textarea { min-height:84px; resize:vertical; }
+  .tar-input:focus, .tar-textarea:focus { outline:none; border-color:var(--accent); }
+
+  .tar-nueva-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--accent-line); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:14px; margin-bottom:16px; display:none; }
+  .tar-nueva-card.abierto { display:block; }
+  @media (min-width: 900px) { .tar-nueva-card { max-width:640px; } }
+  .tar-nueva-card label, .tar-cierre label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-500); margin:12px 0 6px; }
+  .tar-nueva-card label:first-child { margin-top:0; }
+  .tar-nueva-card label small, .tar-cierre label small { text-transform:none; letter-spacing:0; font-weight:600; }
+  .tar-jefes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .tar-opcion { cursor:pointer; min-height:46px; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:8px 6px; font-size:13px; font-weight:700; font-family:inherit; text-align:center; transition:all .15s ease; }
+  .tar-opcion:active { transform:scale(.97); }
+  .tar-opcion.sel { border-color:var(--accent-line); background:var(--accent-dim); color:var(--accent-text); }
+  .tar-opcion.sel-alta { border-color:var(--accent); background:var(--accent-dim); color:var(--accent-text); }
+  .tar-opcion.glob { grid-column:1 / -1; }
+  .tar-fila2 { display:grid; grid-template-columns:1fr; gap:0; }
+  @media (min-width: 480px) { .tar-fila2 { grid-template-columns:1fr 1fr; gap:12px; } }
+  .tar-prio { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  .tar-btn-guardar { width:100%; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:14px; min-height:48px; font-size:15px; font-weight:800; font-family:inherit; margin-top:14px; background:var(--accent); color:var(--accent-ink); box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 55%, transparent), 0 1px 0 rgba(255,255,255,.15) inset; transition:transform .15s ease; }
+  .tar-btn-guardar:active { transform:scale(.98); }
+  .tar-btn-guardar:disabled { opacity:.6; cursor:default; }
+
+  .tar-sec { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin:18px 0 10px; }
+  .tar-sec:first-child { margin-top:0; }
+  .tar-sec .n { background:var(--ink-800); color:var(--text-300); border-radius:var(--radius-chip); padding:2px 9px; font-size:11px; }
+  .tar-list { display:flex; flex-direction:column; gap:10px; }
+  @media (min-width: 900px) { .tar-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:12px; align-items:start; } }
+  .tar-vacio { color:var(--text-500); font-size:13px; margin:6px 0; }
+  .tar-vacio button { cursor:pointer; border:none; background:none; color:var(--accent-text); font-weight:700; font-size:13px; padding:0; text-decoration:underline; font-family:inherit; }
+
+  .tar-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-left:4px solid var(--ink-600); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:13px 14px; }
+  .tar-card.alta { border-left-color:var(--accent); }
+  .tar-card.vencida { border-left-color:var(--danger-fg); }
+  .tar-card.hecha { border-left-color:var(--ok); }
+  .tar-card.anulada { opacity:.6; }
+  .tar-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .tar-titulo { font-weight:700; font-size:14.5px; color:var(--text-100); overflow-wrap:anywhere; }
+  .tar-badges { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:5px; flex-shrink:0; max-width:55%; }
+  .tar-badge { font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:var(--radius-chip); white-space:nowrap; text-transform:uppercase; letter-spacing:.03em; }
+  .tar-b-alta { background:var(--accent-dim); color:var(--accent-text); }
+  .tar-b-glob { background:var(--ink-800); color:var(--accent-text); border:1px solid var(--accent-line); padding:2px 8px; }
+  .tar-nota-glob { margin-top:8px; font-size:11.5px; color:var(--text-500); }
+  .tar-b-venc { background:var(--danger-bg); color:var(--danger-fg); }
+  .tar-b-aviso { background:var(--warn-bg); color:var(--warn-fg); }
+  .tar-b-ok { background:var(--ink-800); color:var(--ok); }
+  .tar-b-neutro { background:var(--ink-800); color:var(--text-300); }
+  .tar-desc { margin:8px 0 0; font-size:13px; line-height:1.5; color:var(--text-300); white-space:pre-line; overflow-wrap:anywhere; }
+  .tar-meta { margin-top:8px; font-size:11.5px; color:var(--text-500); line-height:1.6; }
+  .tar-fb { margin-top:10px; background:var(--ink-950); border:1px solid var(--ink-800); border-left:3px solid var(--ok); border-radius:var(--radius-btn); padding:10px 12px; }
+  .tar-fb .quien { font-size:11px; color:var(--text-500); margin-bottom:3px; }
+  .tar-fb .texto { font-size:13px; color:var(--text-100); white-space:pre-line; overflow-wrap:anywhere; line-height:1.5; }
+  .tar-accion { margin-top:12px; }
+  .tar-btn-completar { width:100%; cursor:pointer; border:1px solid var(--accent-line); background:var(--accent-dim); color:var(--accent-text); border-radius:var(--radius-btn); min-height:46px; padding:10px; font-size:14px; font-weight:800; font-family:inherit; transition:transform .15s ease; }
+  .tar-btn-completar:active { transform:scale(.98); }
+  .tar-btn-anular { cursor:pointer; border:1px solid var(--ink-700); background:transparent; color:var(--text-500); border-radius:var(--radius-btn); min-height:44px; padding:8px 14px; font-size:12.5px; font-weight:700; font-family:inherit; }
+  .tar-btn-anular.confirmar { border-color:var(--danger-line); background:var(--danger-bg); color:var(--danger-fg); }
+  .tar-cierre { display:none; margin-top:4px; }
+  .tar-cierre.abierto { display:block; }
+  .tar-contador { text-align:right; font-size:11px; color:var(--text-600); margin-top:4px; }
+
+  .tar-filtros { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .tar-chip { cursor:pointer; min-height:44px; display:inline-flex; align-items:center; gap:7px; padding:8px 13px; border-radius:var(--radius-chip); border:1px solid var(--ink-700); background:var(--ink-900); color:var(--text-300); font-size:12.5px; font-weight:700; font-family:inherit; }
+  .tar-chip b { font-size:13px; color:var(--text-100); font-variant-numeric:tabular-nums; }
+  .tar-chip.activo { background:var(--accent-dim); border-color:var(--accent-line); color:var(--accent-text); }
+  .tar-chip.activo b { color:inherit; }
+  .tar-filtro-jefe { max-width:340px; margin-bottom:6px; }
+  .tar-aviso-venc { color:var(--danger-fg); font-size:12.5px; font-weight:700; margin:0 0 10px; }
+
+  /* Fotos opcionales */
+  .tar-foto-zona { margin-top:4px; }
+  .tar-btn-foto { cursor:pointer; width:100%; min-height:46px; border:1px dashed var(--ink-600, var(--ink-700)); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:8px 12px; font-size:13.5px; font-weight:700; font-family:inherit; }
+  .tar-btn-foto:active { background:var(--ink-800); }
+  .tar-foto-prev { display:flex; align-items:center; gap:12px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); padding:8px; }
+  .tar-foto-prev img { width:84px; height:84px; object-fit:cover; border-radius:8px; flex-shrink:0; }
+  .tar-foto-prev .info { flex:1; font-size:12px; color:var(--text-500); }
+  .tar-foto-prev button { cursor:pointer; min-height:44px; border:1px solid var(--ink-700); background:transparent; color:var(--text-300); border-radius:var(--radius-btn); padding:0 12px; font-size:12.5px; font-weight:700; font-family:inherit; }
+  .tar-btn-ver-foto { cursor:pointer; min-height:40px; margin-top:8px; margin-right:6px; border:1px solid var(--accent-line); background:var(--accent-dim); color:var(--accent-text); border-radius:var(--radius-btn); padding:0 12px; font-size:12.5px; font-weight:800; font-family:inherit; }
+  .tar-foto-modal { max-width:680px; }
+  .tar-foto-cont { text-align:center; color:var(--text-500); font-size:13px; min-height:60px; }
+  .tar-foto-cont img { max-width:100%; max-height:70vh; border-radius:12px; display:block; margin:0 auto; }
+</style>
+
+<div class="tar-top">
+  <div>
+    <h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">📌 Tareas</h1>
+    <p style="color:var(--text-500);font-size:13px;margin:0;" id="tarSubtitulo">Tareas asignadas.</p>
+  </div>
+  <div class="tar-acciones">
+    <button type="button" class="tar-btn-sec" id="tarBtnNueva" style="display:none;" onclick="tarToggleNueva()">➕ Nueva</button>
+    <button type="button" class="tar-btn-sec" onclick="tarCargar(true)" aria-label="Actualizar">↻</button>
+  </div>
+</div>
+
+<div class="tar-sup-banner" id="tarSupBanner">
+  <span>🔒 Modo supervisor</span>
+  <button type="button" onclick="salirModoSupervisor()">Salir del modo supervisor</button>
+</div>
+
+<div class="tar-nueva-card" id="tarNuevaCard">
+  <label for="tarNTitulo">Título</label>
+  <input type="text" class="tar-input" id="tarNTitulo" maxlength="120" placeholder="¿Qué hay que hacer?" autocomplete="off">
+  <label for="tarNDesc">Descripción <small>(opcional)</small></label>
+  <textarea class="tar-textarea" id="tarNDesc" maxlength="1000" placeholder="Detalles, dónde, cómo…"></textarea>
+  <label>Asignar a</label>
+  <div class="tar-jefes" id="tarNJefes"></div>
+  <div class="tar-fila2">
+    <div>
+      <label for="tarNLimite">Fecha límite <small>(opcional)</small></label>
+      <input type="date" class="tar-input" id="tarNLimite">
+    </div>
+    <div>
+      <label>Prioridad</label>
+      <div class="tar-prio">
+        <button type="button" class="tar-opcion sel" id="tarNPrioNormal" onclick="tarElegirPrio('Normal')">Normal</button>
+        <button type="button" class="tar-opcion" id="tarNPrioAlta" onclick="tarElegirPrio('Alta')">Alta</button>
+      </div>
+    </div>
+  </div>
+  <label>Foto <small>(opcional)</small></label>
+  <div class="tar-foto-zona" id="tarNFotoZona"></div>
+  <button type="button" class="tar-btn-guardar" id="tarNBtnCrear" onclick="tarCrear()">Crear tarea</button>
+</div>
+
+<input type="file" id="tarFotoInput" accept="image/*" style="display:none;" onchange="tarAlElegirFoto(this)">
+
+<div class="koverlay" id="tarOverlayFoto" onclick="if (event.target === this) tarCerrarFoto()">
+  <div class="kmodal tar-foto-modal">
+    <div class="tar-foto-cont" id="tarFotoContenido">Cargando…</div>
+    <button type="button" class="tar-btn-sec" style="width:100%;margin-top:12px;" onclick="tarCerrarFoto()">Cerrar</button>
+  </div>
+</div>
+
+<div id="tarContenido"><p class="tar-vacio">Cargando…</p></div>
+
+<script>
+  const TAR_GLOBAL = 'TODOS';
+  const TAR_REFRESCO_MS = 45000;
+
+  let tarPeticion = 0;
+  let tarCargando = false;
+  let tarTimer = null;
+  let tarFirma = '';
+  let tarDatosJefe = null;
+  let tarDatosSup = null;
+  let tarFiltroEstado = 'Pendiente';
+  let tarFiltroJefe = '';
+  let tarBorrador = {};
+  let tarAbiertas = {};
+  let tarNJefe = '';
+  let tarNPrio = 'Normal';
+  const TAR_FOTO_MAX = 340000;       // caracteres de la data URI (el servidor admite 350.000)
+  let tarFotoNueva = '';             // foto elegida al crear una tarea (data URI)
+  let tarFotoCierre = {};            // foto elegida al completar, por id de tarea
+  let tarFotoDestino = null;         // 'nueva' o id de la tarea que está pidiendo foto
+  let tarFotoCache = {};             // fotos ya descargadas (se borran al cambiar de jefe)
+
+  function tarEsc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function tarErrorServidor(err) {
+    return '❌ Error del servidor: ' + (err && err.message ? err.message : err);
+  }
+  // El modo supervisor manda sobre la identidad: es la vista de gestión.
+  function tarModo() {
+    if (CentinelaState.supervisor) return 'supervisor';
+    return CentinelaState.jefe ? 'jefe' : 'sin';
+  }
+  function tarPanelActivo() {
+    const p = document.getElementById('tab-tareas');
+    return !!(p && p.classList.contains('activo'));
+  }
+  function tarHoyISO() {
+    const d = new Date();
+    const p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  // Insignia con el nº de tareas pendientes en la pestaña de la barra inferior.
+  function tarActualizarBadge(n) {
+    const b = document.getElementById('tabBadgeTareas');
+    if (!b) return;
+    if (n > 0) { b.textContent = n > 9 ? '9+' : String(n); b.style.display = 'block'; }
+    else { b.style.display = 'none'; }
+  }
+
+  // ── Ganchos del cascarón ─────────────────────────────────
+  // Se abre la pestaña: se refresca siempre y arranca el refresco automático.
+  function tareasAlMostrar() { tarCargar(false); tarProgramarRefresco(); }
+  // Se eligió un jefe: se descarta cualquier resto anterior y se cargan SUS tareas.
+  function tareasRecibirJefe() { tarLimpiar(); tarCargar(true); }
+  // "Cambiar" identidad: no debe quedar nada del jefe anterior en pantalla.
+  function tareasAlCambiarIdentidad() { tarLimpiar(); }
+  // Se activó o desactivó el modo supervisor.
+  function tareasAlCambiarModo() {
+    tarLimpiar();
+    tarCargar(!tarPanelActivo());
+    if (tarPanelActivo()) tarProgramarRefresco();
+  }
+
+  // ── Refresco automático (~45 s) mientras la pestaña está visible ──
+  // Una global la puede cerrar otro jefe: sin esto seguiría apareciendo hasta recargar.
+  // Un único temporizador: se para y se vuelve a programar en la MISMA función
+  // (tarProgramarRefresco), y el propio tarTick se detiene solo cuando ya no procede,
+  // así que cambiar de pestaña o de jefe no acumula intervalos.
+  function tarDetenerRefresco() {
+    if (tarTimer !== null) { clearInterval(tarTimer); tarTimer = null; }
+  }
+  function tarProgramarRefresco() {
+    tarDetenerRefresco();
+    tarTimer = setInterval(tarTick, TAR_REFRESCO_MS);
+  }
+  // ¿Está el usuario escribiendo (feedback) o eligiendo en un filtro? No se le repinta debajo.
+  function tarEditando() {
+    const a = document.activeElement;
+    return !!(a && a.closest && a.closest('#tarContenido') && /^(TEXTAREA|INPUT|SELECT)$/.test(a.tagName));
+  }
+  function tarTick() {
+    if (!tarPanelActivo() || tarModo() === 'sin') { tarDetenerRefresco(); return; }
+    if (document.hidden || tarCargando || tarEditando()) return;
+    tarCargar(true);
+  }
+
+  function tarLimpiar() {
+    tarDetenerRefresco();
+    tarPeticion++;
+    tarCargando = false;
+    tarFirma = '';
+    tarDatosJefe = null;
+    tarDatosSup = null;
+    tarFiltroEstado = 'Pendiente';
+    tarFiltroJefe = '';
+    tarBorrador = {};
+    tarAbiertas = {};
+    tarNJefe = '';
+    tarNPrio = 'Normal';
+    tarFotoNueva = '';
+    tarFotoCierre = {};
+    tarFotoCache = {};
+    tarCerrarFoto();
+    tarPintarFotoNueva();
+    document.getElementById('tarNuevaCard').classList.remove('abierto');
+    document.getElementById('tarContenido').innerHTML = '<p class="tar-vacio">Cargando…</p>';
+    tarActualizarBadge(0);
+    tarAplicarModo();
+  }
+
+  function tarAplicarModo() {
+    const modo = tarModo();
+    document.getElementById('tarSupBanner').classList.toggle('visible', modo === 'supervisor');
+    document.getElementById('tarBtnNueva').style.display = modo === 'supervisor' ? '' : 'none';
+    if (modo !== 'supervisor') document.getElementById('tarNuevaCard').classList.remove('abierto');
+    document.getElementById('tarSubtitulo').textContent = modo === 'supervisor'
+      ? 'Asigna tareas a los jefes de equipo y revisa su feedback.'
+      : 'Tareas que te ha asignado el responsable. Solo tú las ves.';
+  }
+
+  // ── Carga ────────────────────────────────────────────────
+  function tarCargar(silencioso) {
+    tarAplicarModo();
+    const modo = tarModo();
+    if (modo === 'sin') {
+      document.getElementById('tarContenido').innerHTML = '<p class="tar-vacio">Identifícate para ver tus tareas.</p>';
+      return;
+    }
+    if (tarCargando) return;
+    tarCargando = true;
+    const peticion = ++tarPeticion;
+    const contenido = document.getElementById('tarContenido');
+    const fallo = function (texto) {
+      tarFirma = '';
+      contenido.innerHTML = '<p class="tar-vacio">' + tarEsc(texto) + ' <button type="button" onclick="tarCargar(false)">Reintentar</button></p>';
+    };
+    const alFallar = function (err) {
+      if (peticion !== tarPeticion) return;
+      tarCargando = false;
+      if (!silencioso) fallo(tarErrorServidor(err));
+    };
+    // Si lo recibido es idéntico a lo que ya se ve, no se repinta (evita parpadeos y
+    // no descoloca lo que el usuario está haciendo en la lista).
+    const cambio = function (r) {
+      const firma = JSON.stringify(r);
+      const igual = firma === tarFirma;
+      tarFirma = firma;
+      return !igual;
+    };
+
+    if (modo === 'supervisor') {
+      google.script.run
+        .withSuccessHandler(function (r) {
+          if (peticion !== tarPeticion) return; // cambió la identidad o el modo mientras tanto
+          tarCargando = false;
+          if (!r || !r.ok) { fallo('No se pudieron leer las tareas (' + ((r && r.error) || 'error') + ').'); return; }
+          const repintar = cambio(r);
+          tarDatosSup = r;
+          tarActualizarBadge(0);
+          if (repintar) tarPintarSupervisor();
+        })
+        .withFailureHandler(alFallar)
+        .obtenerTodasLasTareas();
+    } else {
+      google.script.run
+        .withSuccessHandler(function (r) {
+          if (peticion !== tarPeticion) return;
+          tarCargando = false;
+          if (!r || !r.ok) { fallo('No se pudieron leer tus tareas (' + ((r && r.error) || 'error') + ').'); return; }
+          const repintar = cambio(r);
+          tarDatosJefe = r;
+          tarActualizarBadge((r.pendientes || []).length);
+          if (repintar) tarPintarJefe();
+        })
+        .withFailureHandler(alFallar)
+        .obtenerTareasDeJefe(CentinelaState.jefe);
+    }
+  }
+
+  // ── Vista del jefe ───────────────────────────────────────
+  function tarBadgesFecha(t) {
+    let h = '';
+    if (t.global) h += '<span class="tar-badge tar-b-glob">🌐 Global</span>';
+    if (t.prioridad === 'Alta') h += '<span class="tar-badge tar-b-alta">Alta</span>';
+    if (t.vencida) h += '<span class="tar-badge tar-b-venc">Vencida</span>';
+    else if (t.venceHoy) h += '<span class="tar-badge tar-b-aviso">Vence hoy</span>';
+    return h;
+  }
+
+  function tarTarjetaPendienteJefe(t) {
+    const clase = t.vencida ? ' vencida' : (t.prioridad === 'Alta' ? ' alta' : '');
+    const abierta = !!tarAbiertas[t.id];
+    const borrador = tarBorrador[t.id] || '';
+    const meta = 'Asignada ' + tarEsc(t.fechaAsignacion || '—') + (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : ' · Sin fecha límite');
+    let accion;
+    if (t.id === null) {
+      accion = '<p class="tar-meta">Esta tarea aún no tiene identificador. Actualiza la lista.</p>';
+    } else {
+      accion = '<div class="tar-accion">' +
+        '<button type="button" class="tar-btn-completar" id="tarBtnAbrir-' + t.id + '" style="' + (abierta ? 'display:none;' : '') + '" onclick="tarAbrirCierre(' + t.id + ')">✔ Completar tarea…</button>' +
+        '<div class="tar-cierre' + (abierta ? ' abierto' : '') + '" id="tarCierre-' + t.id + '">' +
+          '<label for="tarFb-' + t.id + '">Feedback <small>(qué has hecho; mínimo 5 caracteres)</small></label>' +
+          '<textarea class="tar-textarea" id="tarFb-' + t.id + '" maxlength="500" placeholder="Ej. Revisado, todo correcto." oninput="tarAlEscribir(' + t.id + ')">' + tarEsc(borrador) + '</textarea>' +
+          '<div class="tar-contador" id="tarCont-' + t.id + '">' + borrador.length + '/500</div>' +
+          '<label>Foto <small>(opcional)</small></label>' +
+          '<div class="tar-foto-zona" id="tarFotoZona-' + t.id + '">' + tarHtmlFotoZona(t.id) + '</div>' +
+          '<button type="button" class="tar-btn-guardar" id="tarBtnCerrar-' + t.id + '" onclick="tarCompletar(' + t.id + ')">Completar tarea</button>' +
+        '</div></div>';
+    }
+    return '<div class="tar-card' + clase + '">' +
+      '<div class="tar-card-head"><div class="tar-titulo">' + tarEsc(t.titulo) + '</div><div class="tar-badges">' + tarBadgesFecha(t) + '</div></div>' +
+      (t.descripcion ? '<p class="tar-desc">' + tarEsc(t.descripcion) + '</p>' : '') +
+      (t.fotoTarea && t.id !== null ? '<button type="button" class="tar-btn-ver-foto" onclick="tarVerFoto(' + t.id + ',\'tarea\')">📷 Ver foto de la tarea</button>' : '') +
+      '<div class="tar-meta">' + meta + '</div>' +
+      (t.global ? '<div class="tar-nota-glob">Tarea global para todos los jefes: la cierra el primero que la complete y después desaparece para los demás.</div>' : '') +
+      accion + '</div>';
+  }
+
+  function tarTarjetaCompletadaJefe(t) {
+    let puntual = t.global ? '<span class="tar-badge tar-b-glob">🌐 Global</span>' : '';
+    if (t.aTiempo === true) puntual += '<span class="tar-badge tar-b-ok">A tiempo</span>';
+    else if (t.aTiempo === false) puntual += '<span class="tar-badge tar-b-aviso">Con retraso</span>';
+    return '<div class="tar-card hecha">' +
+      '<div class="tar-card-head"><div class="tar-titulo">' + tarEsc(t.titulo) + '</div><div class="tar-badges">' + puntual + '</div></div>' +
+      '<div class="tar-meta">Cerrada ' + tarEsc(t.fechaCierre || '—') + (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : '') + '</div>' +
+      (t.feedback ? '<div class="tar-fb"><div class="quien">Tu feedback</div><div class="texto">' + tarEsc(t.feedback) + '</div></div>' : '') +
+      tarBotonesFoto(t) +
+    '</div>';
+  }
+
+  function tarPintarJefe() {
+    const d = tarDatosJefe;
+    if (!d) return;
+    const pend = d.pendientes || [];
+    const comp = d.completadas || [];
+    let h = '<h3 class="tar-sec">Pendientes <span class="n">' + pend.length + '</span></h3>';
+    h += pend.length
+      ? '<div class="tar-list">' + pend.map(tarTarjetaPendienteJefe).join('') + '</div>'
+      : '<p class="tar-vacio">No tienes tareas pendientes.</p>';
+    h += '<h3 class="tar-sec">Completadas recientes</h3>';
+    h += comp.length
+      ? '<div class="tar-list">' + comp.map(tarTarjetaCompletadaJefe).join('') + '</div>'
+      : '<p class="tar-vacio">Todavía no has completado ninguna.</p>';
+    document.getElementById('tarContenido').innerHTML = h;
+  }
+
+  function tarAbrirCierre(id) {
+    tarAbiertas[id] = true;
+    document.getElementById('tarBtnAbrir-' + id).style.display = 'none';
+    document.getElementById('tarCierre-' + id).classList.add('abierto');
+    const ta = document.getElementById('tarFb-' + id);
+    if (ta) ta.focus();
+  }
+
+  function tarAlEscribir(id) {
+    const ta = document.getElementById('tarFb-' + id);
+    if (!ta) return;
+    tarBorrador[id] = ta.value;
+    const c = document.getElementById('tarCont-' + id);
+    if (c) c.textContent = ta.value.length + '/500';
+  }
+
+  function tarCompletar(id) {
+    const ta = document.getElementById('tarFb-' + id);
+    const feedback = ta ? ta.value.trim() : '';
+    if (feedback.length < 5) { showToast('❌ Escribe un pequeño feedback (mínimo 5 caracteres)'); return; }
+    if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
+
+    const boton = document.getElementById('tarBtnCerrar-' + id);
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    const restaurar = function () { boton.disabled = false; boton.textContent = 'Completar tarea'; };
+
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.success) {
+          showToast(r.emailEnviado ? '✅ Tarea completada — informe enviado' : '⚠️ Tarea completada, pero el correo al responsable no se pudo enviar');
+          delete tarBorrador[id];
+          delete tarAbiertas[id];
+          delete tarFotoCierre[id];
+          tarCargando = false;
+          tarCargar(true);
+        } else {
+          restaurar();
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+          // Ya cerrada por otro jefe (global), anulada o inexistente: la lista estaba
+          // desfasada, se recarga y la tarea desaparece de pendientes.
+          if (r && r.refrescar) {
+            delete tarBorrador[id];
+            delete tarAbiertas[id];
+            delete tarFotoCierre[id];
+            tarCargando = false;
+            tarCargar(true);
+          }
+        }
+      })
+      .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
+      .completarTarea({ jefe_equipo: CentinelaState.jefe, id: id, feedback: feedback, foto: tarFotoCierre[id] || '' });
+  }
+
+  // ── Vista del supervisor ─────────────────────────────────
+  function tarTarjetaSupervisor(t) {
+    const clases = ['tar-card'];
+    if (t.estado === 'Completada') clases.push('hecha');
+    else if (t.estado === 'Anulada') clases.push('anulada');
+    else if (t.vencida) clases.push('vencida');
+    else if (t.prioridad === 'Alta') clases.push('alta');
+
+    let badges = tarBadgesFecha(t);
+    if (t.estado === 'Completada') {
+      badges += '<span class="tar-badge tar-b-ok">Completada</span>';
+      if (t.aTiempo === true) badges += '<span class="tar-badge tar-b-ok">A tiempo</span>';
+      else if (t.aTiempo === false) badges += '<span class="tar-badge tar-b-aviso">Con retraso</span>';
+    } else if (t.estado === 'Anulada') {
+      badges += '<span class="tar-badge tar-b-neutro">Anulada</span>';
+    } else {
+      badges += '<span class="tar-badge tar-b-neutro">Pendiente</span>';
+    }
+
+    const destinatario = t.asignadoA === TAR_GLOBAL ? '🌐 Todos los jefes (global)' : '👤 ' + tarEsc(t.asignadoA || 'Sin asignar');
+    let meta = destinatario + '<br>Asignada ' + tarEsc(t.fechaAsignacion || '—') +
+      (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : ' · Sin fecha límite');
+    if (t.estado === 'Anulada') meta += '<br>Anulada ' + tarEsc(t.fechaCierre || '');
+    let feedback = '';
+    if (t.estado === 'Completada') {
+      meta += '<br>Cerrada ' + tarEsc(t.fechaCierre || '—');
+      const correo = t.correoEnviado === 'Sí' ? '✉ Informe enviado' : '✉ Informe NO enviado';
+      const quien = t.cerradaPor || (t.asignadoA === TAR_GLOBAL ? 'un jefe' : t.asignadoA);
+      feedback = '<div class="tar-fb"><div class="quien">Feedback de ' + tarEsc(quien) + (t.global ? ' (el primero en cerrarla)' : '') + ' · ' + correo + '</div>' +
+        '<div class="texto">' + (t.feedback ? tarEsc(t.feedback) : '—') + '</div></div>';
+    }
+    const anular = (t.estado === 'Pendiente' && t.id !== null)
+      ? '<div class="tar-accion"><button type="button" class="tar-btn-anular" id="tarBtnAnular-' + t.id + '" onclick="tarAnular(' + t.id + ')">Anular tarea</button></div>'
+      : '';
+    return '<div class="' + clases.join(' ') + '">' +
+      '<div class="tar-card-head"><div class="tar-titulo">' + tarEsc(t.titulo) + '</div><div class="tar-badges">' + badges + '</div></div>' +
+      (t.descripcion ? '<p class="tar-desc">' + tarEsc(t.descripcion) + '</p>' : '') +
+      '<div class="tar-meta">' + meta + '</div>' + feedback + tarBotonesFoto(t) + anular + '</div>';
+  }
+
+  function tarPintarSupervisor() {
+    const d = tarDatosSup;
+    if (!d) return;
+    const res = d.resumen || { pendientes: 0, vencidas: 0, completadas: 0, anuladas: 0 };
+    const chips = [
+      { v: 'Pendiente', t: 'Pendientes', n: res.pendientes },
+      { v: 'Completada', t: 'Completadas', n: res.completadas },
+      { v: 'Anulada', t: 'Anuladas', n: res.anuladas },
+      { v: '', t: 'Todas', n: res.pendientes + res.completadas + res.anuladas }
+    ];
+    let h = '<div class="tar-filtros">' + chips.map(function (c, i) {
+      return '<button type="button" class="tar-chip' + (tarFiltroEstado === c.v ? ' activo' : '') + '" data-i="' + i + '">' + tarEsc(c.t) + ' <b>' + c.n + '</b></button>';
+    }).join('') + '</div>';
+    h += '<select class="tar-input tar-filtro-jefe" id="tarSelJefe" aria-label="Filtrar por jefe de equipo"><option value="">Todos los jefes</option>' +
+      JEFES.map(function (j) { return '<option value="' + tarEsc(j) + '"' + (tarFiltroJefe === j ? ' selected' : '') + '>' + tarEsc(j) + '</option>'; }).join('') +
+      '<option value="' + TAR_GLOBAL + '"' + (tarFiltroJefe === TAR_GLOBAL ? ' selected' : '') + '>🌐 Solo globales</option></select>';
+    if (res.vencidas > 0) h += '<p class="tar-aviso-venc" style="margin-top:10px;">' + res.vencidas + (res.vencidas === 1 ? ' tarea vencida' : ' tareas vencidas') + '</p>';
+
+    const lista = (d.tareas || []).filter(function (t) {
+      return (!tarFiltroEstado || t.estado === tarFiltroEstado) && (!tarFiltroJefe || t.asignadoA === tarFiltroJefe);
+    });
+    h += '<div style="margin-top:10px;">' + (lista.length
+      ? '<div class="tar-list">' + lista.map(tarTarjetaSupervisor).join('') + '</div>'
+      : '<p class="tar-vacio">No hay tareas con este filtro.</p>') + '</div>';
+    document.getElementById('tarContenido').innerHTML = h;
+
+    const botones = document.querySelectorAll('#tarContenido .tar-chip');
+    for (let i = 0; i < botones.length; i++) {
+      (function (idx) { botones[idx].onclick = function () { tarFiltroEstado = chips[idx].v; tarPintarSupervisor(); }; })(i);
+    }
+    document.getElementById('tarSelJefe').onchange = function () { tarFiltroJefe = this.value; tarPintarSupervisor(); };
+  }
+
+  function tarAnular(id) {
+    const btn = document.getElementById('tarBtnAnular-' + id);
+    if (!btn) return;
+    // Doble pulsación para confirmar (se desarma sola a los 4 s).
+    if (btn.getAttribute('data-confirmar') !== '1') {
+      btn.setAttribute('data-confirmar', '1');
+      btn.classList.add('confirmar');
+      btn.textContent = '¿Seguro? Pulsa otra vez para anular';
+      setTimeout(function () {
+        const b = document.getElementById('tarBtnAnular-' + id);
+        if (b && b.getAttribute('data-confirmar') === '1') {
+          b.removeAttribute('data-confirmar');
+          b.classList.remove('confirmar');
+          b.textContent = 'Anular tarea';
+        }
+      }, 4000);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Anulando…';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.success) showToast('✅ Tarea anulada');
+        else showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        tarCargando = false;
+        tarCargar(true);
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Anular tarea';
+        showToast(tarErrorServidor(err));
+      })
+      .anularTarea({ id: id });
+  }
+
+  // ── Nueva tarea (solo supervisor) ─────────────────────────
+  // Los 4 jefes y, al final, la opción de tarea global (Asignado a = "TODOS").
+  function tarPintarJefesForm() {
+    const cont = document.getElementById('tarNJefes');
+    const opciones = JEFES.concat([TAR_GLOBAL]);
+    cont.innerHTML = opciones.map(function (j, i) {
+      const esGlobal = j === TAR_GLOBAL;
+      return '<button type="button" class="tar-opcion' + (esGlobal ? ' glob' : '') + (tarNJefe === j ? ' sel' : '') + '" data-i="' + i + '">' +
+        (esGlobal ? '🌐 Todos los jefes (tarea global)' : tarEsc(j)) + '</button>';
+    }).join('');
+    const botones = cont.querySelectorAll('button');
+    for (let i = 0; i < botones.length; i++) {
+      (function (idx) { botones[idx].onclick = function () { tarNJefe = opciones[idx]; tarPintarJefesForm(); }; })(i);
+    }
+  }
+
+  function tarElegirPrio(p) {
+    tarNPrio = p;
+    document.getElementById('tarNPrioNormal').className = 'tar-opcion' + (p === 'Normal' ? ' sel' : '');
+    document.getElementById('tarNPrioAlta').className = 'tar-opcion' + (p === 'Alta' ? ' sel-alta' : '');
+  }
+
+  function tarToggleNueva() {
+    const card = document.getElementById('tarNuevaCard');
+    const abrir = !card.classList.contains('abierto');
+    card.classList.toggle('abierto', abrir);
+    if (abrir) {
+      tarPintarJefesForm();
+      tarElegirPrio(tarNPrio);
+      document.getElementById('tarNLimite').min = tarHoyISO();
+      tarPintarFotoNueva();
+      document.getElementById('tarNTitulo').focus();
+    }
+  }
+
+  function tarCrear() {
+    const titulo = document.getElementById('tarNTitulo').value.trim();
+    const descripcion = document.getElementById('tarNDesc').value.trim();
+    const limite = document.getElementById('tarNLimite').value;
+    if (!titulo) { showToast('❌ Escribe un título'); return; }
+    if (!tarNJefe) { showToast('❌ Elige a qué jefe de equipo se asigna (o a todos)'); return; }
+    if (limite && limite < tarHoyISO()) { showToast('❌ La fecha límite no puede ser anterior a hoy'); return; }
+
+    const boton = document.getElementById('tarNBtnCrear');
+    boton.disabled = true;
+    boton.textContent = 'Creando…';
+    const restaurar = function () { boton.disabled = false; boton.textContent = 'Crear tarea'; };
+    const jefeElegido = tarNJefe;
+
+    google.script.run
+      .withSuccessHandler(function (r) {
+        restaurar();
+        if (r && r.success) {
+          showToast(jefeElegido === TAR_GLOBAL ? '✅ Tarea global creada para todos los jefes' : '✅ Tarea asignada a ' + jefeElegido);
+          document.getElementById('tarNTitulo').value = '';
+          document.getElementById('tarNDesc').value = '';
+          document.getElementById('tarNLimite').value = '';
+          tarNJefe = '';
+          tarNPrio = 'Normal';
+          tarFotoNueva = '';
+          tarPintarFotoNueva();
+          document.getElementById('tarNuevaCard').classList.remove('abierto');
+          tarFiltroEstado = 'Pendiente';
+          tarCargando = false;
+          tarCargar(true);
+        } else {
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
+      .crearTarea({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: tarNPrio, fecha_limite: limite, foto: tarFotoNueva });
+  }
+
+  // ── Fotos (opcionales) ───────────────────────────────────
+  // Se reducen aquí (lado mayor 1280 px, JPEG) para que quepan en el servidor y se vean rápido.
+  function tarComprimirFoto(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || !/^image\//.test(file.type || '')) { reject(new Error('El archivo no es una imagen.')); return; }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        const ancho = img.naturalWidth || img.width, alto = img.naturalHeight || img.height;
+        if (!ancho || !alto) { reject(new Error('No se pudo leer la imagen.')); return; }
+        let lado = 1280;
+        for (let intento = 0; intento < 5; intento++) {
+          const k = Math.min(1, lado / Math.max(ancho, alto));
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(ancho * k));
+          c.height = Math.max(1, Math.round(alto * k));
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff';                 // una PNG con transparencia no debe quedar negra
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          for (let q = 0.75; q >= 0.39; q -= 0.1) {
+            const d = c.toDataURL('image/jpeg', q);
+            if (d.length <= TAR_FOTO_MAX) { resolve(d); return; }
+          }
+          lado = Math.round(lado * 0.75);
+        }
+        reject(new Error('La foto es demasiado grande.'));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No se pudo abrir la imagen.')); };
+      img.src = url;
+    });
+  }
+
+  function tarAbrirSelectorFoto(destino) {
+    tarFotoDestino = destino;
+    const inp = document.getElementById('tarFotoInput');
+    inp.value = '';
+    inp.click();
+  }
+
+  function tarAlElegirFoto(input) {
+    const destino = tarFotoDestino;
+    const file = input.files && input.files[0];
+    if (!file || destino === null) return;
+    showToast('⏳ Preparando foto…');
+    tarComprimirFoto(file).then(function (uri) {
+      if (destino === 'nueva') { tarFotoNueva = uri; tarPintarFotoNueva(); }
+      else { tarFotoCierre[destino] = uri; tarPintarFotoCierre(destino); }
+    }).catch(function (err) { showToast('❌ ' + ((err && err.message) || 'No se pudo preparar la foto')); });
+  }
+
+  function tarQuitarFoto(destino) {
+    if (destino === 'nueva') { tarFotoNueva = ''; tarPintarFotoNueva(); }
+    else { delete tarFotoCierre[destino]; tarPintarFotoCierre(destino); }
+  }
+
+  function tarHtmlZonaFoto(uri, destino) {
+    const arg = destino === 'nueva' ? "'nueva'" : destino;
+    if (!uri) return '<button type="button" class="tar-btn-foto" onclick="tarAbrirSelectorFoto(' + arg + ')">📷 Añadir foto (opcional)</button>';
+    return '<div class="tar-foto-prev"><img src="' + uri + '" alt="Foto elegida"><div class="info">Foto lista (' + Math.round(uri.length * 0.75 / 1024) + ' KB)</div>' +
+      '<button type="button" onclick="tarAbrirSelectorFoto(' + arg + ')">Cambiar</button>' +
+      '<button type="button" onclick="tarQuitarFoto(' + arg + ')">Quitar</button></div>';
+  }
+  function tarHtmlFotoZona(id) { return tarHtmlZonaFoto(tarFotoCierre[id] || '', id); }
+  function tarPintarFotoNueva() {
+    const z = document.getElementById('tarNFotoZona');
+    if (z) z.innerHTML = tarHtmlZonaFoto(tarFotoNueva, 'nueva');
+  }
+  function tarPintarFotoCierre(id) {
+    const z = document.getElementById('tarFotoZona-' + id);
+    if (z) z.innerHTML = tarHtmlFotoZona(id);
+  }
+
+  // Botones "Ver foto" de una tarjeta (solo si la tarea las tiene)
+  function tarBotonesFoto(t) {
+    if (t.id === null || t.id === undefined) return '';
+    let h = '';
+    if (t.fotoTarea) h += '<button type="button" class="tar-btn-ver-foto" onclick="tarVerFoto(' + t.id + ',\'tarea\')">📷 Foto de la tarea</button>';
+    if (t.fotoCierre) h += '<button type="button" class="tar-btn-ver-foto" onclick="tarVerFoto(' + t.id + ',\'cierre\')">📷 Foto del cierre</button>';
+    return h ? '<div>' + h + '</div>' : '';
+  }
+
+  function tarCerrarFoto() { document.getElementById('tarOverlayFoto').classList.remove('abierto'); }
+
+  function tarVerFoto(id, cual) {
+    const cont = document.getElementById('tarFotoContenido');
+    const clave = id + ':' + cual;
+    document.getElementById('tarOverlayFoto').classList.add('abierto');
+    if (tarFotoCache[clave]) { cont.innerHTML = '<img src="' + tarFotoCache[clave] + '" alt="Foto">'; return; }
+    cont.textContent = 'Cargando foto…';
+    const quien = CentinelaState.supervisor ? 'Supervisor' : CentinelaState.jefe;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok && r.foto) { tarFotoCache[clave] = r.foto; cont.innerHTML = '<img src="' + r.foto + '" alt="Foto">'; }
+        else cont.textContent = (r && r.error) || 'No se pudo cargar la foto.';
+      })
+      .withFailureHandler(function (err) { cont.textContent = tarErrorServidor(err); })
+      .obtenerFotoTarea({ id: id, cual: cual, jefe: quien });
+  }
+
+  // Sin arranque propio: CentinelaState y JEFES los define el cascarón DESPUÉS de este
+  // script; la pestaña se carga desde los ganchos (tareasRecibirJefe / tareasAlMostrar).
+</script>

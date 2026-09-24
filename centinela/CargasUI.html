@@ -1,0 +1,360 @@
+<style>
+  .car-section { margin-bottom:20px; }
+  .car-section h3 { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin:0 0 10px; }
+  .car-list { display:flex; flex-direction:column; gap:8px; }
+  @media (min-width: 900px) { .car-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; } }
+  .car-item { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:12px 14px; }
+  .car-item .top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .car-item .destino { font-weight:700; font-size:14px; color:var(--text-100); }
+  .car-item .meta { font-size:11.5px; color:var(--text-500); margin-top:3px; }
+  .car-badge { font-size:11px; font-weight:800; padding:4px 10px; border-radius:var(--radius-chip); white-space:nowrap; }
+  .car-badge-curso { background:var(--warn-bg); color:var(--warn-fg); }
+  .car-badge-hecho { background:var(--ink-800); color:var(--ok); }
+  .car-badge-pendiente { background:var(--ink-800); color:var(--text-500); }
+  .car-badge-anulado { background:var(--danger-bg); color:var(--danger-fg); }
+  .car-vacio { color:var(--text-500); font-size:13px; }
+  .car-refresh { font-size:11px; color:var(--text-600); text-align:right; margin-top:4px; }
+
+  /* Plan del día: dos columnas (Cargas | Descargas) */
+  .car-cols { display:grid; grid-template-columns:1fr; gap:18px; }
+  @media (min-width: 900px) { .car-cols { grid-template-columns:1fr 1fr; gap:22px; align-items:start; } }
+  .car-col-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
+  .car-col-head .titulo { font-size:16px; font-weight:800; color:var(--text-100); letter-spacing:.01em; }
+  .car-col-head .cont { font-size:12.5px; font-weight:800; color:var(--ok); white-space:nowrap; }
+  .car-col-head .cont span { color:var(--text-500); font-weight:700; }
+  .car-prog { height:6px; border-radius:99px; background:var(--ink-800); overflow:hidden; margin-bottom:12px; }
+  .car-prog i { display:block; height:100%; background:var(--ok); border-radius:99px; transition:width .4s ease; }
+  .car-stack { display:flex; flex-direction:column; gap:8px; }
+  .car-plan { border-left:6px solid var(--ink-700); }
+  .car-plan .hora { font-variant-numeric:tabular-nums; font-weight:800; margin-right:6px; }
+  .car-plan.est-hecho { border-color:var(--ok); border-left-color:var(--ok); background:color-mix(in srgb, var(--ok) 14%, var(--ink-900)); }
+  .car-plan.est-hecho .destino { color:var(--ok); }
+  .car-plan.est-curso { border-color:var(--warn-line); border-left-color:var(--warn-fg); background:color-mix(in srgb, var(--warn-bg) 55%, var(--ink-900)); }
+  .car-plan.est-anulado { opacity:.5; border-left-color:var(--danger-fg); }
+  .car-plan.est-anulado .destino { text-decoration:line-through; }
+  .car-badge-solido { background:var(--ok); color:var(--ok-ink); letter-spacing:.02em; }
+  .car-plan.est-curso .car-badge-curso { border:1px solid var(--warn-line); }
+  .car-badge-curso .pt { display:inline-block; width:7px; height:7px; border-radius:50%; background:currentColor; margin-right:6px; animation:carPulso 1.2s ease-in-out infinite; }
+  @keyframes carPulso { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+
+  /* Barra de fecha + añadir */
+  .car-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin:0 0 16px; }
+  .car-fechas { display:flex; align-items:center; gap:6px; }
+  .car-nav, .car-hoy { cursor:pointer; border:none; border-radius:var(--radius-btn); min-height:44px; padding:0 14px; font-size:14px; font-weight:800; background:var(--ink-800); color:var(--text-300); }
+  .car-nav { min-width:44px; padding:0; }
+  .car-nav:active, .car-hoy:active { background:var(--ink-700); }
+  #carFecha { min-height:44px; box-sizing:border-box; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:0 10px; font-size:14px; font-family:inherit; font-weight:700; }
+  .car-btn-add { cursor:pointer; border:none; border-radius:var(--radius-btn); min-height:44px; padding:0 16px; font-size:14px; font-weight:800; background:var(--accent); color:var(--accent-ink); }
+  .car-btn-add:active { transform:scale(.97); }
+  .car-error { background:var(--danger-bg); color:var(--danger-fg); border:1px solid var(--danger-line); border-radius:var(--radius-btn); padding:10px 12px; font-size:13px; font-weight:600; margin-bottom:14px; }
+  .car-extra { font-size:10px; font-weight:800; letter-spacing:.06em; padding:2px 7px; border-radius:var(--radius-chip); background:var(--accent-dim); color:var(--accent-text, var(--accent)); margin-left:6px; vertical-align:middle; }
+  .car-acc { margin-top:8px; display:flex; justify-content:flex-end; }
+  .car-btn-anular { cursor:pointer; border:1px solid var(--danger-line); border-radius:var(--radius-btn); min-height:36px; padding:0 12px; font-size:12px; font-weight:800; background:transparent; color:var(--danger-fg); }
+  .car-btn-anular:active { background:var(--danger-bg); }
+
+  /* Ventanas (anular / añadir) */
+  .car-modal h2 { font-size:17px; font-weight:800; margin:0 0 6px; color:var(--text-100); }
+  .car-modal p { font-size:13px; color:var(--text-500); margin:0 0 12px; }
+  .car-modal label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin:12px 0 6px; }
+  .car-modal input[type=date], .car-modal input[type=time] { width:100%; box-sizing:border-box; min-height:44px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:0 10px; font-size:16px; font-family:inherit; }
+  .car-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .car-chip { cursor:pointer; border:1px solid var(--ink-700); background:var(--ink-800); color:var(--text-300); border-radius:var(--radius-chip); padding:9px 14px; min-height:42px; font-size:13.5px; font-weight:800; }
+  .car-chip.on { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .car-botones { display:flex; gap:8px; margin-top:16px; }
+  .car-botones button { flex:1; cursor:pointer; border:none; border-radius:var(--radius-btn); min-height:46px; font-size:14px; font-weight:800; }
+  .car-botones .cancelar { background:var(--ink-800); color:var(--text-300); }
+  .car-botones .aceptar { background:var(--accent); color:var(--accent-ink); }
+  .car-botones .peligro { background:var(--danger-fg); color:#fff; }
+  .car-botones button:disabled { opacity:.55; cursor:default; }
+  .car-detalle { background:var(--ink-950); border:1px solid var(--ink-800); border-radius:var(--radius-btn); padding:10px 12px; font-size:14px; font-weight:700; color:var(--text-100); margin-bottom:10px; }
+</style>
+
+<h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">🚚 Cargas/Descargas</h1>
+<p style="color:var(--text-500);font-size:13px;margin:0 0 14px;">En vivo desde Plataforma Málaga. Puedes anular un transporte o añadir uno extra en el B2B.</p>
+
+<div class="car-toolbar">
+  <div class="car-fechas">
+    <button type="button" class="car-nav" onclick="carMoverDia(-1)" aria-label="Día anterior">◀</button>
+    <input type="date" id="carFecha" onchange="carCambiarFecha(this.value)" aria-label="Fecha del plan">
+    <button type="button" class="car-nav" onclick="carMoverDia(1)" aria-label="Día siguiente">▶</button>
+    <button type="button" class="car-hoy" onclick="carIrHoy()">Hoy</button>
+  </div>
+  <button type="button" class="car-btn-add" onclick="carAbrirAnadir()">➕ Añadir transporte</button>
+</div>
+<div class="car-error" id="carPlanError" style="display:none;"></div>
+
+<div class="car-section">
+  <h3 id="carTituloPlan">Plan del día (B2B)</h3>
+  <div class="car-cols">
+    <div class="car-col">
+      <div class="car-col-head"><span class="titulo">📦 Cargas</span><span class="cont" id="carCntCarga"></span></div>
+      <div class="car-prog"><i id="carProgCarga" style="width:0%"></i></div>
+      <div class="car-stack" id="carPlanCarga">Cargando…</div>
+    </div>
+    <div class="car-col">
+      <div class="car-col-head"><span class="titulo">📥 Descargas</span><span class="cont" id="carCntDescarga"></span></div>
+      <div class="car-prog"><i id="carProgDescarga" style="width:0%"></i></div>
+      <div class="car-stack" id="carPlanDescarga">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<div class="car-section">
+  <h3>En curso ahora</h3>
+  <div class="car-list" id="carEnCurso">Cargando…</div>
+</div>
+
+<div class="car-section">
+  <h3>Completadas hoy</h3>
+  <div class="car-list" id="carCompletadas">Cargando…</div>
+</div>
+
+<div class="car-refresh" id="carRefresco"></div>
+
+<div class="koverlay" id="carOverlayAnular">
+  <div class="kmodal car-modal">
+    <h2>Anular transporte</h2>
+    <p>Se marcará como «Anulado» y tachado en el B2B, y se avisará por correo a administración.</p>
+    <div class="car-detalle" id="carAnularTxt"></div>
+    <div class="car-botones">
+      <button type="button" class="cancelar" onclick="carCerrarAnular()">No, volver</button>
+      <button type="button" class="peligro" id="carBtnAnular" onclick="carConfirmarAnular()">Sí, anular</button>
+    </div>
+  </div>
+</div>
+
+<div class="koverlay" id="carOverlayAnadir">
+  <div class="kmodal car-modal">
+    <h2>Añadir transporte extra</h2>
+    <p>Se inserta en el B2B debajo del siguiente transporte del mismo destino: copia fecha, tipo, origen y destino, pone «Extra» en la hora de cita y la hora de llegada que elijas.</p>
+    <label for="carAddFecha">Fecha</label>
+    <input type="date" id="carAddFecha" onchange="carAddCambiaFecha(this.value)">
+    <label>Destino</label>
+    <div class="car-chips" id="carAddDestinos"></div>
+    <label for="carAddHora">Hora de llegada a tienda</label>
+    <input type="time" id="carAddHora">
+    <div class="car-botones">
+      <button type="button" class="cancelar" onclick="carCerrarAnadir()">Cancelar</button>
+      <button type="button" class="aceptar" id="carBtnAnadir" onclick="carConfirmarAnadir()">Añadir al B2B</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var carFechaSel = '';        // fecha que se está viendo (yyyy-mm-dd)
+  var carPlan = [];            // plan actual (con fila, lugar, tipoB2B...)
+  var carAnularSel = null;
+  var carAddSel = null;        // { tipo, lugar }
+  var carAddPlan = [];         // plan de la fecha elegida en el formulario
+  var carOcupado = false;
+
+  function carEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function carDos(n) { return (n < 10 ? '0' : '') + n; }
+  function carIso(d) { return d.getFullYear() + '-' + carDos(d.getMonth() + 1) + '-' + carDos(d.getDate()); }
+  function carHoyIso() { return carIso(new Date()); }
+  function carIsoADmy(iso) { var p = String(iso).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function carSumarDias(iso, n) { var p = iso.split('-'); var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + n); return carIso(d); }
+  function carAutor() { return CentinelaState.jefe || (CentinelaState.supervisor ? 'Supervisor' : ''); }
+  function carAviso(m) { if (typeof showToast === 'function') showToast(m); }
+
+  // ── Fecha ──
+  function carCambiarFecha(iso) { if (!iso) return; carFechaSel = iso; document.getElementById('carFecha').value = iso; carInit(); }
+  function carMoverDia(n) { carCambiarFecha(carSumarDias(carFechaSel, n)); }
+  function carIrHoy() { carCambiarFecha(carHoyIso()); }
+
+  function carInit() {
+    var iso = carFechaSel;
+    google.script.run
+      .withSuccessHandler(function (v) { if (iso === carFechaSel) carRender(v); })
+      .withFailureHandler(function (err) { carRender({ ok: false, error: (err && err.message) || String(err) }); })
+      .obtenerVistaCargas(iso === carHoyIso() ? null : carIsoADmy(iso));
+  }
+
+  // ── Pintado ──
+  var CAR_CLASE_ESTADO = { 'Pendiente': 'car-badge-pendiente', 'En curso': 'car-badge-curso', 'Completado': 'car-badge-solido', 'Anulado': 'car-badge-anulado' };
+  var CAR_CLASE_TARJETA = { 'Pendiente': '', 'En curso': 'est-curso', 'Completado': 'est-hecho', 'Anulado': 'est-anulado' };
+  var CAR_ETIQUETA = {
+    'Carga':    { 'Pendiente': 'Por cargar',    'En curso': 'Cargando',    'Completado': '✔ CARGADO',    'Anulado': 'Anulada' },
+    'Descarga': { 'Pendiente': 'Por descargar', 'En curso': 'Descargando', 'Completado': '✔ DESCARGADO', 'Anulado': 'Anulada' }
+  };
+
+  function carTarjetaPlan(p, i) {
+    var lugar = p.lugar || (p.tipo === 'Carga' ? p.destino : p.origen) || '—';
+    var est = CAR_ETIQUETA[p.tipo] && CAR_ETIQUETA[p.tipo][p.estado] ? p.estado : 'Pendiente';
+    var meta = (p.flujo || '') + (p.soportes ? (p.flujo ? ' · ' : '') + p.soportes + ' sop.' : '');
+    var punto = est === 'En curso' ? '<span class="pt"></span>' : '';
+    var activo = est === 'Pendiente' || est === 'En curso';
+    return '<div class="car-item car-plan ' + CAR_CLASE_TARJETA[est] + '"><div class="top"><span class="destino"><span class="hora">' + carEsc(p.hora || '--:--') + '</span>' + carEsc(lugar) +
+      (p.extra ? '<span class="car-extra">EXTRA</span>' : '') + '</span>' +
+      '<span class="car-badge ' + CAR_CLASE_ESTADO[est] + '">' + punto + CAR_ETIQUETA[p.tipo][est] + '</span></div>' +
+      (meta ? '<div class="meta">' + carEsc(meta) + '</div>' : '') +
+      (activo ? '<div class="car-acc"><button type="button" class="car-btn-anular" onclick="carPedirAnular(' + i + ')">✕ Anular</button></div>' : '') + '</div>';
+  }
+
+  function carPintarColumna(tipo, idLista, idCont, idProg, vacio) {
+    var items = [];
+    carPlan.forEach(function (p, i) { if (p.tipo === tipo) items.push({ p: p, i: i }); });
+    var validas = items.filter(function (x) { return x.p.estado !== 'Anulado'; });
+    var hechas = validas.filter(function (x) { return x.p.estado === 'Completado'; }).length;
+    document.getElementById(idLista).innerHTML = items.length ? items.map(function (x) { return carTarjetaPlan(x.p, x.i); }).join('') : '<p class="car-vacio">' + vacio + '</p>';
+    document.getElementById(idCont).innerHTML = hechas + ' <span>de ' + validas.length + '</span>';
+    document.getElementById(idProg).style.width = (validas.length ? Math.round(hechas * 100 / validas.length) : 0) + '%';
+  }
+
+  function carRender(v) {
+    var cont1 = document.getElementById('carEnCurso');
+    var cont2 = document.getElementById('carCompletadas');
+    var errBox = document.getElementById('carPlanError');
+    if (!v || !v.ok) {
+      cont1.innerHTML = '<p class="car-vacio">No se pudo leer (' + carEsc((v && v.error) || 'error') + ').</p>';
+      cont2.innerHTML = '';
+      carPlan = [];
+      ['carPlanCarga', 'carPlanDescarga'].forEach(function (id) { document.getElementById(id).innerHTML = ''; });
+      return;
+    }
+    carPlan = v.plan || [];
+    errBox.style.display = v.planError ? 'block' : 'none';
+    errBox.textContent = v.planError || '';
+    var esHoy = carFechaSel === carHoyIso();
+    document.getElementById('carTituloPlan').textContent = (esHoy ? 'Plan de hoy' : 'Plan del ' + carIsoADmy(carFechaSel)) + ' (B2B)';
+    carPintarColumna('Carga', 'carPlanCarga', 'carCntCarga', 'carProgCarga', esHoy ? 'Sin cargas hoy.' : 'Sin cargas ese día.');
+    carPintarColumna('Descarga', 'carPlanDescarga', 'carCntDescarga', 'carProgDescarga', esHoy ? 'Sin descargas hoy.' : 'Sin descargas ese día.');
+
+    cont1.innerHTML = !v.enCurso.length ? '<p class="car-vacio">Ningún muelle ocupado ahora mismo.</p>' : v.enCurso.map(function (c) {
+      return '<div class="car-item"><div class="top"><span class="destino">Muelle ' + carEsc(c.muelle) + ' · ' + carEsc(c.destino) + '</span><span class="car-badge car-badge-curso">' + carEsc(c.tipo) + '</span></div>' +
+        '<div class="meta">' + carEsc(c.cargador) + ' · entrega ' + carEsc(c.horaEntrega) + '</div></div>';
+    }).join('');
+    cont2.innerHTML = !v.completadasHoy.length ? '<p class="car-vacio">Ninguna completada hoy todavía.</p>' : v.completadasHoy.map(function (c) {
+      return '<div class="car-item"><div class="top"><span class="destino">Muelle ' + carEsc(c.muelle) + ' · ' + carEsc(c.destino) + '</span><span class="car-badge car-badge-hecho">' + carEsc(c.tipo) + '</span></div>' +
+        '<div class="meta">' + carEsc(c.cargador) + ' · cerrado ' + carEsc(c.horaFin) + '</div></div>';
+    }).join('');
+    document.getElementById('carRefresco').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ── Anular ──
+  function carPedirAnular(i) {
+    var p = carPlan[i];
+    if (!p) return;
+    if (!carAutor()) { carAviso('❌ Identifícate para anular un transporte'); return; }
+    carAnularSel = p;
+    document.getElementById('carAnularTxt').innerHTML = carEsc(p.hora) + ' · ' + carEsc(p.lugar) + '<br><span style="font-weight:600;color:var(--text-500);">' + (p.tipo === 'Carga' ? 'Carga' : 'Descarga') + ' · ' + carEsc(carIsoADmy(carFechaSel)) + '</span>';
+    document.getElementById('carBtnAnular').disabled = false;
+    document.getElementById('carBtnAnular').textContent = 'Sí, anular';
+    document.getElementById('carOverlayAnular').classList.add('abierto');
+  }
+  function carCerrarAnular() { document.getElementById('carOverlayAnular').classList.remove('abierto'); carAnularSel = null; }
+
+  function carConfirmarAnular() {
+    var p = carAnularSel;
+    if (!p || carOcupado) return;
+    carOcupado = true;
+    var btn = document.getElementById('carBtnAnular');
+    btn.disabled = true; btn.textContent = 'Anulando…';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        carOcupado = false;
+        carCerrarAnular();
+        carAviso(r && r.ok ? r.mensaje : '❌ ' + ((r && r.mensaje) || 'No se pudo anular'));
+        carInit();
+      })
+      .withFailureHandler(function (err) {
+        carOcupado = false;
+        btn.disabled = false; btn.textContent = 'Sí, anular';
+        carAviso('❌ Error del servidor: ' + ((err && err.message) || err));
+      })
+      .anularTransporteB2B({
+        fecha: carIsoADmy(carFechaSel), fila: p.fila, autor: carAutor(),
+        esperado: { tipoB2B: p.tipoB2B, lugar: p.lugar, hora: p.hora, estado: p.estado, flujo: p.flujo, soportes: p.soportes }
+      });
+  }
+
+  // ── Añadir transporte extra ──
+  function carAbrirAnadir() {
+    if (!carAutor()) { carAviso('❌ Identifícate para añadir un transporte'); return; }
+    var hoy = carHoyIso();
+    var f = carFechaSel < hoy ? hoy : carFechaSel;
+    var inputF = document.getElementById('carAddFecha');
+    inputF.min = hoy; inputF.value = f;
+    document.getElementById('carAddHora').value = '';
+    carAddSel = null;
+    document.getElementById('carBtnAnadir').disabled = false;
+    document.getElementById('carBtnAnadir').textContent = 'Añadir al B2B';
+    document.getElementById('carOverlayAnadir').classList.add('abierto');
+    carAddCambiaFecha(f);
+  }
+  function carCerrarAnadir() { document.getElementById('carOverlayAnadir').classList.remove('abierto'); }
+
+  // Opciones de destino = los (tipo, lugar) que ya existen ese día en el B2B (no anulados)
+  function carAddCambiaFecha(iso) {
+    var caja = document.getElementById('carAddDestinos');
+    if (!iso) return;
+    carAddSel = null;
+    if (iso === carFechaSel) { carAddPlan = carPlan; carAddPintar(); return; }
+    caja.innerHTML = '<span class="car-vacio">Cargando…</span>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (document.getElementById('carAddFecha').value !== iso) return;
+        if (!r || !r.ok) { caja.innerHTML = '<span class="car-vacio">' + carEsc((r && r.error) || 'No se pudo leer el B2B') + '</span>'; return; }
+        carAddPlan = r.plan || []; carAddPintar();
+      })
+      .withFailureHandler(function (err) { caja.innerHTML = '<span class="car-vacio">' + carEsc((err && err.message) || err) + '</span>'; })
+      .obtenerPlanB2B(carIsoADmy(iso));
+  }
+
+  function carAddPintar() {
+    var vistos = {}, opciones = [];
+    carAddPlan.forEach(function (p) {
+      if (p.estado === 'Anulado' || !p.lugar) return;
+      var k = p.tipo + '|' + p.lugar;
+      if (!vistos[k]) { vistos[k] = true; opciones.push({ tipo: p.tipo, lugar: p.lugar }); }
+    });
+    var caja = document.getElementById('carAddDestinos');
+    if (!opciones.length) { caja.innerHTML = '<span class="car-vacio">No hay transportes ese día en el B2B de los que copiar los datos.</span>'; return; }
+    opciones.sort(function (a, b) { return a.tipo === b.tipo ? a.lugar.localeCompare(b.lugar) : (a.tipo === 'Carga' ? -1 : 1); });
+    caja.innerHTML = opciones.map(function (o, i) {
+      return '<button type="button" class="car-chip" data-i="' + i + '" onclick="carAddElegir(' + i + ')">' + (o.tipo === 'Carga' ? '📦 ' : '📥 ') + carEsc(o.lugar) + '</button>';
+    }).join('');
+    caja.__opciones = opciones;
+  }
+
+  function carAddElegir(i) {
+    var caja = document.getElementById('carAddDestinos');
+    carAddSel = caja.__opciones[i];
+    Array.prototype.forEach.call(caja.querySelectorAll('.car-chip'), function (b) { b.classList.toggle('on', Number(b.getAttribute('data-i')) === i); });
+  }
+
+  function carConfirmarAnadir() {
+    if (carOcupado) return;
+    var fecha = document.getElementById('carAddFecha').value, hora = document.getElementById('carAddHora').value;
+    if (!fecha) { carAviso('❌ Elige la fecha'); return; }
+    if (!carAddSel) { carAviso('❌ Elige el destino'); return; }
+    if (!hora) { carAviso('❌ Indica la hora de llegada a tienda'); return; }
+    carOcupado = true;
+    var btn = document.getElementById('carBtnAnadir');
+    btn.disabled = true; btn.textContent = 'Añadiendo…';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        carOcupado = false;
+        if (r && r.ok) {
+          carCerrarAnadir();
+          carAviso(r.mensaje);
+          carCambiarFecha(fecha);     // se pasa a ver el día en el que se acaba de añadir
+        } else {
+          btn.disabled = false; btn.textContent = 'Añadir al B2B';
+          carAviso('❌ ' + ((r && r.mensaje) || 'No se pudo añadir'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        carOcupado = false;
+        btn.disabled = false; btn.textContent = 'Añadir al B2B';
+        carAviso('❌ Error del servidor: ' + ((err && err.message) || err));
+      })
+      .anadirTransporteB2B({ fecha: carIsoADmy(fecha), tipo: carAddSel.tipo, lugar: carAddSel.lugar, horaLlegada: hora, autor: carAutor() });
+  }
+
+  // ── Arranque ──
+  carFechaSel = carHoyIso();
+  document.getElementById('carFecha').value = carFechaSel;
+  carInit();
+  setInterval(carInit, 30000);
+</script>

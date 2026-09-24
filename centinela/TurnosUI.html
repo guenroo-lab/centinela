@@ -1,0 +1,180 @@
+<style>
+  .tn-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .tn-sub { color:var(--text-500); font-size:13px; margin:0; }
+  .tn-sub b { color:var(--text-300); }
+  .tn-btn { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; font-size:13px; font-weight:700; background:var(--ink-800); color:var(--text-300); white-space:nowrap; transition:transform .15s ease; }
+  .tn-btn:active { transform:scale(.96); background:var(--ink-700); }
+  .tn-btn:disabled { opacity:.6; }
+  .tn-origen { font-size:11.5px; color:var(--text-600); margin:0 0 12px; }
+  .tn-origen.copia { color:var(--warn-fg); }
+  .tn-aviso { background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn-fg); border-radius:var(--radius-btn); padding:10px 12px; font-size:12.5px; margin-bottom:12px; line-height:1.4; }
+  .tn-error { background:var(--danger-bg); border:1px solid var(--danger-line); color:var(--danger-fg); border-radius:var(--radius-card); padding:14px; font-size:13px; line-height:1.45; }
+
+  .tn-hoy { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-bottom:12px; }
+  .tn-hoy-tit { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin-right:2px; }
+  .tn-hoy-item { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-300); }
+  .tn-hoy-item b { color:var(--text-100); font-size:14px; }
+
+  .tn-buscar { width:100%; max-width:320px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px 12px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
+
+  .tn-marco { overflow-x:auto; border:1px solid var(--ink-800); border-radius:var(--radius-card); background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); box-shadow:var(--shadow-card); }
+  .tn-tabla { border-collapse:separate; border-spacing:0; width:100%; min-width:540px; font-size:13px; }
+  .tn-tabla th, .tn-tabla td { padding:6px 4px; text-align:center; border-bottom:1px solid var(--ink-800); }
+  .tn-tabla tr:last-child td { border-bottom:none; }
+  .tn-tabla thead th { font-size:11px; font-weight:700; color:var(--text-500); padding:9px 4px 7px; background:var(--ink-850); }
+  .tn-tabla thead th .l { display:block; text-transform:uppercase; letter-spacing:.05em; }
+  .tn-tabla thead th .n { display:block; font-size:15px; font-weight:800; color:var(--text-100); margin-top:1px; }
+  .tn-tabla th.tn-nom, .tn-tabla td.tn-nom { position:sticky; left:0; z-index:1; text-align:left; padding-left:12px; padding-right:8px; min-width:150px; background:var(--ink-900); }
+  .tn-tabla thead th.tn-nom { background:var(--ink-850); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .tn-tabla td.tn-nom { font-weight:600; color:var(--text-100); white-space:nowrap; }
+  .tn-tabla td.tn-nom .rol { display:inline-block; margin-left:6px; padding:1px 6px; border-radius:var(--radius-chip); font-size:9.5px; font-weight:800; color:var(--text-500); background:var(--ink-800); vertical-align:1px; }
+  .tn-tabla .hoy { background:color-mix(in srgb, var(--accent) 10%, transparent); }
+  .tn-tabla thead th.hoy { box-shadow:inset 0 -2px 0 var(--accent); }
+  .tn-tabla thead th.hoy .n { color:var(--accent-text); }
+  .tn-tabla tr.tn-grupo td { text-align:left; padding:8px 12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); background:var(--ink-850); position:static; }
+
+  .tn-c { --c:#8a9bb5; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:34px; min-height:30px; padding:0 4px; border-radius:8px; font-weight:800; font-size:13px; line-height:1; background:color-mix(in srgb, var(--c) 18%, transparent); color:color-mix(in srgb, var(--c) 72%, var(--text-100)); border:1px solid color-mix(in srgb, var(--c) 45%, transparent); }
+  .tn-c small { font-size:9px; font-weight:700; margin-top:2px; opacity:.9; }
+  .tn-c-M { --c:#4c7dff; } .tn-c-T { --c:#f0a020; } .tn-c-P { --c:#b070ff; } .tn-c-V { --c:#34d17a; }
+  .tn-c-B { --c:#f0554d; } .tn-c-A { --c:#22c3d6; } .tn-c-PR { --c:#8a9bb5; }
+  .tn-libre { color:var(--text-600); font-size:20px; line-height:1; }
+  .tn-vacio { color:var(--ink-600); }
+
+  .tn-leyenda { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:14px; }
+  .tn-leyenda span { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-300); }
+  .tn-leyenda .tn-c { min-width:28px; min-height:24px; font-size:12px; }
+  .tn-vacio-msg { color:var(--text-500); font-size:13px; padding:16px; }
+
+  /* Móvil: que quepan los 7 días sin desplazar (nombre en dos líneas, casillas más justas) */
+  @media (max-width: 600px) {
+    .tn-tabla { min-width:0; font-size:12px; }
+    .tn-tabla th, .tn-tabla td { padding:5px 1px; }
+    .tn-tabla th.tn-nom, .tn-tabla td.tn-nom { min-width:0; width:112px; max-width:112px; padding-left:8px; padding-right:4px; }
+    .tn-tabla td.tn-nom { white-space:normal; font-size:12px; line-height:1.25; }
+    .tn-tabla td.tn-nom .rol { display:block; width:max-content; margin:3px 0 0; }
+    .tn-c { min-width:29px; min-height:28px; padding:0 2px; font-size:12px; }
+    .tn-tabla tr.tn-grupo td { padding-left:8px; }
+  }
+</style>
+
+<h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">🗓️ Turnos</h1>
+
+<div class="tn-top">
+  <p class="tn-sub" id="tnSemana">Turnos de la semana en curso.</p>
+  <button type="button" class="tn-btn" id="tnBtnRecargar" onclick="tnCargar(true)">↻ Actualizar</button>
+</div>
+<p class="tn-origen" id="tnOrigen"></p>
+<div id="tnAvisos"></div>
+<div class="tn-hoy" id="tnHoy"></div>
+<input type="search" class="tn-buscar" id="tnBuscar" placeholder="Buscar por nombre…" autocomplete="off" oninput="tnRender()">
+<div id="tnContenido"><p class="tn-vacio-msg">Cargando…</p></div>
+<div class="tn-leyenda" id="tnLeyenda"></div>
+
+<script>
+  let tnDatos = null;
+  let tnCargadoEn = 0;
+  let tnCargando = false;
+  const TN_RECARGA_MS = 5 * 60 * 1000;
+  // Significado de los códigos del cuadrante. Un código que no esté aquí se muestra tal cual, sin nombre.
+  const TN_CODIGOS = { M: 'Mañana', T: 'Tarde', P: 'Partido', V: 'Vacaciones', VV: 'Vacaciones año anterior', B: 'Baja', A: 'Asuntos propios', PR: 'Permiso retribuido', '·': 'Libre' };
+  const TN_ORDEN = ['M', 'T', 'P', 'V', 'VV', 'A', 'PR', 'B', '·'];
+
+  function tnEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function tnSinTildes(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+
+  // "P +2h" -> { c: 'P', x: '+2h' }; "" -> { c: '', x: '' }
+  function tnPartirCelda(raw) {
+    const m = String(raw || '').trim().match(/^(\S+)\s*(.*)$/);
+    return m ? { c: m[1].toUpperCase(), x: m[2] } : { c: '', x: '' };
+  }
+
+  function tnHtmlCelda(raw) {
+    const p = tnPartirCelda(raw);
+    if (!p.c) return '<span class="tn-vacio">–</span>';
+    if (p.c === '·') return '<span class="tn-libre" title="Libre">·</span>';
+    const clase = TN_CODIGOS[p.c] ? ' tn-c-' + p.c : '';
+    return '<span class="tn-c' + clase + '" title="' + tnEsc(TN_CODIGOS[p.c] || p.c) + '">' + tnEsc(p.c) + (p.x ? '<small>' + tnEsc(p.x) + '</small>' : '') + '</span>';
+  }
+
+  function turnosAlMostrar() {
+    if (!tnDatos || (Date.now() - tnCargadoEn) > TN_RECARGA_MS) tnCargar(false);
+  }
+
+  function tnCargar(forzar) {
+    if (tnCargando) return;
+    tnCargando = true;
+    const boton = document.getElementById('tnBtnRecargar');
+    boton.disabled = true;
+    if (!tnDatos || forzar) document.getElementById('tnContenido').innerHTML = '<p class="tn-vacio-msg">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        tnCargando = false; boton.disabled = false;
+        if (r && r.ok) { tnDatos = r; tnCargadoEn = Date.now(); tnRender(); }
+        else tnError((r && r.error) || 'No se pudieron cargar los turnos.');
+      })
+      .withFailureHandler(function (err) {
+        tnCargando = false; boton.disabled = false;
+        tnError('Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .obtenerTurnosSemana();
+  }
+
+  function tnError(msg) {
+    tnDatos = null;
+    document.getElementById('tnContenido').innerHTML = '<div class="tn-error">' + tnEsc(msg) + '</div>';
+    ['tnAvisos', 'tnHoy', 'tnLeyenda', 'tnOrigen'].forEach(function (id) { document.getElementById(id).innerHTML = ''; });
+  }
+
+  function tnRender() {
+    const d = tnDatos;
+    if (!d) return;
+    document.getElementById('tnSemana').innerHTML = 'Semana del <b>' + tnEsc(d.titulo) + '</b>';
+    const origen = document.getElementById('tnOrigen');
+    origen.className = 'tn-origen' + (d.origen === 'copia' ? ' copia' : '');
+    origen.textContent = d.origen === 'copia'
+      ? 'Copia guardada (tu cuenta no abre el cuadrante) · actualizada el ' + d.actualizado
+      : 'Cuadrante leído el ' + d.actualizado;
+    document.getElementById('tnAvisos').innerHTML = (d.avisos || []).map(function (a) { return '<div class="tn-aviso">' + tnEsc(a) + '</div>'; }).join('');
+
+    const idxHoy = d.dias.findIndex(function (x) { return x.hoy; });
+    const filtro = tnSinTildes(document.getElementById('tnBuscar').value.trim());
+    // Resumen de hoy y leyenda: sobre toda la plantilla, no sobre lo que deja ver el buscador
+    const codigosVistos = {};
+    const cuentaHoy = {};
+    (d.grupos || []).forEach(function (g) {
+      g.personas.forEach(function (p) {
+        p.turnos.forEach(function (raw) { const c = tnPartirCelda(raw).c; if (c) codigosVistos[c] = true; });
+        if (idxHoy >= 0) { const c = tnPartirCelda(p.turnos[idxHoy]).c; if (c && c !== '·') cuentaHoy[c] = (cuentaHoy[c] || 0) + 1; }
+      });
+    });
+
+    let html = '<div class="tn-marco"><table class="tn-tabla"><thead><tr><th class="tn-nom">Empleado</th>' +
+      d.dias.map(function (x) { return '<th class="' + (x.hoy ? 'hoy' : '') + '"><span class="l">' + tnEsc(x.letra) + '</span><span class="n">' + x.dia + '</span></th>'; }).join('') + '</tr></thead><tbody>';
+    let filas = 0;
+    (d.grupos || []).forEach(function (g) {
+      const personas = g.personas.filter(function (p) { return !filtro || tnSinTildes(p.nombre).indexOf(filtro) >= 0; });
+      if (!personas.length) return;
+      html += '<tr class="tn-grupo"><td colspan="8">' + tnEsc(g.titulo) + '</td></tr>';
+      personas.forEach(function (p) {
+        filas++;
+        html += '<tr><td class="tn-nom">' + tnEsc(p.nombre) + (p.rol ? '<span class="rol">' + tnEsc(p.rol) + '</span>' : '') + '</td>' +
+          p.turnos.map(function (raw, i) { return '<td class="' + (i === idxHoy ? 'hoy' : '') + '">' + tnHtmlCelda(raw) + '</td>'; }).join('') + '</tr>';
+      });
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('tnContenido').innerHTML = filas ? html : '<p class="tn-vacio-msg">' + (filtro ? 'Nadie coincide con esa búsqueda.' : 'No hay turnos para esta semana.') + '</p>';
+
+    const ordenados = Object.keys(cuentaHoy).sort(function (a, b) { const i = TN_ORDEN.indexOf(a), j = TN_ORDEN.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j); });
+    document.getElementById('tnHoy').innerHTML = ordenados.length
+      ? '<span class="tn-hoy-tit">Hoy</span>' + ordenados.map(function (c) {
+          return '<span class="tn-hoy-item">' + tnHtmlCelda(c) + '<b>' + cuentaHoy[c] + '</b>' + (TN_CODIGOS[c] ? tnEsc(TN_CODIGOS[c]) : '') + '</span>';
+        }).join('')
+      : '';
+
+    // Leyenda: solo los códigos que aparecen esta semana
+    const leyenda = Object.keys(codigosVistos).sort(function (a, b) { const i = TN_ORDEN.indexOf(a), j = TN_ORDEN.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j); });
+    document.getElementById('tnLeyenda').innerHTML = leyenda.map(function (c) {
+      return '<span>' + tnHtmlCelda(c) + (TN_CODIGOS[c] ? tnEsc(TN_CODIGOS[c]) : '<em style="color:var(--text-600)">código del cuadrante</em>') + '</span>';
+    }).join('');
+  }
+</script>

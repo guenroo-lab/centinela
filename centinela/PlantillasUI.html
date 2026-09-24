@@ -1,0 +1,786 @@
+<style>
+  .pl-drop { border:2px dashed var(--ink-700); border-radius:var(--radius-card); background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); box-shadow:var(--shadow-card); padding:26px 16px; text-align:center; cursor:pointer; transition:border-color .15s ease, background .15s ease; }
+  .pl-drop.encima { border-color:var(--accent); background:var(--accent-dim); }
+  .pl-drop .ico { font-size:30px; }
+  .pl-drop b { display:block; font-size:15px; color:var(--text-100); margin:6px 0 2px; }
+  .pl-drop span { font-size:12.5px; color:var(--text-500); }
+  .pl-pegar { margin-top:10px; }
+  .pl-pegar summary { cursor:pointer; font-size:12.5px; color:var(--text-500); font-weight:700; }
+  .pl-pegar textarea { width:100%; min-height:110px; margin-top:8px; box-sizing:border-box; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px; font-size:12px; font-family:ui-monospace, Consolas, monospace; resize:vertical; }
+  .pl-btn { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 16px; min-height:44px; font-size:14px; font-weight:700; background:var(--accent); color:var(--accent-ink); transition:transform .15s ease; }
+  .pl-btn:active { transform:scale(.97); }
+  .pl-btn.sec { background:var(--ink-800); color:var(--text-300); }
+  .pl-barra { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:16px 0 4px; }
+  .pl-barra .info { flex:1; font-size:12.5px; color:var(--text-500); min-width:160px; }
+
+  .pl-card { margin-top:16px; background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:14px; }
+  .pl-top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .pl-tienda { font-size:20px; font-weight:800; color:var(--text-100); }
+  .pl-meta { font-size:12.5px; color:var(--text-500); margin-top:2px; }
+  .pl-ctrl { display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; }
+  @media (min-width: 900px) { .pl-ctrl { grid-template-columns:3fr 1fr; align-items:start; } }
+  .pl-ctrl label { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin-bottom:6px; }
+  .pl-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .pl-chip { cursor:pointer; border:1px solid var(--ink-700); background:var(--ink-800); color:var(--text-300); border-radius:var(--radius-chip); padding:8px 14px; min-height:40px; font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .pl-chip.on { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .pl-chips.falta .pl-chip { border-color:var(--danger-line); }
+  .pl-in { width:100%; box-sizing:border-box; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:9px 10px; min-height:40px; font-size:15px; font-family:inherit; }
+  .pl-otro { margin-top:8px; max-width:200px; display:none; }
+  .pl-otro.abierto { display:block; }
+  .pl-avisos { margin-top:12px; display:flex; flex-direction:column; gap:6px; }
+  .pl-aviso { background:var(--warn-bg); color:var(--warn-fg); border:1px solid var(--warn-line); border-radius:var(--radius-btn); padding:8px 12px; font-size:12.5px; font-weight:600; }
+  .pl-papel { margin-top:14px; background:#3a3f47; border-radius:10px; padding:12px; overflow-x:auto; }
+  .pl-zoom .pl-pag { margin:0 auto 14px; box-shadow:0 4px 18px rgba(0,0,0,.5); }
+  .pl-zoom .pl-pag:last-child { margin-bottom:0; }
+  .pl-hodos { margin-top:12px; display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; padding:10px 12px; border:1px solid var(--ink-700); border-radius:var(--radius-btn); background:var(--ink-950); }
+  .pl-chk { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; color:var(--text-100); cursor:pointer; }
+  .pl-chk input { width:20px; height:20px; accent-color:var(--accent); }
+  .pl-hodos-est { font-size:12.5px; color:var(--text-500); }
+  .pl-hodos-est.mal { color:var(--danger-fg); }
+  .pl-vacio { color:var(--text-500); font-size:13px; margin-top:16px; }
+</style>
+
+<h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">📋 Plantilla de carga</h1>
+<p style="color:var(--text-500);font-size:13px;margin:0 0 16px;">Arrastra el Excel «Repertorio de soportes de una expedición» de Infolog (vale cualquiera de los dos formatos). Puedes soltar varios a la vez.</p>
+
+<div class="pl-drop" id="plDrop" onclick="document.getElementById('plFichero').click()">
+  <div class="ico">📂</div>
+  <b>Suelta aquí el Excel o toca para elegirlo</b>
+  <span>.xlsx · la tienda y los soportes se rellenan solos</span>
+</div>
+<input type="file" id="plFichero" accept=".xlsx,.csv,.txt" multiple style="display:none;" onchange="plAlElegir(this)">
+
+<details class="pl-pegar">
+  <summary>¿Sin archivo? Pega aquí los datos copiados del Excel</summary>
+  <textarea id="plPegado" placeholder="Selecciona todo en el Excel (incluida la fila de títulos), copia y pega aquí"></textarea>
+  <button type="button" class="pl-btn sec" style="margin-top:8px;" onclick="plAlPegar()">Generar plantilla</button>
+</details>
+
+<div class="pl-barra" id="plBarra" style="display:none;">
+  <div class="info" id="plInfo"></div>
+  <button type="button" class="pl-btn" id="plBtnTodas" onclick="plImprimirTodas()">🖨 Imprimir todas</button>
+  <button type="button" class="pl-btn sec" onclick="plLimpiar()">Limpiar</button>
+</div>
+<div id="plSalida"></div>
+
+<script>
+  // ── Estado ──
+  var PL = { exps: [], b2b: null, b2bTs: 0 };
+
+  // ── Hoja (mismo CSS en pantalla y en impresión) ──
+  var PL_LOGO = 'data:image/png;base64,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';
+
+  // Cada página es una caja A4 con su propio margen interior de 12 mm: no depende de los márgenes del diálogo de impresión.
+  var PL_CSS_HOJA =
+    '.pl-pag{width:210mm;height:296mm;padding:12mm;position:relative;overflow:hidden;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-size:12px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.pl-pag *{box-sizing:border-box;}' +
+    '.pl-h{display:flex;align-items:center;gap:18px;height:84px;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:10px;}' +
+    '.pl-h img{height:58px;width:auto;display:block;flex:none;}' +
+    '.pl-h .tit{flex:1;min-width:0;}' +
+    '.pl-h .kick{font-size:10px;letter-spacing:.16em;font-weight:700;color:#444;}' +
+    '.pl-h .dest{font-size:32px;font-weight:900;line-height:1.05;margin-top:2px;}' +
+    '.pl-h .dest .hor{font-weight:800;}' +
+    '.pl-h .dest .sin{color:#aaa;font-weight:700;}' +
+    '.pl-h .dat{display:grid;grid-template-columns:auto auto;gap:4px 12px;font-size:13px;text-align:right;white-space:nowrap;flex:none;}' +
+    '.pl-h .dat span{color:#555;}' +
+    '.pl-h .dat b{font-size:15px;}' +
+    '.pl-cont{height:22px;font-size:10px;letter-spacing:.08em;color:#555;font-weight:700;border-bottom:1px solid #000;padding-top:4px;white-space:nowrap;}' +
+    '.pl-t{width:100%;border-collapse:collapse;table-layout:fixed;font-size:var(--fs,13px);}' +
+    '.pl-t th,.pl-t td{border:1px solid #000;padding:0 5px;height:var(--rh,24px);overflow:visible;white-space:nowrap;}' +
+    '.pl-t th{background:#e6e6e6;font-size:11px;letter-spacing:.05em;text-align:left;height:26px;}' +
+    '.pl-t td.n{text-align:center;color:#555;font-size:.72em;}' +
+    '.pl-t td.ok{text-align:center;}' +
+    '.pl-t td.mono{font-family:Consolas,"Courier New",monospace;font-size:.95em;}' +
+    '.pl-t td.ped{font-weight:700;text-align:center;}' +
+    '.pl-t td.ped.negro{background:#000;color:#fff;}' +
+    '.pl-t td.ped.gris{background:#999;}' +
+    '.pl-t td.f{text-align:center;}' +
+    '.pl-t td.f.gris{background:#999;}' +
+    '.pl-cb{display:inline-block;width:calc(var(--rh,24px) * .52);height:calc(var(--rh,24px) * .52);border:2px solid #000;vertical-align:middle;}' +
+    '.pl-pie{position:absolute;left:12mm;right:12mm;bottom:12mm;height:22px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;font-size:11px;color:#444;border-top:1px solid #999;padding-top:3px;white-space:nowrap;}' +
+    '.pl-pie b{color:#000;font-size:14px;}' +
+    '.pl-t td.pedh{font-family:Consolas,"Courier New",monospace;font-weight:700;font-size:.95em;}' +
+    '.pl-t td.pedh small{font-weight:400;color:#555;}' +
+    '.pl-t td.or{overflow:hidden;text-overflow:ellipsis;}' +
+    '.pl-t td.av{text-align:center;}' +
+    '.pl-t td.av-amarillo{font-weight:700;}' +
+    '.pl-t td.av-naranja{font-weight:800;text-decoration:underline;}' +
+    '.pl-t td.av-rojo{background:#000;color:#fff;font-weight:800;}' +
+    '.pl-vacia{margin-top:40px;text-align:center;font-size:16px;color:#444;}';
+
+  var PL_CSS_IMPRESION =
+    '@page{size:A4 portrait;margin:0;}' +
+    'html,body{margin:0;padding:0;background:#fff;}' +
+    '#pl-paginas .pl-pag{page-break-after:always;break-after:page;}' +
+    '#pl-paginas .pl-pag:last-child{page-break-after:auto;break-after:auto;}' +
+    // En papel la hoja se adapta al ancho real de la página (si el diálogo aplica otra escala o papel, no sobra margen a un lado)
+    '@media print{#pl-paginas .pl-pag{width:100%;height:auto;}#pl-paginas .pl-pie{position:static;margin-top:10px;}}';
+
+  var PL_CSS_VENTANA =
+    '@media screen{body{background:#4b4f55;padding:64px 0 24px;}#pl-paginas .pl-pag{margin:0 auto 18px;box-shadow:0 2px 14px rgba(0,0,0,.55);}' +
+    '.pl-barra-imp{position:fixed;top:0;left:0;right:0;height:48px;background:#1f2328;color:#fff;display:flex;align-items:center;justify-content:center;gap:14px;font:600 13px Arial,sans-serif;z-index:9;}' +
+    '.pl-barra-imp button{cursor:pointer;border:none;border-radius:8px;padding:9px 18px;font:700 14px Arial,sans-serif;background:#dc1a23;color:#fff;}}' +
+    '@media print{.pl-barra-imp{display:none;}}';
+
+  // ── Tiendas ──
+  var PL_TIENDAS = { 'malaga': 'Málaga', 'marbella': 'Marbella', 'mijas': 'Mijas', 'granada': 'Granada', 'motril': 'Motril',
+                     'almeria': 'Almería', 'antequera': 'Antequera', 'valencia': 'Valencia' };
+  var PL_HORARIOS_STD = {
+    'malaga':   ['06:00', '07:00', '18:00', '00:00'],
+    'marbella': ['16:00', '17:30', '19:00', '22:00'],
+    'mijas':    ['06:30', '07:00', '08:00', '10:00', '13:00']
+  };
+
+  // ── Utilidades ──
+  function plEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function plNorm(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
+  function plTxt(v) { return v == null ? '' : String(v).trim(); }
+  function plDosDig(n) { return (n < 10 ? '0' : '') + n; }
+  function plHoy() { var d = new Date(); return d.getFullYear() + '-' + plDosDig(d.getMonth() + 1) + '-' + plDosDig(d.getDate()); }
+  function plHoraMas(min) { var d = new Date(Date.now() + min * 60000); return plDosDig(d.getHours()) + ':' + plDosDig(d.getMinutes()); }
+  function plFechaTxt(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : ''; }
+  function plAviso(msg) { if (typeof showToast === 'function') showToast(msg); }
+
+  function plFechaIso(v) {
+    if (v == null || v === '') return '';
+    if (typeof v === 'number') {
+      if (v >= 19000101 && v <= 21001231) { var s = String(Math.round(v)); return s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8); }
+      return new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000).toISOString().slice(0, 10);
+    }
+    var t = String(v).trim(), m;
+    if ((m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t))) return m[1] + '-' + m[2] + '-' + m[3];
+    if ((m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/.exec(t))) return m[3] + '-' + plDosDig(+m[2]) + '-' + plDosDig(+m[1]);
+    if ((m = /^(\d{4})(\d{2})(\d{2})$/.exec(t))) return m[1] + '-' + m[2] + '-' + m[3];
+    return '';
+  }
+
+  // ── Lectura de .xlsx (zip + XML, sin librerías) ──
+  async function plInflar(bytes) {
+    var flujo = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(flujo).arrayBuffer());
+  }
+
+  async function plLeerZip(buf) {
+    var u8 = new Uint8Array(buf), dv = new DataView(buf), eocd = -1;
+    for (var i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('No es un .xlsx válido');
+    var n = dv.getUint16(eocd + 10, true), p = dv.getUint32(eocd + 16, true), dec = new TextDecoder('utf-8'), ent = {};
+    for (var k = 0; k < n; k++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) break;
+      var nlen = dv.getUint16(p + 28, true), elen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
+      ent[dec.decode(u8.subarray(p + 46, p + 46 + nlen))] = { metodo: dv.getUint16(p + 10, true), csize: dv.getUint32(p + 20, true), off: dv.getUint32(p + 42, true) };
+      p += 46 + nlen + elen + clen;
+    }
+    return { ent: ent, u8: u8, dv: dv };
+  }
+
+  async function plExtraer(zip, nombre) {
+    var e = zip.ent[nombre];
+    if (!e) return null;
+    var ini = e.off + 30 + zip.dv.getUint16(e.off + 26, true) + zip.dv.getUint16(e.off + 28, true);
+    var datos = zip.u8.subarray(ini, ini + e.csize);
+    return new TextDecoder('utf-8').decode(e.metodo === 0 ? datos : await plInflar(datos));
+  }
+
+  function plXml(s) {
+    return s.replace(/&(#x?[0-9a-fA-F]+|amp|lt|gt|quot|apos);/g, function (m, e) {
+      if (e.charAt(0) === '#') return String.fromCodePoint(e.charAt(1).toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+      return { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }[e];
+    });
+  }
+  function plTextosT(xml) {
+    var out = '', re = /<t\b[^>]*>([\s\S]*?)<\/t>/g, m;
+    while ((m = re.exec(xml)) !== null) out += plXml(m[1]);
+    return out;
+  }
+  function plColIdx(ref) {
+    var m = /^([A-Z]+)/.exec(ref), n = 0;
+    for (var i = 0; i < m[1].length; i++) n = n * 26 + (m[1].charCodeAt(i) - 64);
+    return n - 1;
+  }
+
+  function plMatrizDeHoja(xml, compartidas) {
+    var filas = [], reFila = /<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g, mf;
+    while ((mf = reFila.exec(xml)) !== null) {
+      var fila = [], reCelda = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, mc, sig = 0;
+      while ((mc = reCelda.exec(mf[1] || '')) !== null) {
+        var attrs = mc[1], cuerpo = mc[2] || '';
+        var r = /\br="([A-Z]+\d+)"/.exec(attrs), tipo = (/\bt="(\w+)"/.exec(attrs) || [])[1] || 'n';
+        var col = r ? plColIdx(r[1]) : sig;
+        sig = col + 1;
+        var v = (/<v>([\s\S]*?)<\/v>/.exec(cuerpo) || [])[1], val = '';
+        if (tipo === 'inlineStr') val = plTextosT(cuerpo);
+        else if (tipo === 's') val = compartidas[parseInt(v, 10)] || '';
+        else if (tipo === 'str') val = v == null ? '' : plXml(v);
+        else if (tipo === 'b') val = v === '1' ? 'VERDADERO' : 'FALSO';
+        else if (tipo === 'e') val = '';
+        else if (v != null && v !== '') val = parseFloat(v);
+        while (fila.length < col) fila.push('');
+        fila[col] = val;
+      }
+      if (fila.some(function (c) { return c !== '' && c != null; })) filas.push(fila);
+    }
+    return filas;
+  }
+
+  async function plParseXlsx(buf) {
+    var zip = await plLeerZip(buf);
+    var hoja = zip.ent['xl/worksheets/sheet1.xml'] ? 'xl/worksheets/sheet1.xml' :
+      Object.keys(zip.ent).filter(function (n) { return /^xl\/worksheets\/sheet\d+\.xml$/.test(n); }).sort()[0];
+    if (!hoja) throw new Error('El Excel no tiene hojas');
+    var compartidas = [], ss = await plExtraer(zip, 'xl/sharedStrings.xml');
+    if (ss) {
+      var re = /<si\b[^>]*>([\s\S]*?)<\/si>/g, m;
+      while ((m = re.exec(ss)) !== null) compartidas.push(plTextosT(m[1]));
+    }
+    return plMatrizDeHoja(await plExtraer(zip, hoja), compartidas);
+  }
+
+  // ── Lectura de texto pegado / CSV ──
+  function plParseDelimitado(texto) {
+    texto = texto.replace(/^﻿/, '');
+    var primera = texto.split(/\r?\n/)[0] || '';
+    var delim = '\t';
+    if (primera.indexOf('\t') < 0) delim = (primera.split(';').length > primera.split(',').length) ? ';' : ',';
+    var filas = [], fila = [], campo = '', enComillas = false;
+    for (var i = 0; i < texto.length; i++) {
+      var c = texto.charAt(i);
+      if (enComillas) {
+        if (c === '"') { if (texto.charAt(i + 1) === '"') { campo += '"'; i++; } else enComillas = false; }
+        else campo += c;
+      } else if (c === '"') enComillas = true;
+      else if (c === delim) { fila.push(campo); campo = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && texto.charAt(i + 1) === '\n') i++;
+        fila.push(campo); campo = '';
+        if (fila.some(function (x) { return x !== ''; })) filas.push(fila);
+        fila = [];
+      } else campo += c;
+    }
+    fila.push(campo);
+    if (fila.some(function (x) { return x !== ''; })) filas.push(fila);
+    return filas;
+  }
+
+  // ── Matriz → filas de soportes (detecta el formato por los títulos) ──
+  var PL_COLS = {
+    exp:   function (h) { return h.indexOf('expedicion') >= 0; },
+    sop:   function (h) { return h.indexOf('soporte') >= 0 && h.indexOf('numsup') >= 0; },
+    tipo:  function (h) { return h === 'tipo'; },
+    sit:   function (h) { return h.indexOf('situacion') === 0; },
+    cli:   function (h) { return h === 'cliente'; },
+    nom:   function (h) { return h.indexOf('nombre del cliente') >= 0; },
+    ped:   function (h) { return h === 'referencia pedido'; },
+    sscc:  function (h) { return h.indexOf('codigo paleta') >= 0; },
+    fecha: function (h) { return h.indexOf('fin preparac') >= 0 && h.indexOf('datsup2') >= 0; }
+  };
+  // Sin títulos: se decide por el nº de columnas (21 = formato «de una expedición», 22 = «general»)
+  var PL_POS = {
+    21: { exp: 0, sop: 1, tipo: 3, sit: 4, cli: 9,  nom: 10, ped: 13, sscc: 18, fecha: 7 },
+    22: { exp: 1, sop: 2, tipo: 4, sit: 5, cli: 10, nom: 11, ped: 14, sscc: 17, fecha: 8 }
+  };
+
+  function plMatrizAFilas(matriz) {
+    var mapa = null, inicio = 0;
+    for (var i = 0; i < Math.min(5, matriz.length) && !mapa; i++) {
+      var hs = matriz[i].map(plNorm);
+      if (!hs.some(function (h) { return h.indexOf('expedicion') >= 0; })) continue;
+      var m = {};
+      Object.keys(PL_COLS).forEach(function (k) {
+        for (var j = 0; j < hs.length; j++) { if (PL_COLS[k](hs[j])) { m[k] = j; break; } }
+      });
+      mapa = m; inicio = i + 1;
+    }
+    if (!mapa) {
+      var ancho = matriz.reduce(function (a, f) { return Math.max(a, f.length); }, 0);
+      mapa = PL_POS[ancho];
+      if (!mapa) throw new Error('No reconozco el formato del archivo (faltan los títulos de columna).');
+    }
+    if (mapa.exp == null || mapa.sop == null || mapa.sscc == null) {
+      throw new Error('Faltan columnas obligatorias (expedición, soporte o código de paleta).');
+    }
+    var out = [];
+    for (var r = inicio; r < matriz.length; r++) {
+      var f = matriz[r];
+      var get = function (k) { return mapa[k] == null ? '' : f[mapa[k]]; };
+      var sop = plTxt(get('sop'));
+      if (!sop || !/\d/.test(sop)) continue;
+      out.push({
+        exp: plTxt(get('exp')),
+        sop: sop,
+        tipo: plTxt(get('tipo')),
+        sit: plTxt(get('sit')),
+        cli: plTxt(get('cli')),
+        nom: plTxt(get('nom')),
+        ped: plTxt(get('ped')),
+        sscc: plTxt(get('sscc')),
+        fecha: plFechaIso(get('fecha'))
+      });
+    }
+    return out;
+  }
+
+  // ── Filas → expediciones (una plantilla por expedición) ──
+  function plNombreTienda(nom, cli) {
+    var n = plNorm(nom);
+    if (PL_TIENDAS[n]) return PL_TIENDAS[n];
+    var base = nom || cli;
+    if (!base) return '';
+    return base.toLowerCase().replace(/(^|\s)(\S)/g, function (m, a, b) { return a + b.toUpperCase(); });
+  }
+
+  function plConstruirExpediciones(filas) {
+    var orden = [], porExp = {}, duplicados = 0;
+    filas.forEach(function (f) {
+      var k = f.exp || 'SIN';
+      if (!porExp[k]) { porExp[k] = { exp: f.exp, filas: [], vistos: {}, tiendas: [], codigos: [] }; orden.push(k); }
+      var e = porExp[k];
+      if (e.vistos[f.sop]) { duplicados++; return; }
+      e.vistos[f.sop] = true;
+      e.filas.push(f);
+      var t = plNombreTienda(f.nom, f.cli);
+      if (t && e.tiendas.indexOf(t) < 0) e.tiendas.push(t);
+      if (f.cli && e.codigos.indexOf(f.cli) < 0) e.codigos.push(f.cli);
+    });
+    var hoy = plHoy();
+    return orden.map(function (k) {
+      var e = porExp[k], peds = {}, fechas = [];
+      if (!e.tiendas.length) e.tiendas.push('Sin tienda');
+      e.filas.forEach(function (f) {
+        f.pedVisible = f.sscc.indexOf('8424019439') === 0 ? 'CMP VALEN' : f.ped;
+        if (f.pedVisible) peds[f.pedVisible] = true;
+        if (f.fecha && fechas.indexOf(f.fecha) < 0) fechas.push(f.fecha);
+      });
+      var avisos = [];
+      var noVal = e.filas.filter(function (f) { return f.sit && plNorm(f.sit).indexOf('validado') < 0; }).length;
+      if (noVal) avisos.push(noVal + ' soporte' + (noVal > 1 ? 's' : '') + ' aún sin validar en muelle.');
+      if (e.tiendas.length > 1) avisos.push('Esta expedición mezcla varias tiendas: ' + e.tiendas.join(', ') + '.');
+      fechas.sort();
+      if (fechas.length && fechas[fechas.length - 1] < hoy) avisos.push('Los datos son de una fecha anterior a hoy (' + plFechaTxt(fechas[fechas.length - 1]) + '). ¿Es el archivo correcto?');
+      if (duplicados) { avisos.push(duplicados + ' soporte' + (duplicados > 1 ? 's' : '') + ' repetido' + (duplicados > 1 ? 's' : '') + ' descartado' + (duplicados > 1 ? 's' : '') + '.'); duplicados = 0; }
+      return {
+        exp: e.exp, filas: e.filas, tienda: e.tiendas.join(' + '), tiendasArr: e.tiendas, codigo: e.codigos.join(' + '),
+        nPedidos: Object.keys(peds).length, fecha: fechas.length ? fechas[fechas.length - 1] : hoy,
+        avisos: avisos, horario: '', horarioOtro: false, horaIni: plHoraMas(10), iniManual: false, extras: [], incluirHodos: false, hodos: null, hodosCargando: false
+      };
+    });
+  }
+
+  // ── Estilo de las celdas PEDIDO / FECHA (mismas reglas que la plantilla Excel) ──
+  function plClasePedido(f, hoy) {
+    var v = f.pedVisible;
+    if (/^[234]\d{7}$/.test(v)) return 'negro';
+    if (/^8\d{7}$/.test(v)) return 'gris';
+    var esNumero = /^\d+$/.test(v);
+    if (f.fecha && f.fecha < hoy && !(esNumero && /^[234]/.test(v))) return 'gris';
+    return '';
+  }
+
+  // ── HTML de las hojas ──
+  // Px útiles para filas: 1ª página (cabecera grande) y siguientes (cabecera pequeña), ya restados cabecera de tabla y pie
+  var PL_FILAS_P1 = 870, PL_FILAS_PN = 940;
+  function plReparto(n, r) {
+    var c1 = Math.max(1, Math.floor(PL_FILAS_P1 / r)), cn = Math.max(1, Math.floor(PL_FILAS_PN / r));
+    var pags = [Math.min(n, c1)], hecho = pags[0];
+    while (hecho < n) { var t = Math.min(cn, n - hecho); pags.push(t); hecho += t; }
+    return pags;
+  }
+  // Fila/letra: la mayor que quepa en las mismas páginas que ocuparía en tamaño mínimo
+  function plTamano(n) {
+    var minimo = 22, p = plReparto(n, minimo).length, r = minimo;
+    for (var t = 54; t > minimo; t--) { if (plReparto(n, t).length <= p) { r = t; break; } }
+    return { rh: r, fs: Math.max(12, Math.min(18, Math.round(r * 0.42))), pags: plReparto(n, r) };
+  }
+
+  function plHtmlHoja(e) {
+    var hoy = plHoy(), tam = plTamano(e.filas.length), total = tam.pags.length, desde = 0;
+    var hor = e.horario ? String(e.horario).toUpperCase() : '';
+    var tienda = e.tienda.toUpperCase();
+    var cab = '<div class="pl-h"><img src="' + PL_LOGO + '" alt="Taisa Logistics"><div class="tit"><div class="kick">PLANTILLA DE CARGA</div>' +
+      '<div class="dest">' + plEsc(tienda) + ' <span class="' + (hor ? 'hor' : 'sin') + '">· ' + plEsc(hor || '--:--') + '</span></div></div>' +
+      '<div class="dat"><span>Expedición</span><b>' + plEsc(e.exp) + '</b><span>Fecha</span><b>' + plEsc(plFechaTxt(e.fecha)) + '</b>' +
+      '<span>Hora inicio</span><b>' + plEsc(e.horaIni || '--:--') + '</b></div></div>';
+    var cols = '<colgroup><col style="width:6%"><col style="width:8%"><col style="width:19%"><col style="width:19%"><col style="width:31%"><col style="width:17%"></colgroup>' +
+      '<thead><tr><th>#</th><th>OK</th><th>SOPORTE</th><th>PEDIDO</th><th>SSCC</th><th>FECHA</th></tr></thead>';
+    return tam.pags.map(function (cuantas, pi) {
+      var filas = e.filas.slice(desde, desde + cuantas).map(function (f, k) {
+        var cf = f.fecha && f.fecha < hoy ? ' gris' : '';
+        return '<tr><td class="n">' + (desde + k + 1) + '</td><td class="ok"><span class="pl-cb"></span></td><td class="mono">' + plEsc(f.sop) + '</td>' +
+          '<td class="ped ' + plClasePedido(f, hoy) + '">' + plEsc(f.pedVisible) + '</td><td class="mono">' + plEsc(f.sscc) + '</td>' +
+          '<td class="f' + cf + '">' + plEsc(plFechaTxt(f.fecha)) + '</td></tr>';
+      }).join('');
+      desde += cuantas;
+      var ident = 'EXP. ' + plEsc(e.exp) + ' · ' + plEsc(tienda) + (hor ? ' · ' + plEsc(hor) : '');
+      var pie = '<div class="pl-pie"><span>' + ident + ' · Pág. ' + (pi + 1) + '/' + total + '</span>' +
+        (pi === total - 1 ? '<b>TOTAL: ' + e.filas.length + ' soporte' + (e.filas.length === 1 ? '' : 's') + ' · ' + e.nPedidos + ' pedido' + (e.nPedidos === 1 ? '' : 's') + '</b>' : '<span>continúa en la página siguiente</span>') + '</div>';
+      return '<div class="pl-pag" style="--rh:' + tam.rh + 'px;--fs:' + tam.fs + 'px">' +
+        (pi === 0 ? cab : '<div class="pl-cont">' + ident + ' · CONTINUACIÓN</div>') +
+        '<table class="pl-t">' + cols + '<tbody>' + filas + '</tbody></table>' + pie + '</div>';
+    }).join('');
+  }
+
+  // Vista en pantalla: las mismas páginas A4, reducidas para que quepan en el ancho disponible
+  function plVistaPapel(e) { return '<div class="pl-zoom">' + plHtmlHoja(e) + plHtmlSilueta(e) + '</div>'; }
+  function plAjustarZoom() {
+    var papeles = document.querySelectorAll('.pl-papel');
+    for (var k = 0; k < papeles.length; k++) {
+      var ancho = papeles[k].clientWidth - 24, zoom = papeles[k].querySelector('.pl-zoom');
+      if (zoom) zoom.style.zoom = ancho > 100 ? Math.min(1, ancho / 794) : 1;
+    }
+  }
+
+
+  // ── Silueta de HODOS: soportes pendientes de cargar de la tienda (solo lectura) ──
+  var PL_TIENDAS_HODOS = ['Málaga', 'Marbella', 'Mijas', 'Granada'];
+  function plTiendasHodos(e) { return e.tiendasArr.filter(function (t) { return PL_TIENDAS_HODOS.indexOf(t) >= 0; }); }
+
+  function plFormatoAntiguedad(h) {
+    if (h < 1) return Math.round(h * 60) + ' min';
+    if (h < 24) return (Math.round(h * 10) / 10) + ' h';
+    var d = Math.floor(h / 24);
+    return d + 'd ' + Math.round(h - d * 24) + 'h';
+  }
+  function plFechaHoraTxt(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return plDosDig(d.getDate()) + '/' + plDosDig(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + plDosDig(d.getHours()) + ':' + plDosDig(d.getMinutes());
+  }
+
+  function plPaginasSilueta(tienda, datos) {
+    var lista = datos.pendientes || [], n = lista.length, tam = plTamano(Math.max(1, n));
+    var total = n ? tam.pags.length : 1, desde = 0, T = tienda.toUpperCase();
+    var conAviso = lista.filter(function (x) { return x.nivelAviso === 'rojo'; }).length;
+    var cab = '<div class="pl-h"><img src="' + PL_LOGO + '" alt="Taisa Logistics"><div class="tit"><div class="kick">SILUETA · PENDIENTES DE CARGA (HODOS)</div>' +
+      '<div class="dest">' + plEsc(T) + '</div></div>' +
+      '<div class="dat"><span>Generado</span><b>' + plEsc(plFechaHoraTxt(datos.generado)) + '</b><span>Pendientes</span><b>' + n + '</b>' +
+      '<span>Con aviso</span><b>' + conAviso + '</b></div></div>';
+    var cols = '<colgroup><col style="width:6%"><col style="width:7%"><col style="width:19%"><col style="width:22%"><col style="width:28%"><col style="width:18%"></colgroup>' +
+      '<thead><tr><th>#</th><th>OK</th><th>Nº PEDIDO</th><th>ID ÚNICO</th><th>ORIGEN</th><th>ANTIGÜEDAD</th></tr></thead>';
+    var ident = 'SILUETA HODOS · ' + plEsc(T);
+    var trozos = n ? tam.pags : [0];
+    return trozos.map(function (cuantas, pi) {
+      var filas = lista.slice(desde, desde + cuantas).map(function (x, k) {
+        var sop = x.soporteTotal > 1 ? ' <small>(' + plEsc(x.soporteNum) + '/' + plEsc(x.soporteTotal) + ')</small>' : '';
+        var origen = plEsc(x.origenTexto) + (x.razonFlujo ? ' · ' + plEsc(x.razonFlujo) : '');
+        var nivel = /^(ok|amarillo|naranja|rojo)$/.test(x.nivelAviso) ? x.nivelAviso : 'ok';
+        return '<tr><td class="n">' + (desde + k + 1) + '</td><td class="ok"><span class="pl-cb"></span></td><td class="pedh">' + plEsc(x.numeroPedido) + sop + '</td>' +
+          '<td class="mono">' + plEsc(x.idUnico) + '</td><td class="or">' + origen + '</td><td class="av av-' + nivel + '">' + plEsc(plFormatoAntiguedad(Number(x.horasTranscurridas) || 0)) + '</td></tr>';
+      }).join('');
+      desde += cuantas;
+      var pie = '<div class="pl-pie"><span>' + ident + ' · Pág. ' + (pi + 1) + '/' + total + '</span>' +
+        (pi === total - 1 ? '<b>TOTAL: ' + n + ' pendiente' + (n === 1 ? '' : 's') + (conAviso ? ' · ' + conAviso + ' con aviso' : '') + '</b>' : '<span>continúa en la página siguiente</span>') + '</div>';
+      var cuerpo = n ? '<table class="pl-t">' + cols + '<tbody>' + filas + '</tbody></table>' : '<div class="pl-vacia">Sin soportes pendientes de carga en HODOS para ' + plEsc(tienda) + '.</div>';
+      return '<div class="pl-pag" style="--rh:' + tam.rh + 'px;--fs:' + tam.fs + 'px">' + (pi === 0 ? cab : '<div class="pl-cont">' + ident + ' · CONTINUACIÓN</div>') + cuerpo + pie + '</div>';
+    }).join('');
+  }
+
+  function plHtmlSilueta(e) {
+    if (!e.incluirHodos || !e.hodos) return '';
+    return plTiendasHodos(e).map(function (t) {
+      var d = e.hodos[t];
+      return d && d.ok ? plPaginasSilueta(t, d) : '';
+    }).join('');
+  }
+
+  function plTextoHodos(e) {
+    var ts = plTiendasHodos(e);
+    if (e.hodosCargando) return { txt: 'Leyendo HODOS…', mal: false };
+    if (!e.hodos) return { txt: '', mal: false };
+    var partes = [], mal = false, url = '';
+    ts.forEach(function (t) {
+      var d = e.hodos[t];
+      if (!d) return;
+      if (d.ok) partes.push(t + ': ' + d.pendientes.length + ' pendiente' + (d.pendientes.length === 1 ? '' : 's'));
+      else {
+        mal = true; partes.push(t + ': ⚠ ' + d.error);
+        if (d.autorizarUrl && /^https:\/\/(accounts|script)\.google\.com\//.test(d.autorizarUrl)) url = d.autorizarUrl;
+      }
+    });
+    return { txt: partes.join(' · '), mal: mal, url: url };
+  }
+
+  function plBloqueHodos(e, i) {
+    var ts = plTiendasHodos(e);
+    if (!ts.length) return '<div class="pl-hodos"><span class="pl-hodos-est">HODOS no gestiona ' + plEsc(e.tienda) + ': se imprime solo la plantilla.</span></div>';
+    var t = plTextoHodos(e);
+    return '<div class="pl-hodos"><label class="pl-chk"><input type="checkbox" id="plHodos' + i + '"' + (e.incluirHodos ? ' checked' : '') + ' onchange="plToggleHodos(' + i + ',this.checked)"> Imprimir también la silueta de HODOS (' + plEsc(ts.join(' + ')) + ')</label>' +
+      '<span class="pl-hodos-est' + (t.mal ? ' mal' : '') + '" id="plHodosEst' + i + '">' + plHtmlEstadoHodos(t) + '</span></div>';
+  }
+  function plHtmlEstadoHodos(t) {
+    return plEsc(t.txt) + (t.url ? ' <a href="' + plEsc(t.url) + '" target="_blank" rel="noopener" style="color:var(--accent-text,var(--accent));font-weight:800;">Conceder permiso</a> <span>(marca todas las casillas y pulsa Continuar)</span>' : '');
+  }
+  function plRefrescarHodosUI(i) {
+    var e = PL.exps[i], el = document.getElementById('plHodosEst' + i);
+    if (!e || !el) return;
+    var t = plTextoHodos(e);
+    el.innerHTML = plHtmlEstadoHodos(t);
+    el.classList.toggle('mal', t.mal);
+  }
+  function plToggleHodos(i, v) { PL.exps[i].incluirHodos = !!v; plRefrescarHoja(i); }
+
+  // Pide a HODOS los pendientes de cada tienda de las expediciones indicadas. Nunca bloquea: si falla, devuelve avisos.
+  function plTraerHodos(indices, alTerminar) {
+    var trabajos = [];
+    indices.forEach(function (i) { plTiendasHodos(PL.exps[i]).forEach(function (t) { trabajos.push({ e: PL.exps[i], t: t, listo: false }); }); });
+    if (!trabajos.length) { alTerminar([]); return; }
+    trabajos.forEach(function (j) { j.e.hodosCargando = true; });
+    var faltan = trabajos.length, avisos = [], cerrado = false, reloj = null;
+    var fin = function () {
+      if (cerrado) return;
+      cerrado = true; clearTimeout(reloj);
+      trabajos.forEach(function (j) { j.e.hodosCargando = false; });
+      alTerminar(avisos);
+    };
+    reloj = setTimeout(function () {
+      trabajos.forEach(function (j) {
+        if (j.listo) return;
+        j.listo = true; (j.e.hodos = j.e.hodos || {})[j.t] = { ok: false, error: 'tiempo agotado' };
+        avisos.push('HODOS ' + j.t + ': tiempo agotado');
+      });
+      fin();
+    }, 25000);
+    trabajos.forEach(function (j) {
+      var hecho = function (res) {
+        if (j.listo) return;
+        j.listo = true;
+        (j.e.hodos = j.e.hodos || {})[j.t] = res;
+        if (!res.ok) avisos.push('HODOS ' + j.t + ': ' + res.error + (res.autorizarUrl ? ' (usa «Conceder permiso» en la tarjeta)' : ''));
+        if (--faltan === 0) fin();
+      };
+      if (typeof google === 'undefined' || !google.script || !google.script.run) { hecho({ ok: false, error: 'sin conexión con el servidor' }); return; }
+      google.script.run
+        .withSuccessHandler(function (r) { hecho(r && typeof r === 'object' ? r : { ok: false, error: 'respuesta vacía' }); })
+        .withFailureHandler(function (err) { hecho({ ok: false, error: (err && err.message) || String(err) }); })
+        .obtenerPendientesHodos(j.t);
+    });
+  }
+
+  // Al cargar el Excel: lee HODOS en segundo plano y añade la silueta a la vista previa
+  function plLeerHodosDeNuevas(nuevas) {
+    var idx = nuevas.map(function (n) { return PL.exps.indexOf(n); }).filter(function (i) { return i >= 0; });
+    plTraerHodos(idx, function () {
+      idx.forEach(function (i) { if (PL.exps[i] && document.getElementById('plPapel' + i)) { plRefrescarHoja(i); plRefrescarHodosUI(i); } });
+    });
+    idx.forEach(function (i) { plRefrescarHodosUI(i); });
+  }
+
+  // ── Horarios: habituales de la tienda + los de hoy en el plan B2B ──
+  function plHorasOrdenadas(lista) {
+    var vistos = {};
+    return lista.filter(function (h) { if (vistos[h]) return false; vistos[h] = true; return true; })
+      .sort(function (a, b) { return (a === '00:00' ? '24:00' : a).localeCompare(b === '00:00' ? '24:00' : b); });
+  }
+  function plOpcionesHorario(e) {
+    var std = [];
+    e.tiendasArr.forEach(function (t) { std = std.concat(PL_HORARIOS_STD[plNorm(t)] || []); });
+    return plHorasOrdenadas(std.concat(e.extras || []));
+  }
+  function plExtrasB2B(e, plan) {
+    var horas = [];
+    (plan || []).forEach(function (p) {
+      if (p.tipo !== 'Carga' || p.estado === 'Completado' || p.estado === 'Anulado' || !/^\d{1,2}:\d{2}$/.test(p.hora || '')) return;
+      var d = plNorm(p.destino);
+      if (e.tiendasArr.some(function (t) { return d.indexOf(plNorm(t)) >= 0; })) horas.push(p.hora.length === 4 ? '0' + p.hora : p.hora);
+    });
+    return horas;
+  }
+
+  // ── Pantalla ──
+  function plChipsHtml(i) {
+    var e = PL.exps[i], ops = plOpcionesHorario(e), esOtro = e.horarioOtro || (e.horario && ops.indexOf(e.horario) < 0 && e.horario !== 'Extra');
+    var html = ops.concat(['Extra']).map(function (h) {
+      return '<button type="button" class="pl-chip' + (!esOtro && e.horario === h ? ' on' : '') + '" onclick="plElegirHorario(' + i + ',\'' + h + '\')">' + plEsc(h) + '</button>';
+    }).join('');
+    html += '<button type="button" class="pl-chip' + (esOtro ? ' on' : '') + '" onclick="plHorarioOtro(' + i + ')">✎ Otro</button>';
+    return html;
+  }
+
+  function plRender() {
+    var cont = document.getElementById('plSalida');
+    if (!PL.exps.length) { cont.innerHTML = ''; document.getElementById('plBarra').style.display = 'none'; return; }
+    document.getElementById('plBarra').style.display = 'flex';
+    var total = PL.exps.reduce(function (a, e) { return a + e.filas.length; }, 0);
+    document.getElementById('plInfo').textContent = PL.exps.length + ' plantilla' + (PL.exps.length > 1 ? 's' : '') + ' · ' + total + ' soportes';
+    document.getElementById('plBtnTodas').style.display = PL.exps.length > 1 ? '' : 'none';
+    cont.innerHTML = PL.exps.map(function (e, i) {
+      var esOtro = e.horarioOtro || (e.horario && plOpcionesHorario(e).indexOf(e.horario) < 0 && e.horario !== 'Extra');
+      return '<div class="pl-card" id="plCard' + i + '">' +
+        '<div class="pl-top"><div><div class="pl-tienda">' + plEsc(e.tienda) + (e.codigo ? ' <span style="font-size:13px;color:var(--text-500);font-weight:700;">' + plEsc(e.codigo) + '</span>' : '') + '</div>' +
+        '<div class="pl-meta">Expedición ' + plEsc(e.exp) + ' · ' + e.filas.length + ' soportes · ' + e.nPedidos + ' pedidos</div></div>' +
+        '<button type="button" class="pl-btn" onclick="plImprimirUna(' + i + ')">🖨 Imprimir</button></div>' +
+        (e.avisos.length ? '<div class="pl-avisos">' + e.avisos.map(function (a) { return '<div class="pl-aviso">⚠️ ' + plEsc(a) + '</div>'; }).join('') + '</div>' : '') +
+        '<div class="pl-ctrl"><div><label>Horario</label><div class="pl-chips" id="plChips' + i + '">' + plChipsHtml(i) + '</div>' +
+        '<input class="pl-in pl-otro' + (esOtro ? ' abierto' : '') + '" id="plOtro' + i + '" type="text" maxlength="12" placeholder="HH:MM" value="' + plEsc(esOtro ? e.horario : '') + '" oninput="plHorarioTexto(' + i + ',this.value)"></div>' +
+        '<div><label>Hora inicio</label><input class="pl-in" id="plIni' + i + '" type="time" value="' + plEsc(e.horaIni) + '" oninput="plCambiaHora(' + i + ',\'horaIni\',this.value)"></div></div>' +
+        plBloqueHodos(e, i) +
+        '<div class="pl-papel" id="plPapel' + i + '">' + plVistaPapel(e) + '</div></div>';
+    }).join('');
+    plAjustarZoom();
+  }
+
+  function plRefrescarHoja(i) { document.getElementById('plPapel' + i).innerHTML = plVistaPapel(PL.exps[i]); plAjustarZoom(); }
+  function plRefrescarChips(i) {
+    document.getElementById('plChips' + i).innerHTML = plChipsHtml(i);
+    document.getElementById('plChips' + i).classList.remove('falta');
+  }
+
+  function plElegirHorario(i, h) {
+    var e = PL.exps[i];
+    e.horario = h; e.horarioOtro = false;
+    document.getElementById('plOtro' + i).classList.remove('abierto');
+    plRefrescarChips(i); plRefrescarHoja(i);
+  }
+  function plHorarioOtro(i) {
+    var e = PL.exps[i];
+    e.horarioOtro = true; e.horario = '';
+    var inp = document.getElementById('plOtro' + i);
+    inp.classList.add('abierto'); inp.value = '';
+    plRefrescarChips(i); plRefrescarHoja(i);
+    inp.focus();
+  }
+  function plHorarioTexto(i, v) { PL.exps[i].horario = v.trim(); PL.exps[i].horarioOtro = true; plRefrescarHoja(i); }
+  function plCambiaHora(i, campo, v) {
+    PL.exps[i][campo] = v;
+    if (campo === 'horaIni') PL.exps[i].iniManual = true;
+    plRefrescarHoja(i);
+  }
+
+  // ── Carga de archivos ──
+  function plAlElegir(input) { plProcesarFicheros(Array.prototype.slice.call(input.files || [])); input.value = ''; }
+  function plAlPegar() {
+    var t = document.getElementById('plPegado').value;
+    if (!t.trim()) { plAviso('❌ Pega primero los datos'); return; }
+    try { plAnadir(plMatrizAFilas(plParseDelimitado(t))); document.getElementById('plPegado').value = ''; }
+    catch (err) { plAviso('❌ ' + err.message); }
+  }
+
+  async function plProcesarFicheros(lista) {
+    var todas = [], errores = [];
+    for (var i = 0; i < lista.length; i++) {
+      var f = lista[i];
+      try {
+        var matriz = /\.xlsx$/i.test(f.name) ? await plParseXlsx(await f.arrayBuffer()) : plParseDelimitado(await f.text());
+        todas = todas.concat(plMatrizAFilas(matriz));
+      } catch (err) { errores.push(f.name + ': ' + err.message); }
+    }
+    if (errores.length) plAviso('❌ ' + errores.join(' · '));
+    if (todas.length) plAnadir(todas);
+    else if (!errores.length) plAviso('❌ No encontré soportes en el archivo');
+  }
+
+  function plAnadir(filas) {
+    if (!filas.length) { plAviso('❌ No encontré soportes en los datos'); return; }
+    var nuevas = plConstruirExpediciones(filas);
+    nuevas.forEach(function (n) {
+      var ya = PL.exps.filter(function (e) { return e.exp === n.exp; })[0];
+      if (ya) { PL.exps[PL.exps.indexOf(ya)] = n; } else PL.exps.push(n);
+    });
+    plRender();
+    plCargarHorariosB2B();
+    plLeerHodosDeNuevas(nuevas);
+    plAviso('✅ ' + nuevas.length + ' plantilla' + (nuevas.length > 1 ? 's' : '') + ' lista' + (nuevas.length > 1 ? 's' : ''));
+  }
+
+  function plCargarHorariosB2B() {
+    var aplicar = function (plan) {
+      PL.exps.forEach(function (e, i) {
+        e.extras = plExtrasB2B(e, plan);
+        if (document.getElementById('plChips' + i)) plRefrescarChips(i);
+      });
+    };
+    if (PL.b2b && Date.now() - PL.b2bTs < 120000) { aplicar(PL.b2b); return; }
+    if (typeof google === 'undefined' || !google.script || !google.script.run) return;
+    google.script.run.withSuccessHandler(function (v) {
+      if (v && v.ok) { PL.b2b = v.plan || []; PL.b2bTs = Date.now(); aplicar(PL.b2b); }
+    }).withFailureHandler(function () {}).obtenerVistaCargas();
+  }
+
+  function plLimpiar() { PL.exps = []; plRender(); }
+
+  // ── Impresión ──
+  function plPrepararParaImprimir(indices) {
+    var faltan = indices.filter(function (i) { return !PL.exps[i].horario; });
+    if (faltan.length) {
+      faltan.forEach(function (i) { document.getElementById('plChips' + i).classList.add('falta'); });
+      var c = document.getElementById('plCard' + faltan[0]);
+      if (c && c.scrollIntoView) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      plAviso('❌ Elige el horario antes de imprimir');
+      return false;
+    }
+    indices.forEach(function (i) {
+      var e = PL.exps[i];
+      if (!e.iniManual) {
+        e.horaIni = plHoraMas(10);
+        var inp = document.getElementById('plIni' + i);
+        if (inp) inp.value = e.horaIni;
+        plRefrescarHoja(i);
+      }
+    });
+    return true;
+  }
+
+  function plDocumento(indices, conVentana, avisos) {
+    var textoBarra = avisos && avisos.length ? '⚠ ' + avisos.join(' · ') + ' — se imprime sin esa parte' : 'Así sale en papel · A4';
+    return '<!doctype html><html><head><meta charset="utf-8"><title>Plantilla de carga</title><style>' + PL_CSS_HOJA + PL_CSS_IMPRESION + (conVentana ? PL_CSS_VENTANA : '') + '</style></head><body>' +
+      (conVentana ? '<div class="pl-barra-imp"><button type="button" onclick="window.print()">🖨 Imprimir</button><span style="max-width:70vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + plEsc(textoBarra) + '</span></div>' : '') +
+      '<div id="pl-paginas">' + indices.map(function (i) { return plHtmlHoja(PL.exps[i]) + plHtmlSilueta(PL.exps[i]); }).join('') + '</div>' +
+      (conVentana ? '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},400);});<\/script>' : '') + '</body></html>';
+  }
+
+  function plImprimirEnMarco(html) {
+    var viejo = document.getElementById('plMarcoImpresion');
+    if (viejo) viejo.remove();
+    var marco = document.createElement('iframe');
+    marco.id = 'plMarcoImpresion';
+    marco.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+    document.body.appendChild(marco);
+    var doc = marco.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+    var intentos = 0;
+    var listo = function () {
+      var imgs = doc.images, ok = true;
+      for (var k = 0; k < imgs.length; k++) if (!imgs[k].complete) ok = false;
+      if (!ok && intentos++ < 20) { setTimeout(listo, 100); return; }
+      try { marco.contentWindow.focus(); marco.contentWindow.print(); }
+      catch (err) { plAviso('❌ El navegador bloqueó la impresión'); }
+    };
+    setTimeout(listo, 250);
+  }
+
+  function plImprimirVarias(indices) {
+    if (!plPrepararParaImprimir(indices)) return;
+    var conHodos = indices.filter(function (i) { var e = PL.exps[i]; return e.incluirHodos && plTiendasHodos(e).length; });
+    // La ventana se abre ya (mientras dura el clic) y se rellena cuando HODOS responde
+    var w = null;
+    try { w = window.open('', '_blank'); } catch (err) { w = null; }
+    if (w && conHodos.length) {
+      w.document.open();
+      w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Plantilla de carga</title></head><body style="margin:0;background:#4b4f55;color:#fff;font:600 16px Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">Preparando la plantilla y los pendientes de HODOS…</body></html>');
+      w.document.close();
+    }
+    plTraerHodos(conHodos, function (avisos) {
+      conHodos.forEach(function (i) { plRefrescarHoja(i); plRefrescarHodosUI(i); });
+      if (avisos.length) plAviso('⚠️ ' + avisos[0] + (avisos.length > 1 ? ' (+' + (avisos.length - 1) + ')' : ''));
+      var html = plDocumento(indices, !!w, avisos);
+      if (w && !w.closed) { w.document.open(); w.document.write(html); w.document.close(); }
+      else if (!w) plImprimirEnMarco(html);
+    });
+  }
+  function plImprimirUna(i) { plImprimirVarias([i]); }
+  function plImprimirTodas() { plImprimirVarias(PL.exps.map(function (e, i) { return i; })); }
+
+  // ── Arranque ──
+  function plInit() {
+    var estilo = document.createElement('style');
+    estilo.textContent = PL_CSS_HOJA;
+    document.head.appendChild(estilo);
+    window.addEventListener('resize', plAjustarZoom);
+    var zona = document.getElementById('plDrop');
+    ['dragenter', 'dragover'].forEach(function (ev) { zona.addEventListener(ev, function (x) { x.preventDefault(); zona.classList.add('encima'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { zona.addEventListener(ev, function (x) { x.preventDefault(); zona.classList.remove('encima'); }); });
+    zona.addEventListener('drop', function (x) { plProcesarFicheros(Array.prototype.slice.call((x.dataTransfer && x.dataTransfer.files) || [])); });
+  }
+  if (typeof document !== 'undefined' && document.getElementById && document.getElementById('plDrop')) plInit();
+</script>

@@ -1,0 +1,327 @@
+<style>
+  .maq-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .maq-btn-nueva { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; font-size:13px; font-weight:700; background:var(--ink-800); color:var(--text-300); transition:transform .15s ease, background .15s ease; }
+  .maq-btn-nueva:active { transform:scale(.96); background:var(--ink-700); }
+  .maq-nueva-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--accent-line); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:14px; margin-bottom:14px; display:none; }
+  .maq-nueva-card.abierto { display:block; }
+
+  .maq-list { display:flex; flex-direction:column; gap:10px; }
+  /* Pantalla ancha: la lista pasa a rejilla, varias máquinas visibles a la
+     vez en vez de una columna estrecha — en móvil sigue en columna única. */
+  @media (min-width: 900px) {
+    .maq-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:12px; align-items:start; }
+    .maq-nueva-card { max-width:520px; }
+  }
+  .maq-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); overflow:hidden; transition:box-shadow .2s ease; }
+  .maq-card-head { padding:13px 14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; transition:background .15s ease; }
+  .maq-card-head:active { background:rgba(255,255,255,.04); }
+  .maq-card-nombre { font-weight:700; font-size:14px; color:var(--text-100); }
+  .maq-card-meta { font-size:11.5px; color:var(--text-500); margin-top:2px; }
+  .maq-badge { font-size:11px; font-weight:800; padding:4px 11px; border-radius:var(--radius-chip); white-space:nowrap; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .maq-badge-OK { background:var(--ink-800); color:var(--ok); }
+  .maq-badge-Fallas { background:var(--warn-bg); color:var(--warn-fg); }
+  .maq-badge-Averiada { background:var(--danger-bg); color:var(--danger-fg); }
+  .maq-badge-Revision { background:var(--ink-800); color:var(--accent-text); }
+
+  .maq-card-body { max-height:0; opacity:0; overflow:hidden; padding:0 14px; transition:max-height .32s ease, opacity .25s ease, padding .32s ease; }
+  .maq-card-body.abierto { max-height:1400px; opacity:1; padding:2px 14px 14px; border-top:1px solid var(--ink-800); }
+
+  .maq-estados { display:flex; gap:8px; margin:12px 0; }
+  .maq-estado-btn { flex:1; cursor:pointer; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:12px 4px; font-size:13px; font-weight:700; text-align:center; transition:all .15s ease; }
+  .maq-estado-btn:active { transform:scale(.96); }
+  .maq-estado-btn.sel-OK { border-color:var(--ok); background:var(--ink-900); color:var(--ok); }
+  .maq-estado-btn.sel-Fallas { border-color:var(--warn-line); background:var(--warn-bg); color:var(--warn-fg); }
+  .maq-estado-btn.sel-Averiada { border-color:var(--danger-line); background:var(--danger-bg); color:var(--danger-fg); }
+  .maq-estado-btn.sel-Revision { border-color:var(--accent); background:var(--ink-900); color:var(--accent-text); }
+  .maq-textarea { width:100%; min-height:80px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:12px; font-size:15px; font-family:inherit; resize:vertical; margin-bottom:12px; box-sizing:border-box; }
+  .maq-btn-guardar { width:100%; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:14px; min-height:48px; font-size:15px; font-weight:800; background:var(--accent); color:var(--accent-ink); box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 55%, transparent), 0 1px 0 rgba(255,255,255,.15) inset; transition:transform .15s ease; }
+  .maq-btn-guardar:active { transform:scale(.98); }
+
+  .maq-hist-box { margin-top:16px; }
+  .maq-hist-item { background:var(--ink-950); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:10px 12px; margin-bottom:6px; font-size:12.5px; }
+  .maq-hist-item .fecha { color:var(--text-500); font-size:11px; }
+
+  .maq-editar-toggle { display:block; text-align:right; font-size:12px; color:var(--text-500); cursor:pointer; margin:2px 0 10px; font-weight:700; }
+  .maq-editar-box { display:none; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-card); padding:12px; margin-bottom:14px; }
+  .maq-editar-box.abierto { display:block; }
+  .maq-editar-box input, .maq-editar-box select { width:100%; background:var(--ink-900); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px; font-size:14px; margin-top:6px; margin-bottom:8px; box-sizing:border-box; }
+  .maq-editar-box label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-500); }
+  .maq-editar-box button { width:100%; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px; font-size:13px; font-weight:700; background:var(--ink-700); color:var(--text-100); transition:transform .15s ease; }
+  .maq-editar-box button:active { transform:scale(.97); }
+
+  .maq-sup-card { background:linear-gradient(160deg, var(--warn-bg) 0%, var(--ink-900) 140%); border:1px solid var(--warn-line); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:14px; margin-bottom:10px; }
+  .maq-sup-card input { width:100%; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px; font-size:14px; margin-top:6px; margin-bottom:8px; box-sizing:border-box; }
+  .maq-sup-card button { width:100%; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px; font-size:13px; font-weight:700; background:var(--accent); color:var(--accent-ink); transition:transform .15s ease; }
+  .maq-sup-card button:active { transform:scale(.97); }
+</style>
+
+<div class="maq-top">
+  <div>
+    <h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">🔧 Maquinaria</h1>
+    <p style="color:var(--text-500);font-size:13px;margin:0;">Toca una máquina para ver o cambiar su estado.</p>
+  </div>
+  <button type="button" class="maq-btn-nueva" onclick="maqToggleNueva()">➕ Añadir</button>
+</div>
+
+<div class="maq-nueva-card" id="maqNuevaCard">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Tipo de máquina</label>
+  <input type="text" id="maqNuevaTipo" placeholder="Ej. TRANSPALETA ELECT" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Propietaria</label>
+  <select id="maqNuevaPropietaria" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;">
+    <option value="Linde">Linde</option>
+    <option value="Still">Still</option>
+  </select>
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Designación (código corto, opcional)</label>
+  <input type="text" id="maqNuevaDesignacion" placeholder="Ej. MOTO, RT, ELV, TORO" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;">
+  <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Serial</label>
+  <input type="text" id="maqNuevaSerial" placeholder="Identificador físico" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:10px;box-sizing:border-box;">
+  <button type="button" class="maq-btn-guardar" id="maqBtnCrear" onclick="maqCrearMaquina()">Añadir máquina</button>
+</div>
+
+<div class="maq-list" id="maqLista">Cargando…</div>
+
+<div id="maqSupervisorBox" style="display:none;margin-top:24px;">
+  <h3 style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--warn-fg);margin:0 0 10px;">🔒 Revisión SAT (supervisor)</h3>
+  <div id="maqSupervisorLista"></div>
+</div>
+
+<script>
+  let maqCache = [];
+  let maqAbierta = null;
+  let maqEstadoElegido = {};
+  const MAQ_ESTADOS = ['OK', 'Fallas', 'Averiada', 'Revision'];
+  const MAQ_ETIQUETA_ESTADO = { OK: 'OK', Fallas: 'Fallas', Averiada: 'Averiada', Revision: 'En revisión' };
+
+  function maqInit() {
+    google.script.run.withSuccessHandler(function (lista) {
+      maqCache = lista;
+      maqRenderLista();
+    }).obtenerMaquinas();
+  }
+
+  function maqToggleNueva() {
+    document.getElementById('maqNuevaCard').classList.toggle('abierto');
+  }
+
+  function maqCrearMaquina() {
+    const tipo = document.getElementById('maqNuevaTipo').value.trim();
+    const propietaria = document.getElementById('maqNuevaPropietaria').value;
+    const designacion = document.getElementById('maqNuevaDesignacion').value.trim();
+    const serial = document.getElementById('maqNuevaSerial').value.trim();
+    if (!tipo || !serial) { showToast('❌ Rellena al menos tipo y serial'); return; }
+
+    const boton = document.getElementById('maqBtnCrear');
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        boton.disabled = false;
+        boton.textContent = 'Añadir máquina';
+        if (result && result.success) {
+          showToast('✅ Máquina ' + result.id + ' añadida');
+          document.getElementById('maqNuevaTipo').value = '';
+          document.getElementById('maqNuevaDesignacion').value = '';
+          document.getElementById('maqNuevaSerial').value = '';
+          document.getElementById('maqNuevaCard').classList.remove('abierto');
+          maqInit();
+        } else {
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Añadir máquina';
+        showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .crearMaquina({ maquina: tipo, propietaria: propietaria, designacion: designacion, serial: serial });
+  }
+
+  function maqRenderLista() {
+    const cont = document.getElementById('maqLista');
+    if (!maqCache.length) { cont.innerHTML = '<p style="color:var(--text-500);font-size:13px;">Sin máquinas todavía — añade la primera con "➕ Añadir".</p>'; return; }
+    cont.innerHTML = maqCache.map(function (m) {
+      const obsInicial = m.estado !== 'OK' ? m.observacion : '';
+      return '<div class="maq-card">' +
+        '<div class="maq-card-head" onclick="maqToggle(' + m.id + ')">' +
+          '<div><div class="maq-card-nombre">' + m.id + ' · ' + m.maquina + '</div>' +
+          '<div class="maq-card-meta">' + m.propietaria + ' · ' + m.serial + '</div></div>' +
+          '<span class="maq-badge maq-badge-' + m.estado + '">' + (MAQ_ETIQUETA_ESTADO[m.estado] || m.estado) + '</span>' +
+        '</div>' +
+        '<div class="maq-card-body" id="maqBody-' + m.id + '">' +
+          '<span class="maq-editar-toggle" onclick="maqToggleEditar(' + m.id + ')">✏️ Editar datos de la máquina</span>' +
+          '<div class="maq-editar-box" id="maqEditarBox-' + m.id + '">' +
+            '<label>Tipo</label><input type="text" id="maqEditTipo-' + m.id + '" value="' + m.maquina + '">' +
+            '<label>Propietaria</label><select id="maqEditPropietaria-' + m.id + '">' +
+              '<option value="Linde"' + (m.propietaria === 'Linde' ? ' selected' : '') + '>Linde</option>' +
+              '<option value="Still"' + (m.propietaria === 'Still' ? ' selected' : '') + '>Still</option>' +
+            '</select>' +
+            '<label>Designación</label><input type="text" id="maqEditDesignacion-' + m.id + '" value="' + (m.designacion || '') + '">' +
+            '<label>Serial</label><input type="text" id="maqEditSerial-' + m.id + '" value="' + m.serial + '">' +
+            '<button type="button" onclick="maqGuardarDatos(' + m.id + ')">Guardar datos</button>' +
+          '</div>' +
+          '<div class="maq-estados">' +
+            MAQ_ESTADOS.map(function (e) {
+              return '<div class="maq-estado-btn" id="maqEstadoBtn-' + m.id + '-' + e + '" onclick="maqElegirEstado(' + m.id + ',\'' + e + '\')">' + MAQ_ETIQUETA_ESTADO[e] + '</div>';
+            }).join('') +
+          '</div>' +
+          '<textarea class="maq-textarea" id="maqObs-' + m.id + '" placeholder="Describe el problema (obligatorio si no es OK)...">' + obsInicial + '</textarea>' +
+          '<button type="button" class="maq-btn-guardar" id="maqBtnGuardar-' + m.id + '" onclick="maqGuardar(' + m.id + ')">Guardar estado</button>' +
+          '<div class="maq-hist-box">' +
+            '<h3 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin:0 0 8px;">Historial</h3>' +
+            '<div id="maqHist-' + m.id + '" style="font-size:12.5px;color:var(--text-500);">—</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function maqToggle(id) {
+    const body = document.getElementById('maqBody-' + id);
+    if (!body) return;
+    const yaAbierta = body.classList.contains('abierto');
+    if (maqAbierta !== null && maqAbierta !== id) {
+      const prev = document.getElementById('maqBody-' + maqAbierta);
+      if (prev) prev.classList.remove('abierto');
+    }
+    body.classList.toggle('abierto', !yaAbierta);
+    maqAbierta = yaAbierta ? null : id;
+    if (!yaAbierta) {
+      const m = maqCache.find(function (x) { return String(x.id) === String(id); });
+      if (m && m.estado !== 'OK') maqElegirEstado(id, m.estado);
+      maqCargarHistorial(id);
+    }
+  }
+
+  function maqToggleEditar(id) {
+    const box = document.getElementById('maqEditarBox-' + id);
+    if (box) box.classList.toggle('abierto');
+  }
+
+  function maqGuardarDatos(id) {
+    const tipo = document.getElementById('maqEditTipo-' + id).value.trim();
+    const propietaria = document.getElementById('maqEditPropietaria-' + id).value;
+    const designacion = document.getElementById('maqEditDesignacion-' + id).value.trim();
+    const serial = document.getElementById('maqEditSerial-' + id).value.trim();
+    if (!tipo || !serial) { showToast('❌ Tipo y serial no pueden quedar vacíos'); return; }
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        if (result && result.success) {
+          showToast('✅ Datos actualizados');
+          maqRecargarYReabrir(id);
+        } else {
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .actualizarDatosMaquina({ id: id, maquina: tipo, propietaria: propietaria, designacion: designacion, serial: serial });
+  }
+
+  function maqElegirEstado(id, estado) {
+    maqEstadoElegido[id] = estado;
+    MAQ_ESTADOS.forEach(function (e) {
+      const btn = document.getElementById('maqEstadoBtn-' + id + '-' + e);
+      if (btn) btn.className = 'maq-estado-btn' + (e === estado ? ' sel-' + e : '');
+    });
+  }
+
+  function maqCargarHistorial(id) {
+    const box = document.getElementById('maqHist-' + id);
+    if (!box) return;
+    box.textContent = 'Cargando…';
+    google.script.run.withSuccessHandler(function (historial) {
+      const boxAhora = document.getElementById('maqHist-' + id);
+      if (!boxAhora) return;
+      if (!historial || !historial.length) { boxAhora.textContent = 'Sin averías registradas.'; return; }
+      boxAhora.innerHTML = historial.map(function (h) {
+        return '<div class="maq-hist-item"><div class="fecha">' + h.fechaInicio + ' → ' + h.fechaResuelto + '</div>' +
+          '<div><b>' + h.estado + ':</b> ' + h.observacion + '</div></div>';
+      }).join('');
+    }).obtenerHistorialMaquina(id);
+  }
+
+  function maqGuardar(id) {
+    const estado = maqEstadoElegido[id];
+    const obsEl = document.getElementById('maqObs-' + id);
+    const observacion = obsEl ? obsEl.value.trim() : '';
+    if (!estado) { showToast('❌ Selecciona un estado'); return; }
+    if (estado !== 'OK' && observacion.length < 5) { showToast('❌ Describe la avería'); return; }
+    if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
+
+    const boton = document.getElementById('maqBtnGuardar-' + id);
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        if (result && result.success) {
+          showToast(result.avisoSat ? '✅ Guardado, SAT avisado' : '✅ Guardado');
+          maqRecargarYReabrir(id);
+        } else {
+          boton.disabled = false;
+          boton.textContent = 'Guardar estado';
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Guardar estado';
+        showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .procesarActualizacionMaquina({ jefe_equipo: CentinelaState.jefe, id: id, estado: estado, observacion: observacion });
+  }
+
+  function maqRecargarYReabrir(id) {
+    google.script.run.withSuccessHandler(function (lista) {
+      maqCache = lista;
+      maqRenderLista();
+      const body = document.getElementById('maqBody-' + id);
+      if (body) {
+        body.classList.add('abierto');
+        maqAbierta = id;
+        maqCargarHistorial(id);
+      }
+    }).obtenerMaquinas();
+  }
+
+  function maquinariaActualizarSupervisor() {
+    const box = document.getElementById('maqSupervisorBox');
+    if (!CentinelaState.supervisor) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    const lista = document.getElementById('maqSupervisorLista');
+    lista.textContent = 'Cargando…';
+    google.script.run.withSuccessHandler(function (maquinas) {
+      if (!maquinas || !maquinas.length) { lista.innerHTML = '<p style="color:var(--text-500);font-size:13px;">No hay averías activas.</p>'; return; }
+      lista.innerHTML = maquinas.map(function (m) {
+        return '<div class="maq-sup-card">' +
+          '<b>' + m.id + ' · ' + m.maquina + '</b> (' + m.serial + ') — ' + (MAQ_ETIQUETA_ESTADO[m.estado] || m.estado) + '<br>' +
+          '<span style="color:var(--text-500);font-size:12px;">' + m.observacion + '</span>' +
+          '<input type="text" id="maqPresu-' + m.id + '" placeholder="Presupuestado" value="' + (m.presupuestado || '') + '">' +
+          '<input type="text" id="maqAcept-' + m.id + '" placeholder="Aceptado" value="' + (m.aceptado || '') + '">' +
+          '<input type="text" id="maqObsRev-' + m.id + '" placeholder="Observaciones tras revisión" value="' + (m.observacionesRevision || '') + '">' +
+          '<button type="button" onclick="maqGuardarRevision(\'' + m.id + '\')">Guardar revisión</button>' +
+          '</div>';
+      }).join('');
+    }).obtenerMaquinasConAveria();
+  }
+
+  function maqGuardarRevision(id) {
+    const presupuestado = document.getElementById('maqPresu-' + id).value;
+    const aceptado = document.getElementById('maqAcept-' + id).value;
+    const observacionesRevision = document.getElementById('maqObsRev-' + id).value;
+    google.script.run
+      .withSuccessHandler(function (result) {
+        if (result && result.success) showToast('✅ Revisión guardada');
+        else showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+      })
+      .withFailureHandler(function (err) {
+        showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .guardarRevisionSat({ id: id, presupuestado: presupuestado, aceptado: aceptado, observacionesRevision: observacionesRevision });
+  }
+
+  maqInit();
+</script>

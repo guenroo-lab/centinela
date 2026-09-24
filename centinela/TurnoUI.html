@@ -1,0 +1,1115 @@
+<style>
+    :root { --radius: 20px; }
+
+
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--ink-950);
+      color: var(--text-100);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 60px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 80% -10%, rgba(227,6,19,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 10% 100%, rgba(0,194,255,0.05) 0%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      opacity: 0.4; pointer-events: none; z-index: 0;
+    }
+
+    .wrap {
+      position: relative; z-index: 1;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 24px 12px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+      animation: fadeDown 0.7s ease both;
+    }
+
+    .logo-wrap {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      background: white;
+      padding: 12px 22px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      max-width: 100%;
+      box-shadow: 0 0 0 1px rgba(227,6,19,0.4), 0 18px 40px rgba(0,0,0,0.6);
+    }
+    /* width:auto mantiene la proporción del logo (349x144) al fijar la altura */
+    .logo-wrap img {
+      height: 46px;
+      width: auto;
+      max-width: 100%;
+      display: block;
+    }
+
+    .header-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.2rem, 9vw, 3rem);
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #fff 30%, #6b7899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .header-sub {
+      color: var(--text-500);
+      font-size: 0.88rem;
+      letter-spacing: 0.3px;
+    }
+
+    .divider {
+      width: 50px; height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+
+    .card {
+      background: linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%);
+      border: 1px solid var(--ink-800);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      animation: cardIn 0.5s ease both;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .card-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 15px;
+      color: var(--text-500);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      color: var(--text-500);
+      margin-bottom: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select, textarea {
+      width: 100%;
+      background: var(--ink-950);
+      border: 1px solid var(--ink-700);
+      border-radius: 12px;
+      color: var(--text-100);
+      padding: 14px 16px;
+      font-size: 16px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 12px;
+    }
+    select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    select option { background: var(--ink-850); }
+
+    .hint {
+      font-size: 12.5px;
+      color: var(--text-500);
+      line-height: 1.5;
+      margin-bottom: 4px;
+    }
+
+    .rol-preview {
+      display: none;
+      background: var(--ink-850);
+      border: 1px solid var(--ink-800);
+      border-left: 3px solid var(--accent);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 12px;
+    }
+    .rol-preview.show { display: block; }
+    .rol-preview h3 {
+      font-size: 13px;
+      color: var(--text-100);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .rol-preview ul { margin: 0; padding-left: 18px; }
+    .rol-preview li {
+      font-size: 13px;
+      color: var(--text-500);
+      line-height: 1.7;
+    }
+
+    .zona-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .zona-number {
+      width: 60px;
+      height: 60px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(227,6,19,0.25);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      color: var(--accent-text);
+      flex-shrink: 0;
+    }
+    .zona-info { min-width: 0; }   /* deja que el texto encoja dentro del flex */
+    .zona-info h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: var(--text-100);
+      margin-bottom: 4px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+    .zona-info p {
+      font-size: 13px;
+      color: var(--text-500);
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    .camera-zone {
+      background: var(--ink-950);
+      border: 2px dashed rgba(227,6,19,0.3);
+      border-radius: 14px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 18px;
+      position: relative;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s;
+    }
+    .camera-zone:hover,
+    .camera-zone:active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .camera-zone:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .camera-zone.processing {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    .camera-zone.has-photo {
+      border-color: var(--green);
+      border-style: solid;
+      padding: 10px;
+    }
+    .camera-zone input { display: none; }
+    .camera-icon { font-size: 52px; margin-bottom: 12px; }
+    .camera-text { font-size: 15px; color: var(--text-500); }
+    .camera-text strong {
+      color: var(--accent-text);
+      display: block;
+      font-size: 16px;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+    .preview-img {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .photo-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: var(--green);
+      color: #000;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 50px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .retake-btn {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      background: rgba(0,0,0,0.78);
+      color: #fff;
+      border: 1px solid var(--ink-700);
+      padding: 12px 18px;
+      min-height: 44px;          /* área táctil mínima para el dedo */
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .retake-btn:active {
+      background: rgba(0,0,0,0.95);
+      transform: scale(0.96);
+    }
+
+    .rating-row {
+      display: grid;
+      /* minmax(0,1fr): sin esto las columnas crecen hasta el ancho de la
+         palabra más larga ("CRÍTICO") y el 5º botón se sale de la tarjeta */
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .rating-btn {
+      padding: 14px 4px;
+      border-radius: 12px;
+      border: 1px solid var(--ink-800);
+      background: var(--ink-950);
+      color: var(--text-500);
+      font-size: clamp(10px, 3vw, 12px);
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .rating-btn span {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+    .rating-btn.selected-1 { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-text); }
+    .rating-btn.selected-2 { border-color: #ff7043; background: rgba(255,112,67,0.12); color: #ff7043; }
+    .rating-btn.selected-3 { border-color: var(--gold); background: rgba(240,180,41,0.12); color: var(--gold); }
+    .rating-btn.selected-4 { border-color: #69f0ae; background: rgba(105,240,174,0.12); color: #69f0ae; }
+    .rating-btn.selected-5 { border-color: var(--green); background: rgba(34,197,94,0.12); color: var(--green); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 18px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: filter 0.2s, transform 0.15s;
+      margin-top: 10px;
+    }
+    .btn-primary:hover { filter: brightness(1.15); transform: translateY(-2px); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      filter: none;
+      transform: none;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 16px 20px;
+      background: transparent;
+      color: var(--text-500);
+      border: 1px solid var(--ink-800);
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--text-100);
+    }
+    .btn-secondary:active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      transform: scale(0.98);
+    }
+
+    .progreso {
+      font-size: 12px;
+      color: var(--text-500);
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .resumen-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--ink-800);
+    }
+    .resumen-item:last-child { border-bottom: none; }
+    .resumen-label {
+      font-size: 15px;
+      color: var(--text-500);
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+    .resumen-value {
+      font-size: 15px;
+      color: var(--text-100);
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .global-score {
+      background: var(--ink-850);
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+      margin-top: 20px;
+      border: 1px solid var(--ink-800);
+    }
+    .global-score-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      color: var(--text-500);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    .global-score-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 60px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .global-score-badge {
+      font-size: 18px;
+      margin-top: 8px;
+      font-weight: 700;
+    }
+
+    .success-screen {
+      text-align: center;
+      padding: 30px 0;
+    }
+    .success-icon {
+      font-size: 72px;
+      /* width:fit-content evita que el "pop" escale una caja a todo lo ancho
+         y asome fuera de la pantalla mientras dura la animación */
+      width: fit-content;
+      margin: 0 auto 20px;
+      animation: pop 0.5s ease;
+    }
+    @keyframes pop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .success-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      color: var(--green);
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+    .success-sub {
+      color: var(--text-500);
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+
+    .aviso {
+      background: rgba(240,180,41,0.1);
+      border: 1px solid rgba(240,180,41,0.35);
+      color: var(--gold);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .result-item {
+      background: var(--ink-850);
+      border: 1px solid var(--ink-800);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    /* El ID de registro es largo (CT-EXPT-20260804-063000): ocupa fila entera */
+    .result-item.full { grid-column: 1 / -1; }
+    .result-item .value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      color: var(--accent);
+      letter-spacing: 1px;
+      overflow-wrap: anywhere;
+    }
+    .result-item.full .value { font-size: clamp(18px, 6vw, 26px); }
+    .result-item .label {
+      font-size: 12px;
+      color: var(--text-500);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 50px 20px;
+    }
+    .loader.show { display: block; }
+    .spinner {
+      width: 56px;
+      height: 56px;
+      border: 4px solid rgba(227,6,19,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(140px);
+      background: var(--ink-900);
+      border: 1px solid var(--ink-800);
+      color: var(--text-100);
+      padding: 16px 26px;
+      border-radius: 12px;
+      font-size: 15px;
+      z-index: 1000;
+      transition: transform 0.3s;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      max-width: 90%;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── Móviles estrechos (iPhone SE y similares, 320-360px) ── */
+    @media (max-width: 360px) {
+      .wrap { padding: 20px 10px; }
+      .card { padding: 16px; }
+      .rating-row { gap: 5px; }
+      .rating-btn { padding: 12px 2px; }
+      .rating-btn span { font-size: 20px; margin-bottom: 4px; }
+      .zona-number { width: 52px; height: 52px; font-size: 19px; }
+      .zona-header { gap: 10px; }
+      .global-score { padding: 22px 14px; }
+      .global-score-value { font-size: 52px; }
+      .result-item { padding: 16px 10px; }
+      .logo-wrap { padding: 10px 16px; }
+      .logo-wrap img { height: 40px; }
+    }
+
+    /* Respeta a quien tiene desactivadas las animaciones en el sistema */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+</style>
+
+  <!-- SCREEN 0: INICIO -->
+  <div class="screen active" id="screen-0">
+    <div class="card">
+      <div class="card-title">🎯 Rol del turno</div>
+      <label for="turnoSelect">¿En qué rol estás en este turno?</label>
+      <select id="turnoSelect" onchange="validarSeleccion()">
+        <option value="">— Selecciona tu rol —</option>
+      </select>
+      <p class="hint">
+        Cada jefe de equipo elige manualmente su rol en cada control.
+        El sistema <strong>no</strong> lo asigna por la hora del día.
+      </p>
+      <div class="rol-preview" id="rolPreview">
+        <h3 id="rolPreviewTitle"></h3>
+        <ul id="rolPreviewList"></ul>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btnStart" onclick="iniciarControl()" disabled>
+      Iniciar Control →
+    </button>
+  </div>
+
+  <div id="zonasScreens"></div>
+
+  <!-- SCREEN RESUMEN -->
+  <div class="screen" id="screen-resumen">
+    <div class="card">
+      <div class="card-title">📝 Comentario General</div>
+      <label for="comentarioGeneral">Observaciones finales (opcional)</label>
+      <textarea id="comentarioGeneral" rows="4" placeholder="Incidencias, tareas pendientes..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">🔍 Resumen del Control</div>
+      <div id="resumenContent"></div>
+    </div>
+    <button class="btn-primary" id="btnEnviar" onclick="enviarFormulario()">📤 Enviar Informe</button>
+    <button class="btn-secondary" onclick="volverUltimaZona()">← Revisar última zona</button>
+  </div>
+
+  <!-- LOADER -->
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <p style="color:var(--text-500);font-size:14px;">Enviando informe...</p>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="screen" id="screen-success">
+    <div class="success-screen">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Turno Registrado</div>
+      <p class="success-sub" id="successSub">El informe ha sido enviado correctamente.</p>
+      <div id="avisosBox"></div>
+      <div id="resultGlobalScore"></div>
+      <div class="result-grid" id="resultGrid"></div>
+      <div class="card">
+        <div class="card-title">📧 Notificación</div>
+        <p style="font-size:14px;color:var(--text-500);line-height:1.6;" id="estadoEmail"></p>
+      </div>
+      <button class="btn-primary" onclick="reiniciarApp()">🔄 Nuevo Control</button>
+    </div>
+  </div>
+
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const TURNOS = <?!= JSON.stringify(TURNOS) ?>;
+
+  const FOTO_MAX_ANCHO = 800;
+  const FOTO_CALIDAD = 0.7;
+
+  let state = {
+    currentStep: 0,
+    jefe: '',
+    turno: null,
+    turnoId: '',
+    zonas: [],
+    enviando: false,
+    runId: 0
+  };
+
+  function initApp() {
+    // Los roles se generan desde TURNOS: el nº de zonas nunca queda desfasado.
+    const turnoSelect = document.getElementById('turnoSelect');
+    Object.keys(TURNOS).forEach(id => {
+      const t = TURNOS[id];
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = t.nombre + ' (' + t.zonas.length + ' fotos)';
+      turnoSelect.appendChild(opt);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
+
+  // Se dispara desde AMBOS selectores: antes solo desde el de turno,
+  // así que elegir el turno primero y el jefe después dejaba el botón bloqueado.
+  function validarSeleccion() {
+    const turnoId = document.getElementById('turnoSelect').value;
+
+    document.getElementById('btnStart').disabled = !turnoId;
+
+    const preview = document.getElementById('rolPreview');
+    if (turnoId && TURNOS[turnoId]) {
+      const t = TURNOS[turnoId];
+      document.getElementById('rolPreviewTitle').textContent =
+        t.nombre + ' · ' + t.zonas.length + ' zonas a fotografiar';
+      document.getElementById('rolPreviewList').innerHTML =
+        t.zonas.map(z => '<li>' + z.nombre + '</li>').join('');
+      preview.classList.add('show');
+    } else {
+      preview.classList.remove('show');
+    }
+  }
+
+  function iniciarControl() {
+    state.turnoId = document.getElementById('turnoSelect').value;
+    state.turno = TURNOS[state.turnoId];
+
+    if (!state.jefe) {
+      showToast('❌ Falta identificarte — recarga la app');
+      return;
+    }
+    if (!state.turno) {
+      showToast('❌ Selecciona tu rol de turno');
+      return;
+    }
+
+    generarPantallasZonas();
+    goToStep(1);
+  }
+
+  function generarPantallasZonas() {
+    // Nuevo control: cualquier callback de foto pendiente de un control
+    // anterior (abandonado a medias) queda invalidado a partir de aquí.
+    state.runId++;
+
+    const container = document.getElementById('zonasScreens');
+    container.innerHTML = '';
+
+    const total = state.turno.zonas.length;
+
+    state.zonas = state.turno.zonas.map(zona => ({
+      estado: null,
+      comentario: '',
+      fotoBase64: '',
+      nombre: zona.nombre,
+      procesando: false
+    }));
+
+    state.turno.zonas.forEach((zona, idx) => {
+      const screen = document.createElement('div');
+      screen.className = 'screen';
+      screen.id = 'screen-zona-' + idx;
+
+      screen.innerHTML = `
+        <div class="progreso">Zona ${idx + 1} de ${total} · ${state.turno.nombre}</div>
+        <div class="card">
+          <div class="zona-header">
+            <div class="zona-number">${idx + 1}/${total}</div>
+            <div class="zona-info">
+              <h2>${zona.nombre}</h2>
+              <p>${zona.descripcion}</p>
+            </div>
+          </div>
+
+          <div class="camera-zone" id="cameraZone-${idx}" role="button" tabindex="0"
+               aria-label="Fotografiar ${zona.nombre}"
+               onclick="triggerCamera(${idx})"
+               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();triggerCamera(${idx});}">
+            <input type="file" id="fileInput-${idx}" accept="image/*" capture="environment" onchange="handlePhoto(this, ${idx})">
+            <div id="cameraPlaceholder-${idx}">
+              <div class="camera-icon">📷</div>
+              <div class="camera-text">
+                <strong>Toca para fotografiar</strong>
+                ${zona.nombre}
+              </div>
+            </div>
+          </div>
+
+          <label id="ratingLabel-${idx}">📊 Estado de la zona</label>
+          <div class="rating-row" role="radiogroup" aria-labelledby="ratingLabel-${idx}">
+            ${[1,2,3,4,5].map(n => `
+              <button type="button" class="rating-btn" id="rating-${idx}-${n}" role="radio" aria-checked="false" onclick="setRating(${idx}, ${n})">
+                <span>${['⛔','🔴','🟡','🟢','⭐'][n-1]}</span>
+                ${['Crítico','Defic.','Acept.','Bueno','Excel.'][n-1]}
+              </button>
+            `).join('')}
+          </div>
+
+          <label for="comentario-${idx}">💬 Comentario (opcional)</label>
+          <textarea id="comentario-${idx}" rows="3" placeholder="Describe el estado, incidencias..." oninput="state.zonas[${idx}].comentario = this.value"></textarea>
+        </div>
+
+        <button class="btn-primary" id="btnZona-${idx}" onclick="nextZona(${idx})" disabled>
+          ${idx < total - 1 ? 'Siguiente Zona →' : 'Ver Resumen →'}
+        </button>
+        ${idx > 0
+          ? `<button class="btn-secondary" onclick="goToStep(${idx})">← Zona anterior</button>`
+          : `<button class="btn-secondary" onclick="goToStep(0)">← Volver al inicio</button>`}
+      `;
+
+      container.appendChild(screen);
+    });
+  }
+
+  function triggerCamera(idx) {
+    if (state.zonas[idx] && state.zonas[idx].procesando) {
+      showToast('⏳ Procesando foto anterior…');
+      return;
+    }
+    document.getElementById('fileInput-' + idx).click();
+  }
+
+  function handlePhoto(input, idx) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (state.zonas[idx].procesando) return;   // evita dos lecturas a la vez de la misma zona
+
+    const runId = state.runId;
+    state.zonas[idx].procesando = true;
+    const zone = document.getElementById('cameraZone-' + idx);
+    if (zone) zone.classList.add('processing');
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      state.zonas[idx].procesando = false;
+      if (zone) zone.classList.remove('processing');
+      // Sin esto, reintentar con el MISMO archivo tras un fallo de lectura
+      // no dispara 'change' y handlePhoto no se vuelve a ejecutar.
+      input.value = '';
+      showToast('❌ No se pudo leer la foto, inténtalo de nuevo');
+    };
+    reader.onload = async (e) => {
+      // Se comprime aquí y no al enviar: evita guardar en memoria varias
+      // fotos de 4-8 MB en el móvil y hace el envío mucho más rápido.
+      const comprimida = await comprimirImagen(e.target.result, FOTO_MAX_ANCHO, FOTO_CALIDAD);
+
+      // El control pudo abandonarse (volver al inicio y empezar uno nuevo)
+      // mientras esta compresión estaba en curso: no toques el estado/DOM nuevo.
+      if (runId !== state.runId) return;
+
+      state.zonas[idx].procesando = false;
+      state.zonas[idx].fotoBase64 = comprimida;
+      state.zonas[idx].nombre = state.turno.zonas[idx].nombre;
+
+      const placeholder = document.getElementById('cameraPlaceholder-' + idx);
+      if (!zone || !placeholder) return;
+      zone.classList.remove('processing');
+      placeholder.innerHTML = `
+        <img src="${comprimida}" class="preview-img" alt="Foto de ${state.turno.zonas[idx].nombre}" />
+        <span class="photo-badge">✓ Foto</span>
+        <button type="button" class="retake-btn" onclick="event.stopPropagation(); retakePhoto(${idx})">🔄 Repetir</button>
+      `;
+      zone.classList.add('has-photo');
+      checkZonaComplete(idx);
+      showToast('📷 Foto capturada');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function retakePhoto(idx) {
+    state.zonas[idx].fotoBase64 = '';
+
+    // Sin esto, volver a elegir el MISMO archivo no dispara onchange
+    // y la foto nunca se vuelve a adjuntar.
+    const input = document.getElementById('fileInput-' + idx);
+    if (input) input.value = '';
+
+    const zone = document.getElementById('cameraZone-' + idx);
+    const placeholder = document.getElementById('cameraPlaceholder-' + idx);
+    zone.classList.remove('has-photo');
+    placeholder.innerHTML = `
+      <div class="camera-icon">📷</div>
+      <div class="camera-text">
+        <strong>Toca para fotografiar</strong>
+        ${state.turno.zonas[idx].nombre}
+      </div>
+    `;
+    checkZonaComplete(idx);
+  }
+
+  function setRating(idx, val) {
+    state.zonas[idx].estado = val;
+    for (let n = 1; n <= 5; n++) {
+      const btn = document.getElementById('rating-' + idx + '-' + n);
+      const selected = n === val;
+      btn.className = 'rating-btn' + (selected ? ' selected-' + n : '');
+      btn.setAttribute('aria-checked', selected ? 'true' : 'false');
+    }
+    checkZonaComplete(idx);
+  }
+
+  function checkZonaComplete(idx) {
+    const z = state.zonas[idx];
+    const ok = z.estado !== null && z.fotoBase64 !== '';
+    document.getElementById('btnZona-' + idx).disabled = !ok;
+  }
+
+  function nextZona(idx) {
+    if (idx < state.turno.zonas.length - 1) {
+      goToStep(idx + 2);
+    } else {
+      buildResumen();
+      goToStep('resumen');
+    }
+  }
+
+  function buildResumen() {
+    const estados = state.zonas.map(z => z.estado || 3);
+    const prom = (estados.reduce((a,b)=>a+b,0)/estados.length).toFixed(1);
+    const color = prom >= 4 ? '#22c55e' : prom >= 3 ? '#f0b429' : '#ff4d5a';
+    const label = prom >= 4 ? '🟢 ÓPTIMO' : prom >= 3 ? '🟡 ACEPTABLE' : '🔴 CRÍTICO';
+
+    let html = `
+      <div class="resumen-item">
+        <span class="resumen-label">Jefe de equipo</span>
+        <span class="resumen-value">${state.jefe}</span>
+      </div>
+      <div class="resumen-item">
+        <span class="resumen-label">Rol / Turno</span>
+        <span class="resumen-value">${state.turno.nombre}</span>
+      </div>
+    `;
+
+    state.turno.zonas.forEach((zona, i) => {
+      const est = state.zonas[i].estado || 0;
+      const ec = est >= 4 ? '#22c55e' : est >= 3 ? '#f0b429' : '#ff4d5a';
+      const labels = ['—','⛔ Crítico','🔴 Deficiente','🟡 Aceptable','🟢 Bueno','⭐ Excelente'];
+      html += `
+        <div class="resumen-item">
+          <span class="resumen-label">${zona.nombre}</span>
+          <span class="resumen-value" style="color:${ec};">${labels[est]}</span>
+        </div>
+      `;
+    });
+
+    html += `
+      <div class="global-score">
+        <div class="global-score-label">Puntuación Global</div>
+        <div class="global-score-value" style="color:${color}">${prom}<span style="font-size:28px;">/5</span></div>
+        <div class="global-score-badge" style="color:${color}">${label}</div>
+      </div>
+    `;
+
+    document.getElementById('resumenContent').innerHTML = html;
+  }
+
+  // Todas las pantallas se controlan SOLO con la clase .active.
+  // Antes se mezclaba con style.display y quedaban dos pantallas superpuestas.
+  function mostrarPantalla(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function goToStep(step) {
+    if (typeof step === 'number') {
+      if (step === 0) {
+        mostrarPantalla('screen-0');
+      } else if (step <= state.turno.zonas.length) {
+        mostrarPantalla('screen-zona-' + (step - 1));
+      }
+      state.currentStep = step;
+    } else if (step === 'resumen') {
+      mostrarPantalla('screen-resumen');
+      state.currentStep = state.turno.zonas.length + 1;
+    }
+  }
+
+  function volverUltimaZona() {
+    goToStep(state.turno.zonas.length);
+  }
+
+  function comprimirImagen(base64, maxWidth, calidad) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (!w || !h) { resolve(base64); return; }
+          if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', calidad));
+        } catch (err) {
+          resolve(base64);
+        }
+      };
+      // Sin onerror la promesa no se resolvía nunca y el envío se quedaba colgado.
+      img.onerror = () => resolve(base64);
+      img.src = base64;
+    });
+  }
+
+  function enviarFormulario() {
+    if (state.enviando) return;          // evita doble envío por doble toque
+    state.enviando = true;
+    document.getElementById('btnEnviar').disabled = true;
+
+    const zonas = state.zonas.map((z, i) => ({
+      nombre: state.turno.zonas[i].nombre,
+      estado: z.estado,
+      comentario: z.comentario,
+      foto: z.fotoBase64 || ''
+    }));
+
+    const payload = {
+      jefe_equipo: state.jefe,
+      turno_id: state.turnoId,
+      zonas: zonas,
+      comentario_general: document.getElementById('comentarioGeneral').value
+    };
+
+    mostrarPantalla('');   // oculta todas
+    document.getElementById('loader').classList.add('show');
+
+    // Sin esto, una conexion que se cae a medio envio dejaba el spinner
+    // girando para siempre y el usuario perdia todas las fotos del turno
+    // (unica salida era recargar la pagina, que las borraba).
+    let atendido = false;
+    const timeoutId = setTimeout(() => {
+      if (atendido) return;
+      atendido = true;
+      document.getElementById('loader').classList.remove('show');
+      state.enviando = false;
+      restaurarResumen('⏱️ Tiempo agotado. Comprueba tu conexión e inténtalo de nuevo.');
+    }, 40000);
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (atendido) return;
+        atendido = true;
+        clearTimeout(timeoutId);
+        document.getElementById('loader').classList.remove('show');
+        state.enviando = false;
+
+        if (result && result.success) {
+          showSuccessScreen(result);
+        } else {
+          restaurarResumen('❌ Error: ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (atendido) return;
+        atendido = true;
+        clearTimeout(timeoutId);
+        console.error('Error del servidor:', err);
+        document.getElementById('loader').classList.remove('show');
+        state.enviando = false;
+        restaurarResumen('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .procesarRegistro(payload);
+  }
+
+  function restaurarResumen(mensaje) {
+    document.getElementById('btnEnviar').disabled = false;
+    mostrarPantalla('screen-resumen');
+    showToast(mensaje);
+  }
+
+  function showSuccessScreen(result) {
+    const color = result.puntuacionGlobal >= 4 ? '#22c55e' : result.puntuacionGlobal >= 3 ? '#f0b429' : '#ff4d5a';
+
+    document.getElementById('resultGlobalScore').innerHTML = `
+      <div class="global-score" style="margin-bottom:24px;">
+        <div class="global-score-label">Puntuación Final</div>
+        <div class="global-score-value" style="color:${color}">${result.puntuacionGlobal}<span style="font-size:28px;">/5</span></div>
+        <div class="global-score-badge" style="color:${color}">${result.calificacion}</div>
+        <div style="font-size:12px;color:var(--text-500);margin-top:10px;">${result.turno} · ${result.numZonas} zonas</div>
+      </div>
+    `;
+
+    document.getElementById('resultGrid').innerHTML = `
+      <div class="result-item full">
+        <div class="value">${result.idRegistro}</div>
+        <div class="label">ID Registro</div>
+      </div>
+      <div class="result-item">
+        <div class="value">${result.horaStr}</div>
+        <div class="label">Hora Cierre</div>
+      </div>
+      <div class="result-item">
+        <div class="value">${result.numZonas}</div>
+        <div class="label">Zonas</div>
+      </div>
+    `;
+
+    // El estado real del email, no un texto fijo.
+    document.getElementById('estadoEmail').textContent =
+      result.emailEnviado === 'Enviado'
+        ? 'Informe enviado a Pedro Gil.'
+        : 'El email NO se pudo enviar. Avisa a Pedro Gil.';
+
+    const avisos = result.avisos || [];
+    document.getElementById('avisosBox').innerHTML = avisos.length
+      ? '<div class="aviso">⚠️ ' + avisos.join('<br>⚠️ ') + '</div>'
+      : '';
+
+    document.getElementById('successSub').textContent =
+      'Registro ' + result.idRegistro + ' del ' + result.fechaStr;
+
+    mostrarPantalla('screen-success');
+  }
+
+  function reiniciarApp() {
+    location.reload();
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function turnoRecibirJefe(jefe) {
+    state.jefe = jefe;
+  }
+</script>

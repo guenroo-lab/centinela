@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <script>
+    (function () {
+      var m = 'dark', t = 'taisared';
+      try {
+        m = localStorage.getItem('centinela_mode_pick') || 'dark';
+        t = localStorage.getItem('centinela_theme_pick') || 'taisared';
+      } catch (e) {}
+      document.documentElement.setAttribute('data-kmode', m);
+      document.documentElement.setAttribute('data-ktheme', t);
+    })();
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink-950:#090d13; --ink-900:#0f151e; --ink-850:#141b26; --ink-800:#1a2230;
+      --ink-700:#28323f; --ink-600:#3a4757;
+      --text-100:#eef2f7; --text-300:#c3ccd8; --text-500:#8b97a8; --text-600:#66707e;
+      --ok:#34d17a; --ok-ink:#062b12;
+      --warn-bg:#4a2c0b; --warn-fg:#ffcd8a; --warn-line:#7a4a15;
+      --danger-bg:#3a1414; --danger-fg:#ffb0ab; --danger-line:#7a2a24;
+      --radius-card:14px; --radius-btn:10px; --radius-chip:999px;
+      --shadow-card:0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px -12px rgba(0,0,0,.6);
+      --accent-text: color-mix(in srgb, var(--accent) 65%, white 35%);
+    }
+    [data-kmode="light"] {
+      --ink-950:#f6f4f1; --ink-900:#ffffff; --ink-850:#fbfaf8; --ink-800:#e8e4de;
+      --ink-700:#d7d2ca; --ink-600:#b6afa4;
+      --text-100:#201f1c; --text-300:#4a473f; --text-500:#7a7568; --text-600:#96917f;
+      --ok:#1a8f4c; --ok-ink:#eafff2;
+      --warn-bg:#fff1d6; --warn-fg:#92400e; --warn-line:#f0c878;
+      --danger-bg:#fde7e5; --danger-fg:#b91c1c; --danger-line:#f4b3ac;
+      --shadow-card:0 1px 2px rgba(30,25,15,.04), 0 10px 24px -14px rgba(30,25,15,.18);
+      --accent-text: var(--accent);
+    }
+    [data-ktheme="indigo"]   { --accent:#4c7dff; --accent-ink:#ffffff; --accent-dim:#1c2b52; --accent-line:#3a55a8; }
+    [data-ktheme="lmgreen"]  { --accent:#3fb54a; --accent-ink:#04220a; --accent-dim:#123420; --accent-line:#2f7a3c; }
+    [data-ktheme="taisared"] { --accent:#e2263a; --accent-ink:#ffffff; --accent-dim:#3a1216; --accent-line:#8a2530; }
+    [data-ktheme="amber"]    { --accent:#f0a020; --accent-ink:#241400; --accent-dim:#3a2708; --accent-line:#93672a; }
+    [data-kmode="light"][data-ktheme="lmgreen"]  { --accent:#2f9e3f; --accent-ink:#ffffff; --accent-dim:#e4f5e7; --accent-line:#a9dab4; }
+    [data-kmode="light"][data-ktheme="taisared"] { --accent:#dc1a23; --accent-ink:#ffffff; --accent-dim:#fde6e6; --accent-line:#f0aaac; }
+
+    * { box-sizing: border-box; }
+    html, body { background: var(--ink-950); }
+    body { margin:0; padding:0 0 84px; color:var(--text-100); font-family:'Inter',system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; transition:background .15s ease,color .15s ease; }
+    #shell { max-width:480px; margin:0 auto; padding:16px; transition:max-width .2s ease; }
+    /* En pantalla ancha (escritorio/tablet apaisada) se aprovecha el sitio
+       — en móvil (por debajo de esto) sigue exactamente igual que antes. */
+    @media (min-width: 900px) {
+      #shell { max-width:1400px; padding:24px 32px; }
+    }
+
+    .brand-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:14px; }
+    .brand-badge { background:#fff; border-radius:10px; padding:6px 10px; display:flex; align-items:center; box-shadow:0 2px 8px -3px rgba(0,0,0,.4); }
+    .brand-badge img { display:block; height:28px; width:auto; }
+    .brand-nombre { font-family:'Permanent Marker', cursive; font-size:30px; color:var(--accent-text); line-height:1; letter-spacing:.015em; }
+    .theme-toggle { margin-left:auto; }
+    button.theme-btn { cursor:pointer; border:none; background:var(--ink-800); color:var(--text-300); padding:7px 10px; border-radius:var(--radius-btn); font-size:12px; display:flex; align-items:center; gap:5px; min-height:36px; font-weight:700; }
+    .theme-btn svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+    .theme-panel { background:var(--ink-900); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:12px; margin-bottom:14px; display:none; }
+    .theme-panel.abierto { display:block; }
+    .picker-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+    .picker-row:last-child { margin-bottom:0; }
+    .picker-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-600); width:52px; flex:none; }
+    .pick { cursor:pointer; display:flex; align-items:center; gap:7px; padding:7px 11px 7px 8px; border-radius:var(--radius-chip); background:var(--ink-800); border:1px solid var(--ink-700); color:var(--text-300); font-size:12.5px; font-weight:600; }
+    .pick .dot { width:13px; height:13px; border-radius:50%; flex:none; }
+    .pick[data-for="indigo"] .dot { background:#4c7dff; }
+    .pick[data-for="lmgreen"] .dot { background:#3fb54a; }
+    .pick[data-for="taisared"] .dot { background:#e2263a; }
+    .pick[data-for="amber"] .dot { background:#f0a020; }
+    .pick.active { background:var(--accent-dim); border-color:var(--accent-line); color:var(--accent-ink); }
+    [data-kmode="light"] .pick.active { color:var(--accent); }
+    .pick[data-hidden] { display:none; }
+
+    .grid-jefes { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0; }
+    .btn-jefe { min-height:72px; border-radius:16px; border:2px solid var(--ink-700); background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); color:var(--text-100); font-size:16px; font-weight:800; cursor:pointer; padding:10px; box-shadow:var(--shadow-card); transition:transform .15s ease; }
+    .btn-jefe:active { background:var(--accent-dim); border-color:var(--accent); transform:scale(.97); }
+
+    .id-bar { background:var(--accent-dim); border:1px solid var(--accent-line); color:var(--accent-ink); padding:9px 12px; border-radius:var(--radius-btn); margin-bottom:14px; font-size:13px; display:flex; align-items:center; justify-content:space-between; gap:8px; font-weight:700; }
+    [data-kmode="light"] .id-bar { color:var(--accent); }
+    button.btn-cambiar { background:var(--ink-950); color:var(--text-100); border:1px solid rgba(255,255,255,.18); padding:6px 12px; font-size:12px; min-height:32px; border-radius:var(--radius-chip); cursor:pointer; font-weight:700; }
+
+    /* Barra inferior: con 8 pestañas no caben en móvil, así que cada una tiene un ancho
+       mínimo y la barra se desplaza en horizontal (sin barra visible). En pantalla ancha
+       las pestañas se reparten el ancho como siempre. mostrarTab() mantiene visible la activa. */
+    .tabs { position:fixed; left:0; right:0; bottom:0; display:flex; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; background:var(--ink-900); border-top:1px solid var(--ink-800); box-shadow:0 -8px 24px -12px rgba(0,0,0,.5); padding:4px max(4px, env(safe-area-inset-left)) calc(4px + env(safe-area-inset-bottom)); gap:2px; z-index:900; }
+    .tabs::-webkit-scrollbar { display:none; }
+    .tabs a { position:relative; flex:1 0 68px; min-width:68px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:8px 2px; border-radius:calc(var(--radius-card) - 4px); text-decoration:none; color:var(--text-500); font-size:10.5px; font-weight:700; min-height:52px; cursor:pointer; transition:background .15s ease, color .15s ease; }
+    @media (max-width: 600px) { .tabs a { font-size:10px; } }
+    .tabs a span { text-align:center; line-height:1.15; }
+    .tabs a svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .tabs a.activa { background:var(--accent-dim); color:var(--accent-text); }
+    .tab-badge { position:absolute; top:3px; left:calc(50% + 6px); min-width:16px; height:16px; padding:0 4px; border-radius:99px; background:var(--accent); color:var(--accent-ink); font-size:10px; font-style:normal; font-weight:800; line-height:16px; text-align:center; display:none; }
+
+    .fab-sugerencias { position:fixed; right:16px; bottom:76px; width:52px; height:52px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:none; box-shadow:0 8px 20px -8px rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:901; }
+    .fab-sugerencias svg { width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .fab-sugerencias:active { transform:scale(.94); }
+
+    .koverlay { position:fixed; inset:0; background:rgba(5,7,10,.6); display:none; align-items:center; justify-content:center; padding:20px; z-index:1000; }
+    .koverlay.abierto { display:flex; }
+    .kmodal { background:var(--ink-900); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:18px; max-width:400px; width:100%; box-shadow:var(--shadow-card); }
+
+    .tab-panel { display:none; }
+    .tab-panel.activo { display:block; }
+  </style>
+</head>
+<body>
+  <div id="shell">
+    <div class="brand-head">
+      <div class="brand-badge"><img src="<?!= LOGO_TAISA_DATA_URI ?>" alt="Taisa"></div>
+      <span class="brand-nombre"
+            onmousedown="iniciarPulsacionSupervisor()" onmouseup="cancelarPulsacionSupervisor()" onmouseleave="cancelarPulsacionSupervisor()"
+            ontouchstart="iniciarPulsacionSupervisor()" ontouchend="cancelarPulsacionSupervisor()">Centinela</span>
+      <div class="theme-toggle">
+        <button class="theme-btn" onclick="toggleThemePanel()" type="button">
+          <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+          Tema
+        </button>
+      </div>
+    </div>
+
+    <div class="theme-panel" id="themePanel">
+      <div class="picker-row"><span class="picker-label">Modo</span>
+        <button class="pick" data-mode="dark" onclick="setKModo('dark')" type="button">Oscuro</button>
+        <button class="pick" data-mode="light" onclick="setKModo('light')" type="button">Claro</button>
+      </div>
+      <div class="picker-row" id="acentoPicker">
+        <span class="picker-label">Acento</span>
+        <button class="pick" data-for="indigo" onclick="setKTema('indigo')" type="button"><span class="dot"></span>Índigo</button>
+        <button class="pick" data-for="lmgreen" onclick="setKTema('lmgreen')" type="button"><span class="dot"></span>Verde LM</button>
+        <button class="pick" data-for="taisared" onclick="setKTema('taisared')" type="button"><span class="dot"></span>Rojo Taisa</button>
+        <button class="pick" data-for="amber" onclick="setKTema('amber')" type="button"><span class="dot"></span>Ámbar</button>
+      </div>
+    </div>
+
+    <div id="puertaIdentidad">
+      <h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">¿Quién eres?</h1>
+      <p style="color:var(--text-500);font-size:13px;margin:0 0 4px;">Selecciona tu nombre para continuar.</p>
+      <div class="grid-jefes" id="gridJefes"></div>
+    </div>
+
+    <div id="appCentinela" style="display:none;">
+      <div class="id-bar">
+        <span id="idBarTexto"></span>
+        <button class="btn-cambiar" onclick="cambiarIdentidad()" type="button">Cambiar</button>
+      </div>
+
+      <div class="tab-panel activo" id="tab-turno" data-tab="turno">
+        <?!= include('TurnoUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-maquinaria" data-tab="maquinaria">
+        <?!= include('MaquinariaUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-dispositivos" data-tab="dispositivos">
+        <?!= include('DispositivosUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-residuos" data-tab="residuos">
+        <?!= include('ResiduosUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-turnos" data-tab="turnos">
+        <?!= include('TurnosUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-personal" data-tab="personal">
+        <?!= include('PersonalUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-tareas" data-tab="tareas">
+        <?!= include('TareasUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-cargas" data-tab="cargas">
+        <?!= include('CargasUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-plantillas" data-tab="plantillas">
+        <?!= include('PlantillasUI'); ?>
+      </div>
+      <div class="tab-panel" id="tab-chat" data-tab="chat">
+        <?!= include('ChatUI'); ?>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab-sugerencias" id="fabSugerencias" onclick="abrirSugerencias()" type="button" style="display:none;" aria-label="Enviar sugerencia">
+    <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26A7 7 0 0 0 12 2z"/><path d="M9 21h6"/></svg>
+  </button>
+
+  <div class="tabs" id="barraTabs" style="display:none;">
+    <a href="#" class="activa" data-tab="turno" onclick="event.preventDefault(); mostrarTab('turno')">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Turno</span>
+    </a>
+    <a href="#" data-tab="cargas" onclick="event.preventDefault(); mostrarTab('cargas')">
+      <svg viewBox="0 0 24 24"><rect x="1" y="6" width="15" height="12" rx="1"/><path d="M16 10h4l3 4v4h-7z"/><circle cx="5.5" cy="19.5" r="1.5"/><circle cx="18.5" cy="19.5" r="1.5"/></svg>
+      <span>Cargas</span>
+    </a>
+    <a href="#" data-tab="plantillas" onclick="event.preventDefault(); mostrarTab('plantillas')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+      <span>Plantilla de carga</span>
+    </a>
+    <a href="#" data-tab="tareas" onclick="event.preventDefault(); mostrarTab('tareas')">
+      <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+      <span>Tareas</span>
+      <i class="tab-badge" id="tabBadgeTareas"></i>
+    </a>
+    <a href="#" data-tab="maquinaria" onclick="event.preventDefault(); mostrarTab('maquinaria')">
+      <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <span>Maquinaria</span>
+    </a>
+    <a href="#" data-tab="dispositivos" onclick="event.preventDefault(); mostrarTab('dispositivos')">
+      <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+      <span>Dispositivos</span>
+    </a>
+    <a href="#" data-tab="residuos" onclick="event.preventDefault(); mostrarTab('residuos')">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg>
+      <span>Residuos</span>
+    </a>
+    <a href="#" data-tab="turnos" onclick="event.preventDefault(); mostrarTab('turnos')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>Turnos</span>
+    </a>
+    <a href="#" data-tab="personal" onclick="event.preventDefault(); mostrarTab('personal')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Personal</span>
+    </a>
+    <a href="#" data-tab="chat" onclick="event.preventDefault(); mostrarTab('chat')">
+      <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      <span>Chat</span>
+    </a>
+  </div>
+
+  <div class="koverlay" id="overlaySugerencias">
+    <div class="kmodal">
+      <?!= include('SugerenciasUI'); ?>
+    </div>
+  </div>
+
+  <div class="koverlay" id="overlaySupervisor">
+    <div class="kmodal">
+      <p style="margin:0 0 14px;font-size:15px;font-weight:700;color:var(--text-100);">🔒 Modo supervisor</p>
+      <input type="password" id="supervisorPass" placeholder="Contraseña"
+             style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:12px;font-size:15px;box-sizing:border-box;"
+             onkeydown="if(event.key==='Enter'){confirmarSupervisor();}">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+        <button type="button" onclick="cerrarSupervisor()" style="cursor:pointer;border:none;border-radius:var(--radius-btn);padding:10px 16px;min-height:44px;font-size:14px;font-weight:700;background:var(--ink-800);color:var(--text-300);">Cancelar</button>
+        <button type="button" onclick="confirmarSupervisor()" style="cursor:pointer;border:none;border-radius:var(--radius-btn);padding:10px 16px;min-height:44px;font-size:14px;font-weight:700;background:var(--accent);color:var(--accent-ink);">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var CentinelaState = { jefe: null, supervisor: false };
+    var JEFES = <?!= JSON.stringify(JEFES_EQUIPO) ?>;
+    var TEMAS_MODOS = { indigo: ['dark'], lmgreen: ['dark', 'light'], taisared: ['dark', 'light'], amber: ['dark'] };
+
+    function toggleThemePanel() {
+      document.getElementById('themePanel').classList.toggle('abierto');
+    }
+    function setKModo(modo) {
+      document.documentElement.setAttribute('data-kmode', modo);
+      try { localStorage.setItem('centinela_mode_pick', modo); } catch (e) {}
+      var actual = document.documentElement.getAttribute('data-ktheme');
+      if (TEMAS_MODOS[actual].indexOf(modo) === -1) setKTema('taisared'); else sincronizarPickers_();
+    }
+    function setKTema(nombre) {
+      document.documentElement.setAttribute('data-ktheme', nombre);
+      try { localStorage.setItem('centinela_theme_pick', nombre); } catch (e) {}
+      sincronizarPickers_();
+    }
+    function sincronizarPickers_() {
+      var modo = document.documentElement.getAttribute('data-kmode');
+      var tema = document.documentElement.getAttribute('data-ktheme');
+      var picks = document.querySelectorAll('.pick[data-mode]');
+      for (var i = 0; i < picks.length; i++) picks[i].classList.toggle('active', picks[i].getAttribute('data-mode') === modo);
+      picks = document.querySelectorAll('.pick[data-for]');
+      for (var j = 0; j < picks.length; j++) {
+        var p = picks[j];
+        var nombre = p.getAttribute('data-for');
+        p.toggleAttribute('data-hidden', TEMAS_MODOS[nombre].indexOf(modo) === -1);
+        p.classList.toggle('active', nombre === tema);
+      }
+    }
+
+    function initShell() {
+      var grid = document.getElementById('gridJefes');
+      grid.innerHTML = JEFES.map(function (j, i) {
+        return '<button type="button" class="btn-jefe" data-i="' + i + '">' + j + '</button>';
+      }).join('');
+      var botones = grid.querySelectorAll('.btn-jefe');
+      for (var i = 0; i < botones.length; i++) {
+        (function (idx) {
+          botones[idx].onclick = function () { elegirIdentidad(JEFES[idx]); };
+        })(i);
+      }
+      sincronizarPickers_();
+    }
+
+    function elegirIdentidad(jefe) {
+      CentinelaState.jefe = jefe;
+      document.getElementById('puertaIdentidad').style.display = 'none';
+      document.getElementById('appCentinela').style.display = 'block';
+      document.getElementById('barraTabs').style.display = 'flex';
+      document.getElementById('fabSugerencias').style.display = 'flex';
+      document.getElementById('idBarTexto').textContent = jefe;
+      if (typeof turnoRecibirJefe === 'function') turnoRecibirJefe(jefe);
+      if (typeof tareasRecibirJefe === 'function') tareasRecibirJefe(jefe);
+    }
+
+    function cambiarIdentidad() {
+      CentinelaState.jefe = null;
+      document.getElementById('appCentinela').style.display = 'none';
+      document.getElementById('barraTabs').style.display = 'none';
+      document.getElementById('fabSugerencias').style.display = 'none';
+      document.getElementById('puertaIdentidad').style.display = 'block';
+      // El modo supervisor no se hereda: si el siguiente en usar el dispositivo es un jefe,
+      // no debe ver lo del supervisor (todas las tareas, revisión SAT...).
+      if (CentinelaState.supervisor) {
+        CentinelaState.supervisor = false;
+        if (typeof maquinariaActualizarSupervisor === 'function') maquinariaActualizarSupervisor();
+        if (typeof tareasAlCambiarModo === 'function') tareasAlCambiarModo();
+      }
+      // Que no quede en pantalla nada del jefe anterior (sus tareas).
+      if (typeof tareasAlCambiarIdentidad === 'function') tareasAlCambiarIdentidad();
+    }
+
+    function mostrarTab(id) {
+      var paneles = document.querySelectorAll('.tab-panel');
+      for (var i = 0; i < paneles.length; i++) paneles[i].classList.toggle('activo', paneles[i].getAttribute('data-tab') === id);
+      var enlaces = document.querySelectorAll('#barraTabs a');
+      for (var j = 0; j < enlaces.length; j++) enlaces[j].classList.toggle('activa', enlaces[j].getAttribute('data-tab') === id);
+      // La barra inferior se desplaza en móvil: la pestaña activa debe quedar a la vista.
+      var activa = document.querySelector('#barraTabs a.activa');
+      if (activa && activa.scrollIntoView) {
+        try { activa.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); }
+        catch (e) { activa.scrollIntoView(false); }
+      }
+      if (id === 'dispositivos' && typeof dispositivosAlMostrar === 'function') dispositivosAlMostrar();
+      if (id === 'tareas' && typeof tareasAlMostrar === 'function') tareasAlMostrar();
+      if (id === 'residuos' && typeof residuosAlMostrar === 'function') residuosAlMostrar();
+      if (id === 'turnos' && typeof turnosAlMostrar === 'function') turnosAlMostrar();
+    }
+
+    function abrirSugerencias() {
+      document.getElementById('overlaySugerencias').classList.add('abierto');
+      if (typeof sugerenciasAlAbrir === 'function') sugerenciasAlAbrir(CentinelaState.jefe);
+    }
+    function cerrarSugerencias() {
+      document.getElementById('overlaySugerencias').classList.remove('abierto');
+    }
+
+    var supervisorTimer = null;
+    function iniciarPulsacionSupervisor() {
+      supervisorTimer = setTimeout(function () {
+        supervisorTimer = null;
+        document.getElementById('overlaySupervisor').classList.add('abierto');
+        var input = document.getElementById('supervisorPass');
+        input.value = '';
+        input.focus();
+      }, 2000);
+    }
+    function cancelarPulsacionSupervisor() {
+      if (supervisorTimer) { clearTimeout(supervisorTimer); supervisorTimer = null; }
+    }
+    function confirmarSupervisor() {
+      var val = document.getElementById('supervisorPass').value;
+      if (val === '467') {
+        CentinelaState.supervisor = true;
+        document.getElementById('overlaySupervisor').classList.remove('abierto');
+        showToast('🔓 Modo supervisor activado');
+        // Si aún no se eligió jefe (se entró directo con la contraseña desde
+        // la puerta de identidad), se salta ese paso — un supervisor no es
+        // uno de los 4 jefes de equipo, no tiene sentido pedírselo.
+        if (!CentinelaState.jefe) {
+          document.getElementById('puertaIdentidad').style.display = 'none';
+          document.getElementById('appCentinela').style.display = 'block';
+          document.getElementById('barraTabs').style.display = 'flex';
+          document.getElementById('fabSugerencias').style.display = 'flex';
+          document.getElementById('idBarTexto').textContent = 'Supervisor';
+        }
+        if (typeof maquinariaActualizarSupervisor === 'function') maquinariaActualizarSupervisor();
+        if (typeof tareasAlCambiarModo === 'function') tareasAlCambiarModo();
+      } else {
+        showToast('❌ Contraseña incorrecta');
+      }
+    }
+    function cerrarSupervisor() {
+      document.getElementById('overlaySupervisor').classList.remove('abierto');
+    }
+    // Salida explícita del modo supervisor (antes solo se salía recargando la página).
+    // Si se había entrado directamente con la contraseña, sin elegir jefe, se vuelve
+    // a la puerta de identidad.
+    function salirModoSupervisor() {
+      CentinelaState.supervisor = false;
+      showToast('🔒 Modo supervisor desactivado');
+      if (typeof maquinariaActualizarSupervisor === 'function') maquinariaActualizarSupervisor();
+      if (typeof tareasAlCambiarModo === 'function') tareasAlCambiarModo();
+      if (!CentinelaState.jefe) cambiarIdentidad();
+    }
+
+    initShell();
+  </script>
+</body>
+</html>

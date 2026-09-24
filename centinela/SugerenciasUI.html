@@ -1,0 +1,52 @@
+<style>
+  .sug-form label { display:block; font-size:13px; font-weight:700; color:var(--text-500); margin-bottom:8px; text-transform:uppercase; letter-spacing:.04em; }
+  .sug-form textarea { width:100%; min-height:120px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:12px; font-size:15px; font-family:inherit; resize:vertical; }
+  .sug-form .sug-botones { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  .sug-form button { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 16px; min-height:44px; font-size:14px; font-weight:700; }
+  .sug-form button.enviar { background:var(--accent); color:var(--accent-ink); }
+  .sug-form button.cancelar { background:var(--ink-800); color:var(--text-300); }
+  .sug-form p.titulo { margin:0 0 14px; font-size:17px; font-weight:800; color:var(--text-100); }
+</style>
+<div class="sug-form">
+  <p class="titulo">💡 Enviar sugerencia</p>
+  <label for="sugTexto">¿Qué mejorarías?</label>
+  <textarea id="sugTexto" placeholder="Cuéntanos tu idea..."></textarea>
+  <div class="sug-botones">
+    <button type="button" class="cancelar" onclick="cerrarSugerencias()">Cancelar</button>
+    <button type="button" class="enviar" id="btnEnviarSugerencia" onclick="enviarSugerencia()">Enviar</button>
+  </div>
+</div>
+<script>
+  function sugerenciasAlAbrir(jefe) {
+    document.getElementById('sugTexto').value = '';
+    document.getElementById('btnEnviarSugerencia').disabled = false;
+  }
+
+  function enviarSugerencia() {
+    var texto = document.getElementById('sugTexto').value.trim();
+    if (!texto) { showToast('❌ Escribe algo antes de enviar'); return; }
+    if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
+
+    var boton = document.getElementById('btnEnviarSugerencia');
+    boton.disabled = true;
+    boton.textContent = 'Enviando…';
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        boton.disabled = false;
+        boton.textContent = 'Enviar';
+        if (result && result.success) {
+          showToast('✅ Sugerencia enviada, gracias');
+          cerrarSugerencias();
+        } else {
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Enviar';
+        showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .procesarSugerencia({ jefe_equipo: CentinelaState.jefe, texto: texto });
+  }
+</script>

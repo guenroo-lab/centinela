@@ -1,0 +1,413 @@
+<style>
+  .per-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .per-btn-nuevo { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; font-size:13px; font-weight:700; background:var(--ink-800); color:var(--text-300); transition:transform .15s ease; }
+  .per-btn-nuevo:active { transform:scale(.96); background:var(--ink-700); }
+  .per-nuevo-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--accent-line); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:14px; margin-bottom:14px; display:none; }
+  .per-nuevo-card.abierto { display:block; }
+  .per-nuevo-card input { width:100%; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px; font-size:14px; margin:6px 0 10px; box-sizing:border-box; }
+
+  .per-list { display:flex; flex-direction:column; gap:10px; }
+  @media (min-width: 900px) { .per-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px; align-items:start; } }
+  .per-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); overflow:hidden; }
+  .per-card-head { padding:13px 14px; cursor:pointer; display:flex; align-items:center; gap:10px; transition:background .15s ease; }
+  .per-card-head:active { background:rgba(255,255,255,.04); }
+  .per-card-nombre { font-weight:700; font-size:14px; color:var(--text-100); }
+  .per-card-body { max-height:0; opacity:0; overflow:hidden; padding:0 14px; transition:max-height .32s ease, opacity .25s ease, padding .32s ease; }
+  .per-card-body.abierto { max-height:6000px; opacity:1; padding:2px 14px 14px; border-top:1px solid var(--ink-800); }
+  .per-textarea { width:100%; min-height:80px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:12px; font-size:15px; font-family:inherit; resize:vertical; margin:12px 0; box-sizing:border-box; }
+  .per-btn-guardar { width:100%; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:14px; min-height:48px; font-size:15px; font-weight:800; background:var(--accent); color:var(--accent-ink); box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 55%, transparent); transition:transform .15s ease; }
+  .per-btn-guardar:active { transform:scale(.98); }
+  .per-card-sub { font-size:11px; color:var(--text-500); margin-top:2px; }
+  .per-card-sub:empty { display:none; }
+  .per-sinincid { font-size:11px; font-weight:700; color:var(--text-600); white-space:nowrap; }
+
+  .per-label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-500); margin:12px 0 6px; }
+  .per-label em { font-style:normal; font-weight:600; text-transform:none; letter-spacing:0; color:var(--text-600); }
+  .per-textarea { margin-bottom:0; }
+  .per-gchips { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; }
+  .per-gchip { cursor:pointer; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:8px 2px; font-size:17px; font-weight:800; line-height:1.1; display:flex; flex-direction:column; align-items:center; gap:3px; transition:transform .15s ease; }
+  .per-gchip small { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
+  .per-gchip:active { transform:scale(.95); }
+  .per-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .per-chip { cursor:pointer; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-chip); padding:7px 12px; font-size:12.5px; font-weight:600; transition:transform .15s ease; }
+  .per-chip:active { transform:scale(.96); }
+  .per-chip.on { background:var(--accent-dim); border-color:var(--accent); color:var(--accent-text); }
+  .per-fecha { background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px; font-size:14px; font-family:inherit; box-sizing:border-box; max-width:100%; }
+  .per-quien { font-size:12px; color:var(--text-500); margin:14px 0 8px; }
+  .per-quien b { color:var(--text-300); }
+
+  /* Gravedad: 1-2 verde, 3 ámbar, 4 rojo, 5 rojo pleno, sin puntuar (antiguas) gris */
+  .per-gchip.on.g1, .per-gchip.on.g2, .per-badge.g1, .per-badge.g2 { background:color-mix(in srgb, var(--ok) 16%, transparent); border-color:var(--ok); color:var(--ok); }
+  .per-gchip.on.g3, .per-badge.g3 { background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn-fg); }
+  .per-gchip.on.g4, .per-badge.g4 { background:var(--danger-bg); border-color:var(--danger-line); color:var(--danger-fg); }
+  .per-gchip.on.g5, .per-badge.g5 { background:#e30613; border-color:#e30613; color:#fff; }
+  .per-badge { display:inline-block; border:1px solid var(--ink-700); border-radius:var(--radius-chip); padding:2px 9px; font-size:11px; font-weight:800; color:var(--text-500); background:var(--ink-950); white-space:nowrap; }
+  .per-tag { display:inline-block; border-radius:var(--radius-chip); padding:2px 9px; font-size:11px; font-weight:600; color:var(--text-300); background:var(--ink-800); }
+
+  .per-hist-item { background:var(--ink-950); border:1px solid var(--ink-800); border-left:3px solid var(--ink-700); border-radius:var(--radius-card); padding:10px 12px; margin-bottom:6px; font-size:12.5px; }
+  .per-hist-item.g1, .per-hist-item.g2 { border-left-color:var(--ok); }
+  .per-hist-item.g3 { border-left-color:var(--warn-line); }
+  .per-hist-item.g4, .per-hist-item.g5 { border-left-color:#e30613; }
+  .per-hist-cab { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  .per-hist-texto { color:var(--text-100); line-height:1.45; white-space:pre-wrap; word-break:break-word; }
+  .per-hist-item .fecha { color:var(--text-500); font-size:11px; margin-top:6px; }
+  .per-hist-item .fecha b { color:var(--text-300); }
+
+  .per-lock { max-width:420px; margin:28px auto 0; text-align:center; background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:26px 20px; }
+  .per-lock .cand { font-size:38px; }
+  .per-lock h2 { font-size:17px; font-weight:800; margin:8px 0 4px; color:var(--text-100); }
+  .per-lock p { font-size:13px; color:var(--text-500); margin:0 0 16px; }
+  .per-lock input { width:100%; box-sizing:border-box; text-align:center; letter-spacing:.35em; font-size:22px; font-weight:800; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:12px; margin-bottom:12px; }
+  .per-lock input.error { border-color:var(--danger-line); animation:perSacudir .3s ease; }
+  @keyframes perSacudir { 25% { transform:translateX(-6px); } 75% { transform:translateX(6px); } }
+  .per-lock-msg { min-height:18px; font-size:12.5px; font-weight:700; color:var(--danger-fg); margin-bottom:10px; }
+  .per-btn-bloquear { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; font-size:13px; font-weight:700; background:var(--ink-800); color:var(--text-300); }
+  #perContenido { display:none; }
+  #perContenido.abierto { display:block; }
+</style>
+
+<h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">👥 Personal</h1>
+
+<div class="per-lock" id="perBloqueo">
+  <div class="cand">🔒</div>
+  <h2>Acceso restringido</h2>
+  <p>Este apartado contiene información sensible. Introduce el código para verla.</p>
+  <input type="password" id="perCodigo" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Código de acceso" placeholder="•••••" onkeydown="if (event.key === 'Enter') perDesbloquear()">
+  <div class="per-lock-msg" id="perLockMsg"></div>
+  <button type="button" class="per-btn-guardar" id="perBtnEntrar" onclick="perDesbloquear()">Entrar</button>
+</div>
+
+<div id="perContenido">
+  <div class="per-top">
+    <p style="color:var(--text-500);font-size:13px;margin:0;">Ficha de cada operario, con sus incidencias.</p>
+    <div style="display:flex;gap:8px;">
+      <button type="button" class="per-btn-bloquear" onclick="perBloquear()">🔒 Bloquear</button>
+      <button type="button" class="per-btn-nuevo" onclick="perToggleNuevo()">➕ Añadir</button>
+    </div>
+  </div>
+
+  <div class="per-nuevo-card" id="perNuevoCard">
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Nombre del operario</label>
+    <input type="text" id="perNuevoNombre" placeholder="Nombre y apellido">
+    <button type="button" class="per-btn-guardar" id="perBtnCrear" onclick="perCrearOperario()">Añadir</button>
+  </div>
+
+  <div class="per-list" id="perLista"></div>
+</div>
+
+<script>
+  let perCache = [];
+  let perAbierta = null;
+  let perCodigo = '';          // solo en memoria: al recargar la app hay que volver a introducirlo
+  let perJefeAlEntrar = null;
+  let perTimerInactivo = null, perTimerFuera = null;
+  const PER_INACTIVIDAD_MS = 10 * 60 * 1000;   // bloquea solo tras 10 min sin tocar nada
+  const PER_FUERA_MS = 3 * 60 * 1000;          // o tras 3 min en otra pestaña
+
+  function perEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  // ── Bloqueo ──
+  function perDesbloquear() {
+    const campo = document.getElementById('perCodigo');
+    const codigo = campo.value.trim();
+    const msg = document.getElementById('perLockMsg');
+    if (!codigo) { msg.textContent = 'Escribe el código.'; return; }
+    const boton = document.getElementById('perBtnEntrar');
+    boton.disabled = true; boton.textContent = 'Comprobando…'; msg.textContent = '';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        boton.disabled = false; boton.textContent = 'Entrar';
+        if (r && r.ok) {
+          perCodigo = codigo;
+          perJefeAlEntrar = (typeof CentinelaState !== 'undefined') ? CentinelaState.jefe : null;
+          campo.value = '';
+          document.getElementById('perBloqueo').style.display = 'none';
+          document.getElementById('perContenido').classList.add('abierto');
+          perReiniciarInactividad();
+          perInit();
+        } else {
+          msg.textContent = (r && r.error) || 'Código incorrecto.';
+          campo.classList.remove('error'); void campo.offsetWidth; campo.classList.add('error');
+          campo.select();
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false; boton.textContent = 'Entrar';
+        msg.textContent = 'Error del servidor: ' + (err && err.message ? err.message : err);
+      })
+      .desbloquearPersonal(codigo);
+  }
+
+  // Vuelve a la pantalla de bloqueo y borra del navegador todo lo que se había cargado
+  function perBloquear(aviso) {
+    perCodigo = ''; perCache = []; perAbierta = null; perJefeAlEntrar = null; perForm = {};
+    clearTimeout(perTimerInactivo); clearTimeout(perTimerFuera);
+    document.getElementById('perLista').innerHTML = '';
+    document.getElementById('perNuevoNombre').value = '';
+    document.getElementById('perNuevoCard').classList.remove('abierto');
+    document.getElementById('perContenido').classList.remove('abierto');
+    document.getElementById('perBloqueo').style.display = '';
+    document.getElementById('perCodigo').value = '';
+    document.getElementById('perLockMsg').textContent = aviso || '';
+  }
+
+  // Si el servidor dice que el código ya no vale, se bloquea
+  function perFalloServidor(err) {
+    const m = (err && err.message) ? err.message : String(err);
+    if (m.indexOf('ACCESO_DENEGADO') >= 0 || m.indexOf('DEMASIADOS_INTENTOS') >= 0) { perBloquear('Sesión caducada: introduce el código otra vez.'); return true; }
+    return false;
+  }
+
+  function perReiniciarInactividad() {
+    clearTimeout(perTimerInactivo);
+    if (perCodigo) perTimerInactivo = setTimeout(function () { perBloquear('Bloqueado por inactividad.'); }, PER_INACTIVIDAD_MS);
+  }
+
+  // Cambiar de jefe, salir de la pestaña un rato o dejarla sin usar → vuelve a pedir el código.
+  // Se vigila el panel con un observador para no depender del cascarón.
+  function perVigilarPestana() {
+    const panel = document.getElementById('tab-personal');
+    if (!panel || typeof MutationObserver === 'undefined') return;
+    new MutationObserver(function () {
+      const activa = panel.classList.contains('activo');
+      if (!perCodigo) return;
+      if (activa) {
+        clearTimeout(perTimerFuera);
+        if (typeof CentinelaState !== 'undefined' && CentinelaState.jefe !== perJefeAlEntrar) perBloquear('Ha cambiado el usuario: introduce el código.');
+        else perReiniciarInactividad();
+      } else {
+        clearTimeout(perTimerFuera);
+        perTimerFuera = setTimeout(function () { perBloquear('Bloqueado al salir de la pestaña.'); }, PER_FUERA_MS);
+      }
+    }).observe(panel, { attributes: true, attributeFilter: ['class'] });
+    ['click', 'keydown', 'input', 'touchstart'].forEach(function (ev) { panel.addEventListener(ev, perReiniciarInactividad, true); });
+  }
+
+  // ── Datos (todas las llamadas llevan el código; el servidor lo comprueba en cada una) ──
+  function perInit() {
+    const cont = document.getElementById('perLista');
+    cont.innerHTML = '<p style="color:var(--text-500);font-size:13px;">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (lista) { perCache = lista || []; perRenderLista(); })
+      .withFailureHandler(function (err) { if (!perFalloServidor(err)) cont.innerHTML = '<p style="color:var(--danger-fg);font-size:13px;">Error al cargar: ' + perEsc(err && err.message ? err.message : err) + '</p>'; })
+      .obtenerOperarios(perCodigo);
+  }
+
+  function perToggleNuevo() {
+    document.getElementById('perNuevoCard').classList.toggle('abierto');
+  }
+
+  function perCrearOperario() {
+    const nombre = document.getElementById('perNuevoNombre').value.trim();
+    if (!nombre) { showToast('❌ Escribe un nombre'); return; }
+    const boton = document.getElementById('perBtnCrear');
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    google.script.run
+      .withSuccessHandler(function (result) {
+        boton.disabled = false;
+        boton.textContent = 'Añadir';
+        if (result && result.success) {
+          showToast('✅ Operario añadido');
+          document.getElementById('perNuevoNombre').value = '';
+          document.getElementById('perNuevoCard').classList.remove('abierto');
+          perInit();
+        } else {
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Añadir';
+        if (!perFalloServidor(err)) showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .crearOperario({ nombre: nombre, codigo: perCodigo });
+  }
+
+  // ── Campos de la incidencia ──
+  const PER_GRAVEDADES = ['Leve', 'Menor', 'Moderada', 'Grave', 'Muy grave'];   // gravedad 1..5
+  const PER_TIPOS = ['Puntualidad / Asistencia', 'Seguridad / EPI', 'Calidad / Errores', 'Actitud / Trato', 'Rendimiento', 'Otro'];
+  const PER_MEDIDAS = ['Sin medida', 'Advertencia verbal', 'Advertencia escrita'];
+  let perForm = {};   // por operario, lo elegido en el formulario: { gravedad, tipo, medida }
+
+  function perNombreGravedad(g) { return PER_GRAVEDADES[Number(g) - 1] || ''; }
+
+  function perHoyIso() {
+    const d = new Date();
+    const dos = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + dos(d.getMonth() + 1) + '-' + dos(d.getDate());
+  }
+
+  // Cabecera de la ficha: nº de incidencias, la más grave y la última fecha
+  function perHtmlResumen(o) {
+    const n = Number(o.incidencias) || 0;
+    if (!n) return '<span class="per-sinincid">Sin incidencias</span>';
+    const g = Number(o.gravedadMax) || 0;
+    return '<span class="per-badge g' + g + '">' + n + (n === 1 ? ' incidencia' : ' incidencias') + (g ? ' · máx. ' + perNombreGravedad(g) : '') + '</span>';
+  }
+  function perTextoSub(o) { return (Number(o.incidencias) > 0 && o.ultima) ? 'Última: ' + o.ultima : ''; }
+
+  function perRenderLista() {
+    const cont = document.getElementById('perLista');
+    if (!perCache.length) { cont.innerHTML = '<p style="color:var(--text-500);font-size:13px;">Sin operarios todavía — añade el primero con "➕ Añadir".</p>'; return; }
+    perForm = {};
+    cont.innerHTML = perCache.map(function (o) {
+      const id = Number(o.id);
+      return '<div class="per-card">' +
+        '<div class="per-card-head" onclick="perToggle(' + id + ')">' +
+          '<div style="flex:1;min-width:0;"><div class="per-card-nombre">' + perEsc(o.nombre) + '</div>' +
+            '<div class="per-card-sub" id="perSub-' + id + '">' + perEsc(perTextoSub(o)) + '</div></div>' +
+          '<div id="perResumen-' + id + '">' + perHtmlResumen(o) + '</div>' +
+        '</div>' +
+        '<div class="per-card-body" id="perBody-' + id + '">' +
+          '<textarea class="per-textarea" id="perTexto-' + id + '" placeholder="¿Qué ha pasado? Describe la incidencia o advertencia…"></textarea>' +
+          '<span class="per-label">Gravedad <em>(obligatoria)</em></span>' +
+          '<div class="per-gchips">' + PER_GRAVEDADES.map(function (nombre, i) {
+            return '<button type="button" class="per-gchip g' + (i + 1) + '" data-campo="gravedad" data-valor="' + (i + 1) + '" onclick="perElegir(' + id + ',\'gravedad\',' + (i + 1) + ')">' + (i + 1) + '<small>' + perEsc(nombre) + '</small></button>';
+          }).join('') + '</div>' +
+          '<span class="per-label">Tipo <em>(opcional)</em></span>' +
+          '<div class="per-chips">' + PER_TIPOS.map(function (t, i) {
+            return '<button type="button" class="per-chip" data-campo="tipo" data-valor="' + i + '" onclick="perElegir(' + id + ',\'tipo\',' + i + ')">' + perEsc(t) + '</button>';
+          }).join('') + '</div>' +
+          '<span class="per-label">Medida tomada <em>(opcional)</em></span>' +
+          '<div class="per-chips">' + PER_MEDIDAS.map(function (t, i) {
+            return '<button type="button" class="per-chip" data-campo="medida" data-valor="' + i + '" onclick="perElegir(' + id + ',\'medida\',' + i + ')">' + perEsc(t) + '</button>';
+          }).join('') + '</div>' +
+          '<span class="per-label">Cuándo ocurrió</span>' +
+          '<input type="date" class="per-fecha" id="perFecha-' + id + '" value="' + perHoyIso() + '" max="' + perHoyIso() + '">' +
+          '<div class="per-quien" id="perQuien-' + id + '"></div>' +
+          '<button type="button" class="per-btn-guardar" id="perBtnGuardar-' + id + '" onclick="perGuardar(' + id + ')">Guardar incidencia</button>' +
+          '<div style="margin-top:16px;">' +
+            '<h3 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-500);margin:0 0 8px;">Historial</h3>' +
+            '<div id="perHist-' + id + '" style="font-size:12.5px;color:var(--text-500);">—</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function perToggle(id) {
+    const body = document.getElementById('perBody-' + id);
+    if (!body) return;
+    const yaAbierta = body.classList.contains('abierto');
+    if (perAbierta !== null && perAbierta !== id) {
+      const prev = document.getElementById('perBody-' + perAbierta);
+      if (prev) prev.classList.remove('abierto');
+    }
+    body.classList.toggle('abierto', !yaAbierta);
+    perAbierta = yaAbierta ? null : id;
+    if (!yaAbierta) { perPintarForm(id); perCargarHistorial(id); }
+  }
+
+  // Marca en el formulario lo elegido y muestra quién registrará la incidencia
+  function perPintarForm(id) {
+    const f = perForm[id] || {};
+    const chips = document.querySelectorAll('#perBody-' + id + ' [data-campo]');
+    for (let i = 0; i < chips.length; i++) {
+      const campo = chips[i].getAttribute('data-campo');
+      chips[i].classList.toggle('on', f[campo] !== undefined && String(f[campo]) === chips[i].getAttribute('data-valor'));
+    }
+    const quien = document.getElementById('perQuien-' + id);
+    if (quien) {
+      const jefe = (typeof CentinelaState !== 'undefined') ? CentinelaState.jefe : null;
+      quien.innerHTML = jefe ? 'Quedará registrada a nombre de <b>' + perEsc(jefe) + '</b>, con fecha y hora de ahora.' : '⚠️ Falta identificarte — recarga la app.';
+    }
+  }
+
+  // gravedad se elige (1..5); tipo y medida son opcionales: tocar el elegido lo quita
+  function perElegir(id, campo, valor) {
+    const f = perForm[id] || (perForm[id] = {});
+    if (campo === 'gravedad') f.gravedad = valor;
+    else if (f[campo] === valor) delete f[campo];
+    else f[campo] = valor;
+    perPintarForm(id);
+  }
+
+  function perHtmlIncidencia(h) {
+    const g = Number(h.gravedad) || 0;
+    const cab = '<span class="per-badge g' + g + '">' + (g ? g + ' · ' + perEsc(perNombreGravedad(g)) : 'Sin puntuar') + '</span>' +
+      (h.tipo ? '<span class="per-tag">' + perEsc(h.tipo) + '</span>' : '') +
+      (h.medida ? '<span class="per-tag">' + perEsc(h.medida) + '</span>' : '');
+    const hecho = (h.fechaHecho && h.fechaHecho !== h.fecha) ? ' · Ocurrió el ' + perEsc(h.fechaHecho) : '';
+    return '<div class="per-hist-item g' + g + '"><div class="per-hist-cab">' + cab + '</div>' +
+      '<div class="per-hist-texto">' + perEsc(h.texto) + '</div>' +
+      '<div class="fecha">Puesta por <b>' + perEsc(h.reportadoPor) + '</b> · registrada ' + perEsc(h.fecha) + ' ' + perEsc(h.hora) + hecho + '</div></div>';
+  }
+
+  // Tras guardar, actualiza el resumen de las cabeceras sin cerrar la ficha abierta
+  function perRefrescarResumen() {
+    google.script.run
+      .withSuccessHandler(function (lista) {
+        if (!perCodigo || !lista) return;
+        perCache = lista;
+        lista.forEach(function (o) {
+          const sub = document.getElementById('perSub-' + Number(o.id));
+          const res = document.getElementById('perResumen-' + Number(o.id));
+          if (sub) sub.textContent = perTextoSub(o);
+          if (res) res.innerHTML = perHtmlResumen(o);
+        });
+      })
+      .withFailureHandler(function (err) { perFalloServidor(err); })
+      .obtenerOperarios(perCodigo);
+  }
+
+  function perCargarHistorial(id) {
+    const box = document.getElementById('perHist-' + id);
+    if (!box) return;
+    box.textContent = 'Cargando…';
+    google.script.run
+      .withSuccessHandler(function (historial) {
+        const boxAhora = document.getElementById('perHist-' + id);
+        if (!boxAhora) return;
+        if (!historial || !historial.length) { boxAhora.textContent = 'Sin incidencias registradas.'; return; }
+        boxAhora.innerHTML = historial.map(perHtmlIncidencia).join('');
+      })
+      .withFailureHandler(function (err) { if (!perFalloServidor(err)) { const b = document.getElementById('perHist-' + id); if (b) b.textContent = 'No se pudo cargar el historial.'; } })
+      .obtenerIncidenciasOperario(id, perCodigo);
+  }
+
+  function perGuardar(id) {
+    const texto = document.getElementById('perTexto-' + id).value.trim();
+    if (texto.length < 5) { showToast('❌ Describe la incidencia'); return; }
+    const f = perForm[id] || {};
+    if (!f.gravedad) { showToast('❌ Puntúa la gravedad (1 a 5)'); return; }
+    const fecha = document.getElementById('perFecha-' + id).value || perHoyIso();
+    if (fecha > perHoyIso()) { showToast('❌ La fecha no puede ser futura'); return; }
+    if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
+
+    const boton = document.getElementById('perBtnGuardar-' + id);
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        boton.disabled = false;
+        boton.textContent = 'Guardar incidencia';
+        if (result && result.success) {
+          showToast('✅ Guardado');
+          document.getElementById('perTexto-' + id).value = '';
+          document.getElementById('perFecha-' + id).value = perHoyIso();
+          perForm[id] = {};
+          perPintarForm(id);
+          perCargarHistorial(id);
+          perRefrescarResumen();
+        } else {
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Guardar incidencia';
+        if (!perFalloServidor(err)) showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .procesarIncidencia({
+        jefe_equipo: CentinelaState.jefe, operario_id: id, texto: texto, codigo: perCodigo,
+        gravedad: f.gravedad,
+        tipo: f.tipo !== undefined ? PER_TIPOS[f.tipo] : '',
+        medida: f.medida !== undefined ? PER_MEDIDAS[f.medida] : '',
+        fecha_hecho: fecha
+      });
+  }
+
+  perVigilarPestana();
+</script>

@@ -1,0 +1,161 @@
+<style>
+  .res-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+  .res-btn { min-height:88px; border-radius:16px; border:1px solid var(--ink-700); background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); color:var(--text-100); font-size:14px; font-weight:800; cursor:pointer; padding:12px; box-shadow:var(--shadow-card); transition:transform .15s ease; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .res-btn:active { transform:scale(.96); background:var(--accent-dim); border-color:var(--accent); }
+  .res-btn .ico { font-size:26px; }
+  .res-averia-btn { width:100%; min-height:56px; border-radius:var(--radius-btn); border:1px solid var(--danger-line); background:var(--danger-bg); color:var(--danger-fg); font-size:14px; font-weight:800; cursor:pointer; box-shadow:var(--shadow-card); transition:transform .15s ease; }
+  .res-averia-btn:active { transform:scale(.97); }
+
+  .res-form { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:16px; margin-top:16px; display:none; }
+  .res-form.abierto { display:block; }
+  .res-form textarea { width:100%; min-height:90px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:12px; font-size:15px; font-family:inherit; resize:vertical; margin:10px 0 12px; box-sizing:border-box; }
+  .res-form .res-botones { display:flex; gap:8px; }
+  .res-form button { flex:1; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:12px; min-height:44px; font-size:14px; font-weight:700; transition:transform .15s ease; }
+  .res-form button:active { transform:scale(.97); }
+  .res-form .cancelar { background:var(--ink-800); color:var(--text-300); }
+  .res-form .enviar { background:var(--accent); color:var(--accent-ink); }
+
+  .res-hist-tit { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin:26px 0 8px; }
+  .res-hist { display:flex; flex-direction:column; gap:8px; }
+  .res-hist-item { display:flex; gap:12px; align-items:flex-start; background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:11px 13px; }
+  .res-hist-item .ico { font-size:22px; line-height:1.1; }
+  .res-hist-item .tipo { font-size:13.5px; font-weight:700; color:var(--text-100); }
+  .res-hist-item.averia .tipo { color:var(--danger-fg); }
+  .res-hist-item .obs { font-size:12.5px; color:var(--text-300); margin-top:3px; line-height:1.4; white-space:pre-wrap; word-break:break-word; }
+  .res-hist-item .quien { font-size:11.5px; color:var(--text-500); margin-top:3px; }
+  .res-hist-item .quien b { color:var(--text-300); }
+  .res-hist-vacio { font-size:13px; color:var(--text-500); }
+</style>
+
+<h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">♻️ Residuos</h1>
+<p style="color:var(--text-500);font-size:13px;margin:0 0 16px;">Solicita un cambio de cuba o reporta una avería.</p>
+
+<div class="res-grid">
+  <button type="button" class="res-btn" onclick="resAbrirCuba('Escombros')"><span class="ico">🧱</span>Escombros</button>
+  <button type="button" class="res-btn" onclick="resAbrirCuba('Madera')"><span class="ico">🪵</span>Madera</button>
+  <button type="button" class="res-btn" onclick="resAbrirCuba('Plástico')"><span class="ico">♻️</span>Plástico</button>
+  <button type="button" class="res-btn" onclick="resAbrirCuba('Cartón')"><span class="ico">📦</span>Cartón</button>
+</div>
+
+<button type="button" class="res-averia-btn" onclick="resAbrirAveria()">⚠️ Reportar avería</button>
+
+<div class="res-form" id="resFormCuba">
+  <p style="margin:0 0 4px;font-size:14px;color:var(--text-100);font-weight:700;">Confirmar cambio de cuba: <span id="resTipoTexto"></span></p>
+  <p style="margin:0;font-size:12.5px;color:var(--text-500);">Se enviará un correo a Recisur pidiendo el cambio.</p>
+  <div class="res-botones" style="margin-top:14px;">
+    <button type="button" class="cancelar" onclick="resCerrarFormularios()">Cancelar</button>
+    <button type="button" class="enviar" id="resBtnEnviarCuba" onclick="resEnviarCuba()">Confirmar y enviar</button>
+  </div>
+</div>
+
+<div class="res-form" id="resFormAveria">
+  <p style="margin:0 0 10px;font-size:14px;color:var(--text-100);font-weight:700;">Describe la avería</p>
+  <textarea id="resAveriaTexto" placeholder="¿Qué ha pasado?"></textarea>
+  <div class="res-botones">
+    <button type="button" class="cancelar" onclick="resCerrarFormularios()">Cancelar</button>
+    <button type="button" class="enviar" id="resBtnEnviarAveria" onclick="resEnviarAveria()">Enviar</button>
+  </div>
+</div>
+
+<h3 class="res-hist-tit">Últimas peticiones</h3>
+<div class="res-hist" id="resHistorial"><p class="res-hist-vacio">Cargando…</p></div>
+
+<script>
+  let resTipoElegido = '';
+  const RES_ICONOS = { 'Escombros': '🧱', 'Madera': '🪵', 'Plástico': '♻️', 'Cartón': '📦', 'Averia': '⚠️' };
+
+  function resEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  // Las 5 últimas peticiones (cuba o avería), con cuándo y quién. Se recarga al entrar en la pestaña y al enviar.
+  function resCargarHistorial() {
+    google.script.run
+      .withSuccessHandler(function (lista) {
+        const cont = document.getElementById('resHistorial');
+        if (!lista || !lista.length) { cont.innerHTML = '<p class="res-hist-vacio">Todavía no hay peticiones.</p>'; return; }
+        cont.innerHTML = lista.map(function (p) {
+          const averia = p.tipo === 'Averia';
+          const hora = String(p.hora || '').replace(/^(\d{1,2}:\d{2}).*$/, '$1');
+          return '<div class="res-hist-item' + (averia ? ' averia' : '') + '"><span class="ico">' + (RES_ICONOS[p.tipo] || '📋') + '</span><div>' +
+            '<div class="tipo">' + (averia ? 'Avería' : 'Cambio de cuba de ' + resEsc(p.tipo)) + '</div>' +
+            (p.observacion ? '<div class="obs">' + resEsc(p.observacion) + '</div>' : '') +
+            '<div class="quien">' + resEsc(p.fecha) + ' ' + resEsc(hora) + ' · <b>' + resEsc(p.jefe) + '</b></div></div></div>';
+        }).join('');
+      })
+      .withFailureHandler(function () {
+        document.getElementById('resHistorial').innerHTML = '<p class="res-hist-vacio">No se pudo cargar el histórico.</p>';
+      })
+      .obtenerUltimasPeticionesResiduos();
+  }
+
+  function residuosAlMostrar() { resCargarHistorial(); }
+
+  function resCerrarFormularios() {
+    document.getElementById('resFormCuba').classList.remove('abierto');
+    document.getElementById('resFormAveria').classList.remove('abierto');
+  }
+
+  function resAbrirCuba(tipo) {
+    resTipoElegido = tipo;
+    document.getElementById('resTipoTexto').textContent = tipo;
+    document.getElementById('resFormAveria').classList.remove('abierto');
+    document.getElementById('resFormCuba').classList.add('abierto');
+  }
+
+  function resAbrirAveria() {
+    document.getElementById('resFormCuba').classList.remove('abierto');
+    document.getElementById('resAveriaTexto').value = '';
+    document.getElementById('resFormAveria').classList.add('abierto');
+  }
+
+  function resEnviarCuba() {
+    if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
+    const boton = document.getElementById('resBtnEnviarCuba');
+    boton.disabled = true;
+    boton.textContent = 'Enviando…';
+    google.script.run
+      .withSuccessHandler(function (result) {
+        boton.disabled = false;
+        boton.textContent = 'Confirmar y enviar';
+        if (result && result.success) {
+          showToast('✅ Petición enviada a Recisur');
+          resCerrarFormularios();
+          resCargarHistorial();
+        } else {
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Confirmar y enviar';
+        showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .procesarPeticionResiduos({ jefe_equipo: CentinelaState.jefe, tipo: resTipoElegido, observacion: '' });
+  }
+
+  function resEnviarAveria() {
+    const texto = document.getElementById('resAveriaTexto').value.trim();
+    if (texto.length < 5) { showToast('❌ Describe la avería'); return; }
+    if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
+    const boton = document.getElementById('resBtnEnviarAveria');
+    boton.disabled = true;
+    boton.textContent = 'Enviando…';
+    google.script.run
+      .withSuccessHandler(function (result) {
+        boton.disabled = false;
+        boton.textContent = 'Enviar';
+        if (result && result.success) {
+          showToast('✅ Avería enviada');
+          resCerrarFormularios();
+          resCargarHistorial();
+        } else {
+          showToast('❌ ' + ((result && result.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        boton.disabled = false;
+        boton.textContent = 'Enviar';
+        showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .procesarPeticionResiduos({ jefe_equipo: CentinelaState.jefe, tipo: 'Averia', observacion: texto });
+  }
+</script>
