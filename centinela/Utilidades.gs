@@ -115,3 +115,39 @@ function cabecerasOk(sheet, cabeceras) {
 function asegurarCabeceras_(sheet, cabeceras) {
   if (!cabecerasOk(sheet, cabeceras)) escribirCabeceras(sheet, cabeceras);
 }
+
+// ── Fechas escritas como texto en hojas con idioma mes/día ───
+// En una hoja cuyo idioma lee «06/10/2026» como mes/día, un texto dd/MM escrito en una celda SIN formato «texto» se
+// guarda como Date del día equivocado (10 de junio). Un Date en la respuesta de google.script.run hace que la llamada
+// ENTERA llegue como null y la pantalla se quede en «Cargando…». Ver CLAUDE.md (v75, v76) y Tareas.gs (tarTextoFecha_).
+const HOJA_LOCALE_MES_PRIMERO_ = /^(en|es)_(US|PR|PH)$/;
+
+function hojaMesPrimero_(sheet) {
+  try {
+    return HOJA_LOCALE_MES_PRIMERO_.test(sheet.getParent().getSpreadsheetLocale());
+  } catch (e) {
+    return false;
+  }
+}
+
+function esFechaCelda_(valor) {
+  return Object.prototype.toString.call(valor) === "[object Date]";
+}
+
+// Valor de celda -> algo que google.script.run pueda devolver. Un Date se pasa a texto «dd/MM/yyyy HH:mm»; si la hoja
+// es mes/día y el «día» del Date cabe como mes (≤ 12) se le da la vuelta para recuperar lo que se escribió (un día > 12
+// jamás se habría convertido en Date, así que ahí la fecha es real). Lo que no es fecha se devuelve tal cual.
+function celdaSegura_(valor, mesPrimero) {
+  if (!esFechaCelda_(valor)) return valor;
+  if (isNaN(valor.getTime())) return "";
+  const tz = Session.getScriptTimeZone();
+  if (mesPrimero) {
+    const mes = parseInt(Utilities.formatDate(valor, tz, "M"), 10);
+    const dia = parseInt(Utilities.formatDate(valor, tz, "d"), 10);
+    if (dia <= 12) {
+      return (mes < 10 ? "0" : "") + mes + "/" + (dia < 10 ? "0" : "") + dia + "/" +
+        Utilities.formatDate(valor, tz, "yyyy HH:mm");
+    }
+  }
+  return Utilities.formatDate(valor, tz, "dd/MM/yyyy HH:mm");
+}

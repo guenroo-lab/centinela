@@ -92,11 +92,40 @@
   const MAQ_ESTADOS = ['OK', 'Fallas', 'Averiada', 'Revision'];
   const MAQ_ETIQUETA_ESTADO = { OK: 'OK', Fallas: 'Fallas', Averiada: 'Averiada', Revision: 'En revisión' };
 
-  function maqInit() {
-    google.script.run.withSuccessHandler(function (lista) {
+  // Si la lista no llega (error del servidor, respuesta nula) o falla al pintarla, se dice y se ofrece reintentar:
+  // antes la pantalla se quedaba en «Cargando…» para siempre sin ningún aviso.
+  function maqErrorCarga_(mensaje) {
+    const cont = document.getElementById('maqLista');
+    cont.textContent = '';
+    const p = document.createElement('p');
+    p.style.cssText = 'color:var(--warn-fg);font-size:13px;margin:0 0 10px;';
+    p.textContent = 'No se pudieron cargar las máquinas' + (mensaje ? ' (' + mensaje + ')' : '') + '.';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'maq-btn-guardar';
+    b.textContent = 'Reintentar';
+    b.onclick = function () { cont.textContent = 'Cargando…'; maqInit(); };
+    cont.appendChild(p);
+    cont.appendChild(b);
+  }
+
+  function maqRecibirLista_(lista, despues) {
+    if (!Array.isArray(lista)) { maqErrorCarga_('el servidor no devolvió la lista'); return; }
+    try {
       maqCache = lista;
       maqRenderLista();
-    }).obtenerMaquinas();
+    } catch (e) {
+      maqErrorCarga_(e && e.message ? e.message : e);
+      return;
+    }
+    if (despues) despues();
+  }
+
+  function maqInit() {
+    google.script.run
+      .withSuccessHandler(function (lista) { maqRecibirLista_(lista); })
+      .withFailureHandler(function (err) { maqErrorCarga_(err && err.message ? err.message : err); })
+      .obtenerMaquinas();
   }
 
   function maqToggleNueva() {
@@ -252,6 +281,9 @@
         return '<div class="maq-hist-item"><div class="fecha">' + h.fechaInicio + ' → ' + h.fechaResuelto + '</div>' +
           '<div><b>' + h.estado + ':</b> ' + h.observacion + '</div>' + sat + '</div>';
       }).join('');
+    }).withFailureHandler(function (err) {
+      const boxAhora = document.getElementById('maqHist-' + id);
+      if (boxAhora) boxAhora.textContent = 'No se pudo cargar el historial (' + (err && err.message ? err.message : err) + ').';
     }).obtenerHistorialMaquina(id);
   }
 
@@ -287,16 +319,19 @@
   }
 
   function maqRecargarYReabrir(id) {
-    google.script.run.withSuccessHandler(function (lista) {
-      maqCache = lista;
-      maqRenderLista();
-      const body = document.getElementById('maqBody-' + id);
-      if (body) {
-        body.classList.add('abierto');
-        maqAbierta = id;
-        maqCargarHistorial(id);
-      }
-    }).obtenerMaquinas();
+    google.script.run
+      .withSuccessHandler(function (lista) {
+        maqRecibirLista_(lista, function () {
+          const body = document.getElementById('maqBody-' + id);
+          if (body) {
+            body.classList.add('abierto');
+            maqAbierta = id;
+            maqCargarHistorial(id);
+          }
+        });
+      })
+      .withFailureHandler(function (err) { maqErrorCarga_(err && err.message ? err.message : err); })
+      .obtenerMaquinas();
   }
 
   function maquinariaActualizarSupervisor() {
@@ -306,7 +341,8 @@
     const lista = document.getElementById('maqSupervisorLista');
     lista.textContent = 'Cargando…';
     google.script.run.withSuccessHandler(function (maquinas) {
-      if (!maquinas || !maquinas.length) { lista.innerHTML = '<p style="color:var(--text-500);font-size:13px;">No hay averías activas.</p>'; return; }
+      if (!Array.isArray(maquinas)) { lista.textContent = 'No se pudieron cargar las averías (el servidor no devolvió la lista).'; return; }
+      if (!maquinas.length) { lista.innerHTML = '<p style="color:var(--text-500);font-size:13px;">No hay averías activas.</p>'; return; }
       lista.innerHTML = maquinas.map(function (m) {
         const satTexto = maqTextoSat_(m);
         return '<div class="maq-sup-card">' +
@@ -319,6 +355,8 @@
           '<button type="button" onclick="maqGuardarRevision(\'' + m.id + '\')">Guardar revisión</button>' +
           '</div>';
       }).join('');
+    }).withFailureHandler(function (err) {
+      lista.textContent = 'No se pudieron cargar las averías (' + (err && err.message ? err.message : err) + ').';
     }).obtenerMaquinasConAveria();
   }
 
