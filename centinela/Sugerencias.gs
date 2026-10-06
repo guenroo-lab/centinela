@@ -7,6 +7,7 @@ function procesarSugerencia(data) {
 
   if (!data) throw new Error("No se han recibido datos.");
   if (!data.jefe_equipo) throw new Error("Falta indicar quién eres.");
+  data.jefe_equipo = jefeVigente_(data.jefe_equipo);
   if (JEFES_EQUIPO.indexOf(data.jefe_equipo) === -1) {
     throw new Error("Jefe de equipo no reconocido: " + data.jefe_equipo);
   }
@@ -72,7 +73,7 @@ function enviarEmailSugerencia_(jefe, texto, fechaStr, horaStr) {
       "<div style=\"background:#0f1220;border-radius:12px;padding:16px;margin-top:12px;\">" +
       "<p style=\"margin:0;white-space:pre-wrap;\">" + escapeHtml(texto) + "</p></div></div>";
 
-    GmailApp.sendEmail(CONFIG.EMAIL_RESPONSABLE, asunto, cuerpo, {
+    GmailApp.sendEmail(CONFIG.EMAIL_RESPONSABLE, asuntoSeguro_(asunto), sinAstrales_(cuerpo), {
       cc: ccConResponsables_(CONFIG.EMAIL_RESPONSABLE),
       htmlBody: htmlSeguro_(html),
       name: "Centinela"

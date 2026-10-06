@@ -19,7 +19,7 @@ function obtenerMaquinas() {
     if (fila[0] === "" || fila[0] === null) continue;
     maquinas.push({
       id: fila[0], maquina: fila[1], propietaria: fila[2], designacion: fila[3],
-      serial: fila[4], estado: fila[5], observacion: fila[6]
+      serial: fila[4], estado: fila[5], observacion: fila[6], fechaEnvioSat: fila[8]
     });
   }
   return maquinas;
@@ -115,7 +115,7 @@ function obtenerMaquinasConAveria() {
     if (fila[5] === "Fallas" || fila[5] === "Averiada" || fila[5] === "Revision") {
       resultado.push({
         id: fila[0], maquina: fila[1], serial: fila[4], estado: fila[5],
-        observacion: fila[6], presupuestado: fila[9], aceptado: fila[10],
+        observacion: fila[6], fechaEnvioSat: fila[8], presupuestado: fila[9], aceptado: fila[10],
         observacionesRevision: fila[11]
       });
     }
@@ -138,7 +138,7 @@ function obtenerHistorialMaquina(id) {
         estado: datos[i][4], observacion: datos[i][5], fechaInicio: datos[i][6],
         fechaResuelto: datos[i][7], presupuestado: datos[i][8],
         aceptado: datos[i][9], observacionesRevision: datos[i][10],
-        resueltoPor: datos[i][11]
+        resueltoPor: datos[i][11], fechaEnvioSat: datos[i][12]
       });
     }
   }
@@ -150,6 +150,7 @@ function procesarActualizacionMaquina(data) {
 
   if (!data) throw new Error("No se han recibido datos.");
   if (!data.jefe_equipo) throw new Error("Falta indicar quién eres.");
+  data.jefe_equipo = jefeVigente_(data.jefe_equipo);
   if (JEFES_EQUIPO.indexOf(data.jefe_equipo) === -1) {
     throw new Error("Jefe de equipo no reconocido: " + data.jefe_equipo);
   }
@@ -197,7 +198,7 @@ function procesarActualizacionMaquina(data) {
       if (estadoAnterior !== "OK") {
         const filaHistorial = [
           actual[0], nombreMaquina, propietaria, serial, estadoAnterior, actual[6],
-          actual[7], fechaStr, actual[9], actual[10], actual[11], data.jefe_equipo
+          actual[7], fechaStr, actual[9], actual[10], actual[11], data.jefe_equipo, actual[8]
         ];
         let hojaHist = ss.getSheetByName(CONFIG.SHEET_NAME_HISTORIAL_MAQUINARIA);
         if (!hojaHist) hojaHist = ss.insertSheet(CONFIG.SHEET_NAME_HISTORIAL_MAQUINARIA);
@@ -212,17 +213,20 @@ function procesarActualizacionMaquina(data) {
     // Fallas / Averiada / Revision
     const esNueva = (estadoAnterior === "OK");
     sheet.getRange(fila, 6, 1, 2).setValues([[estado, observacion]]);
-    sheet.getRange(fila, 8, 1, 1).setValue(fechaStr);
+    // Fecha Estado = inicio de la avería: solo se pone la primera vez (esNueva). Si se
+    // sobrescribiera en cada cambio (p.ej. Fallas → Revision → Averiada) se perdería la
+    // fecha real de inicio y el historial saldría con la fecha del último cambio, no la del inicio.
+    if (esNueva) sheet.getRange(fila, 8, 1, 1).setValue(fechaStr);
 
-    // "Revision" solo cambia la etiqueta (ya se revisó, sigue a falta de reparar):
-    // nunca manda avisoSat ni el correo interno, aunque sea la primera vez que se marca.
+    // "Revision" solo cambia la etiqueta (ya se revisó, sigue a falta de reparar): nunca manda avisoSat.
+    // El correo al SAT ya lleva a los mandos en copia (ccConResponsables_) — no se manda aviso interno aparte.
     let avisoSat = false;
-    if (estado !== "Revision") {
-      if (esNueva) {
-        sheet.getRange(fila, 9, 1, 1).setValue(fechaStr);
-        avisoSat = enviarAvisoSat_(propietaria, actual[0], nombreMaquina, serial, observacion);
-      }
-      enviarAvisoInternoMaquinaria_(actual[0], nombreMaquina, estado, observacion, data.jefe_equipo);
+    if (estado !== "Revision" && esNueva) {
+      avisoSat = enviarAvisoSat_(propietaria, actual[0], nombreMaquina, serial, observacion);
+      // Fecha Envio SAT solo se pone si el correo realmente salió: si se deja puesta aunque
+      // falle (propietaria desconocida, error de MailApp) no hay forma fiable de saber luego
+      // si al SAT se le avisó de verdad o no.
+      if (avisoSat) sheet.getRange(fila, 9, 1, 1).setValue(fechaStr);
     }
 
     SpreadsheetApp.flush();
@@ -290,27 +294,10 @@ function enviarAvisoSat_(propietaria, id, nombreMaquina, serial, observacion) {
     const html = "<table border=\"1\" cellpadding=\"5\" style=\"border-collapse:collapse;width:100%;\">" +
       "<tr style=\"background:#1d3557;color:#fff;\"><th>ID</th><th>Máquina</th><th>Serie</th><th>Avería</th></tr>" +
       "<tr><td>" + escapeHtml(id) + "</td><td>" + escapeHtml(nombreMaquina) + "</td><td>" + escapeHtml(serial) + "</td><td>" + escapeHtml(observacion) + "</td></tr></table>";
-    MailApp.sendEmail({ to: para, cc: ccConResponsables_(para, cc), subject: asunto, htmlBody: "<h2>Aviso de avería</h2>" + html });
+    MailApp.sendEmail({ to: para, cc: ccConResponsables_(para, cc), subject: asuntoSeguro_(asunto), htmlBody: htmlSeguro_("<h2>Aviso de avería</h2>" + html) });
     return true;
   } catch (e) {
     Logger.log("❌ Error enviando aviso SAT: " + e.message);
     return false;
-  }
-}
-
-function enviarAvisoInternoMaquinaria_(id, nombreMaquina, estado, observacion, jefe) {
-  try {
-    const destinatarios = "Pedro.gil@ext.leroymerlin.es, jose-antonio.alcaide@ext.leroymerlin.es";
-    const asunto = "🚨 " + estado + " - " + nombreMaquina + " (ID " + id + ")";
-    const html = "<div style=\"font-family:Arial;border:1px solid #ccc;padding:15px;\">" +
-      "<h2 style=\"color:#1d3557;\">Aviso de Maquinaria — Centinela</h2>" +
-      "<p><b>ID:</b> " + escapeHtml(id) + " | <b>Máquina:</b> " + escapeHtml(nombreMaquina) + "</p>" +
-      "<p><b>Estado:</b> " + escapeHtml(estado) + "</p>" +
-      "<p><b>Observación:</b> " + escapeHtml(observacion) + "</p>" +
-      "<p><b>Reportado por:</b> " + escapeHtml(jefe) + "</p>" +
-      "<hr><p style=\"font-size:11px;\">Centinela — Control de Maquinaria</p></div>";
-    MailApp.sendEmail({ to: destinatarios, subject: asunto, htmlBody: html });
-  } catch (e) {
-    Logger.log("❌ Error enviando aviso interno maquinaria: " + e.message);
   }
 }

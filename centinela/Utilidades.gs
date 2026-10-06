@@ -35,6 +35,23 @@ function htmlSeguro_(html) {
   });
 }
 
+// Lo mismo pasa con el ASUNTO y con un cuerpo de TEXTO PLANO (htmlSeguro_ solo cubre el HTML): Gmail muestra un
+// emoji fuera del plano básico como «������». Aquí se quitan (junto con los selectores de variación y uniones que
+// los acompañan), sin tocar lo que sí es del plano básico. Esos SÍ se ven bien en Gmail, también como emoji a todo
+// color: ⏰ ➕ ❗ ❕ ✅ ⭐ ⚡ ⚠️ ♻️ ✉️. Por eso los asuntos llevan esos y no 📌 🔁 📅 📦. Cubre también emojis
+// tecleados por los jefes en títulos o textos libres que acaben en un asunto.
+function sinAstrales_(texto) {
+  return String(texto == null ? "" : texto)
+    .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF][︎️‍]*/g, "")   // el emoji astral y lo que le cuelga
+    .replace(/[\uD800-\uDFFF]/g, "")                                          // un sustituto suelto (dato corrupto)
+    .replace(/(^|\s)[︎️‍]+/g, "$1");                           // un selector huérfano al principio
+}
+
+// Asunto seguro: sin emojis astrales, en una sola línea y nunca vacío.
+function asuntoSeguro_(asunto) {
+  return sinAstrales_(asunto).replace(/\s+/g, " ").trim() || "Centinela";
+}
+
 // José y Pedro (CORREOS_RESPONSABLES) van en copia de TODO correo que genera la app.
 // Devuelve el campo `cc` completo: los cc propios del correo + los responsables, sin repetir
 // direcciones ni poner en copia a quien ya va en `para`. "" si no queda nadie.

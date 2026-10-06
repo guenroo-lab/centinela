@@ -46,7 +46,7 @@ const B2B_TEXTO_EXTRA_ = "Extra";
 
 // ── Utilidades ──
 function autorGestionB2B_(autor) {
-  const a = String(autor || "").trim();
+  const a = String(jefeVigente_(String(autor || "").trim()));
   if (JEFES_EQUIPO.indexOf(a) >= 0 || a === IDENTIDAD_SUPERVISOR) return a;
   throw new Error("Identifícate (jefe de equipo o supervisor) para gestionar transportes.");
 }
@@ -71,12 +71,17 @@ function minutosDeHoraB2B_(txt) {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 }
 
-function destinatariosGestionB2B_(lugar) {
+// `incluirTienda` (por defecto true): los buzones propios de la tienda (EXTRA_POR_DESTINO) solo
+// tienen sentido en una EXPEDICIÓN (transporte que sale hacia esa tienda). En una RECEPCIÓN el
+// transporte no va a la tienda, así que no se les avisa a ellos — solo a administración/jefes.
+function destinatariosGestionB2B_(lugar, incluirTienda) {
   const t = String(lugar || "").toLowerCase();
   let extras = [];
-  if (t.indexOf("marbella") > -1) extras = CARGAS_CORREOS_.EXTRA_POR_DESTINO["marbella"];
-  else if (t.indexOf("málaga") > -1 || t.indexOf("malaga") > -1) extras = CARGAS_CORREOS_.EXTRA_POR_DESTINO["malaga"];
-  else if (t.indexOf("mijas") > -1) extras = CARGAS_CORREOS_.EXTRA_POR_DESTINO["mijas"];
+  if (incluirTienda !== false) {
+    if (t.indexOf("marbella") > -1) extras = CARGAS_CORREOS_.EXTRA_POR_DESTINO["marbella"];
+    else if (t.indexOf("málaga") > -1 || t.indexOf("malaga") > -1) extras = CARGAS_CORREOS_.EXTRA_POR_DESTINO["malaga"];
+    else if (t.indexOf("mijas") > -1) extras = CARGAS_CORREOS_.EXTRA_POR_DESTINO["mijas"];
+  }
   const vistos = {}, lista = [];
   CARGAS_CORREOS_.ADMINISTRACION.concat(extras).forEach(function (mail) {
     const k = String(mail).trim().toLowerCase();
@@ -117,8 +122,8 @@ function enviarCorreoGestionB2B_(accion, d) {
         '<p style="text-align:center;color:#6b7899;font-size:11px;margin-top:14px">Mensaje automático de Centinela · No responder</p>' +
       "</div>";
     MailApp.sendEmail({
-      to: destinatariosGestionB2B_(d.destino).join(","),
-      subject: asunto, htmlBody: html, name: CARGAS_CORREOS_.REMITENTE_NOMBRE
+      to: destinatariosGestionB2B_(d.destino, !d.esRecepcion).join(","),
+      subject: asuntoSeguro_(asunto), htmlBody: htmlSeguro_(html), name: CARGAS_CORREOS_.REMITENTE_NOMBRE
     });
     return true;
   } catch (e) {
@@ -224,7 +229,7 @@ function anularTransporteB2B(data) {
       hora: horaFilaB2B_(datosFila, esRecepcion, tz),
       fechaTransporte: Utilities.formatDate(fechaObj, tz, "dd/MM/yyyy"),
       flujos: String(datosFila[COL_B2B_.FLUJO - 1] || "-"), soportes: String(datosFila[COL_B2B_.PALETS - 1] || "-"),
-      notas: "-", autor: autor
+      notas: "-", autor: autor, esRecepcion: esRecepcion
     });
     return {
       ok: true, correoEnviado: correo,
@@ -344,7 +349,7 @@ function anadirTransporteB2B(data) {
       tipo: esCarga ? "Carga (Expedición) · EXTRA" : "Descarga (Recepción) · EXTRA",
       destino: lugar, fechaTransporte: data.fecha, hora: horaNorm, etiquetaHora: "Hora de llegada a tienda",
       flujos: "(se define en la carga)", soportes: "(se define en la carga)",
-      notas: "Transporte Extra añadido desde Centinela", autor: autor
+      notas: "Transporte Extra añadido desde Centinela", autor: autor, esRecepcion: !esCarga
     });
     return {
       ok: true, fila: filaNueva, correoEnviado: correo,

@@ -67,8 +67,31 @@ const JEFES_EQUIPO = [
   "Dani Simo",
   "Daniel Arrastio",
   "Francisco Parada",
-  "Sebastián Gelviz"
+  "Sebastián Gelvis"
 ];
+
+// Nombres escritos con una ortografía anterior que ya se corrigió (filas de las hojas que siguen con la vieja).
+// Clave = nombre normalizado (sin tildes, minúsculas, espacios simples); valor = el nombre actual de JEFES_EQUIPO.
+// Se tolera al LEER (tareas asignadas, «enterado» de notas); lo que se escribe ya lleva el nombre nuevo.
+const JEFES_ALIAS = {
+  "sebastian gelviz": "Sebastián Gelvis"
+};
+
+// Una página de la app abierta desde ANTES de un cambio de ortografía (p. ej. «Sebastián Gelviz» → «Gelvis») sigue
+// mandando el nombre viejo: sin esto el servidor contesta «Jefe de equipo no reconocido» y ese jefe ve sus tareas
+// pero no puede completarlas hasta recargar. Lleva el nombre (viejo, o con otras mayúsculas/tildes) al vigente;
+// cualquier otra cosa se devuelve tal cual y la validación de siempre la rechaza.
+function jefeVigente_(nombre) {
+  const t = String(nombre == null ? "" : nombre).trim();
+  if (!t) return nombre;
+  const norm = function (x) { return String(x).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim().toLowerCase(); };   // sin depender de otros archivos
+  const k = norm(t);
+  for (let i = 0; i < JEFES_EQUIPO.length; i++) {
+    if (norm(JEFES_EQUIPO[i]) === k) return JEFES_EQUIPO[i];
+  }
+  if (JEFES_ALIAS.hasOwnProperty(k)) return JEFES_ALIAS[k];
+  return nombre;
+}
 
 // Correos en copia de todo lo que se manda a Recisur: los 4 jefes de equipo y los responsables.
 const CORREOS_JEFES_EQUIPO = [
@@ -77,6 +100,14 @@ const CORREOS_JEFES_EQUIPO = [
   "francisco-javier.camara@ext.leroymerlin.es",
   "sebastian.gelvis@ext.leroymerlin.es"
 ];
+// Correo de cada jefe de equipo (para avisarles de las tareas que se les asignan). Mismas cuatro
+// direcciones de CORREOS_JEFES_EQUIPO, pero por nombre: aquel array va en otro orden.
+const CORREOS_JEFES_POR_NOMBRE = {
+  "Dani Simo": "daniel.simo@ext.leroymerlin.es",
+  "Daniel Arrastio": "daniel.arrastio@ext.leroymerlin.es",
+  "Francisco Parada": "francisco-javier.camara@ext.leroymerlin.es",
+  "Sebastián Gelvis": "sebastian.gelvis@ext.leroymerlin.es"
+};
 const CORREOS_RESPONSABLES = [
   "jose-antonio.alcaide@ext.leroymerlin.es",
   "pedro.gil@ext.leroymerlin.es"
@@ -103,12 +134,27 @@ const CONFIG = {
   SHEET_NAME_HISTORIAL_DISPOSITIVOS: "Historial_Dispositivos",
   SHEET_NAME_TAREAS: "Tareas",
   SHEET_NAME_TAREAS_FOTOS: "Tareas_Fotos",
+  SHEET_NAME_TAREAS_RECURRENTES: "Tareas_Recurrentes",
+  SHEET_NAME_TURNO_ZONAS: "Turno_Zonas",
+  SHEET_NAME_PETICIONES_CONSUMIBLES: "Peticiones_Consumibles",
+  SHEET_NAME_TAREAS_PROGRAMADAS: "Tareas_Programadas",
+  SHEET_NAME_NOTAS: "Notas",
+  SHEET_NAME_NOTAS_FOTOS: "Notas_Fotos",
+  SHEET_NAME_APROBACIONES: "Aprobaciones",
+  SHEET_NAME_APROBACIONES_FOTOS: "Aprobaciones_Fotos",
+  SHEET_NAME_ACTIVIDAD: "Actividad",
+  // Enlace de la app (el deployment de producción) para el botón "Abrir Centinela" de los correos.
+  APP_URL: "https://script.google.com/macros/s/AKfycbwmhHWgXRZ8f1PKM7Ko-VxFUMU2NW4A02vPFJ9oULMWhuYonML36X6hREma-sKe-6sqzw/exec",
   CARGAS_SPREADSHEET_ID: "1_6wZYmuzo3cUAzv8JjZCEyQ5ZcPVCHgupP2mWnCfaJQ",
   CARGAS_HOJA_CURSO: "EnCurso",
   CARGAS_HOJA_REG: "Registros",
   B2B_SHEET_ID: "1HIYNp2SSpXbIvwfRpFcHI7y4rqZqcrEUu8d-_4WTpeY",
   // "Cuadrante 2.0": Centinela solo LEE la hoja del mes en curso (pestaña Turnos).
   CUADRANTE_SHEET_ID: "15h2N9yeolUe1hH3dzMTzKlVbIXPNGmKfcUI9Jk5VXdU",
+  // "UltimaMilla" (proyecto aparte lm_produccion, app "Última Milla"): Centinela
+  // solo LEE la pestaña INCIDENCIAS (nunca escribe, no es su sistema).
+  LM_INCIDENCIAS_SHEET_ID: "13TXO0gVJco1J-UC1s8hTJOcfCkHolhKZJj6x62djXtw",
+  LM_INCIDENCIAS_HOJA: "INCIDENCIAS",
   B2B_PRIMERA_FILA_DATOS: 3,
   // HODOS (proyecto aparte, deployment de producción): Centinela solo LEE de él
   // (doGet?accion=pendientesTienda) para imprimir la "silueta" de la tienda.
@@ -170,6 +216,53 @@ const CABECERAS_TAREAS = [
 // celda). Foto ID = "<id de tarea>-T" (la de la tarea) o "<id>-C" (la del cierre).
 const CABECERAS_TAREAS_FOTOS = ["Foto ID", "Parte", "Total", "Datos"];
 
+// Plantillas de tareas recurrentes: cada día activo genera una fila nueva en Tareas (ver
+// TareasRecurrentes.gs). "Ultima Generada" evita duplicar si el disparador se ejecuta dos veces el mismo día.
+// "Dias" = qué días de la semana se genera, en letras: L M X(miércoles) J V S D (p. ej. "LMXJV"). Vacío = L-V
+// (así funcionaban todas las plantillas anteriores a esta columna).
+const CABECERAS_TAREAS_RECURRENTES = [
+  "ID", "Titulo", "Descripcion", "Asignado a", "Prioridad", "Activa", "Creada por", "Fecha Creacion", "Ultima Generada", "Dias"
+];
+
+// Tareas para el futuro: se crean ya, pero no llegan a los jefes (ni se les avisa) hasta su "Fecha Aplicar"
+// (ver TareasProgramadas.gs). Estado: Programada / Aplicada / Cancelada. Al aplicarse se apunta el ID de la tarea real.
+const CABECERAS_TAREAS_PROGRAMADAS = [
+  "ID", "Titulo", "Descripcion", "Asignado a", "Prioridad", "Fecha Aplicar", "Fecha Limite", "Estado",
+  "Creada por", "Fecha Creacion", "Fecha Aplicada", "ID Tarea"
+];
+
+// Cola de aprobaciones del jefe de área (ver Aprobaciones.gs). Lo que un mando pide y necesita su visto bueno
+// queda aquí (Estado: Pendiente / Aprobada / Rechazada / Cancelada) con los datos en JSON; al aprobarse se
+// ejecuta. "Foto" = "Sí" si lleva una foto guardada en Aprobaciones_Fotos (id "AP<id>"). "Resultado" = qué se
+// creó al aprobar (o el error si no se pudo).
+const CABECERAS_APROBACIONES = [
+  "ID", "Tipo", "Resumen", "Solicitante", "Email Solicitante", "Fecha", "Hora", "Estado",
+  "Resuelta por", "Fecha Resolucion", "Motivo", "Datos (JSON)", "Resultado", "Foto"
+];
+const CABECERAS_APROBACIONES_FOTOS = ["Foto ID", "Parte", "Total", "Datos"];
+// Registro de lo que se crea desde los perfiles de gestión (quién, cuándo, qué): lo lee el jefe de área.
+const CABECERAS_ACTIVIDAD = ["Fecha", "Hora", "Quien", "Rol", "Accion", "Detalle"];
+
+// Notas informativas del responsable para los jefes de equipo (ver Notas.gs). Publicada/Caduca van como texto
+// "yyyy-MM-dd HH:mm" (Caduca vacía = sin caducidad). Estado: Activa / Retirada. "Enterados" = "Jefe=yyyy-MM-dd HH:mm;Jefe=…".
+// Destinatarios vacío = todos los jefes; si no, "Jefe;Jefe". Obligatoria = Sí/No (aviso a pantalla hasta marcar «Enterado»).
+// Correo = No solicitado / Enviado / NO enviado. Foto = Sí si hay foto en Notas_Fotos (vacío = no).
+const CABECERAS_NOTAS = [
+  "ID", "Titulo", "Texto", "Tipo", "Fijada", "Publicada", "Caduca", "Duracion", "Autor", "Estado", "Enterados",
+  "Destinatarios", "Obligatoria", "Correo", "Foto"
+];
+
+// Fotos de las notas, troceadas como las de Tareas: [Foto ID (= ID de la nota), Parte, Total, Datos].
+const CABECERAS_NOTAS_FOTOS = ["Foto ID", "Parte", "Total", "Datos"];
+
+// Zonas a fotografiar por rol de turno, editables por el supervisor (ver TurnoConfig.gs).
+// Vacía = todavía nadie ha editado nada: se usan las zonas por defecto de TURNOS (Config.gs).
+const CABECERAS_TURNO_ZONAS = ["Turno ID", "Orden", "Nombre", "Descripcion"];
+
+// Peticiones de consumibles (ver Consumibles.gs). "Correo" = "Enviado" / "NO enviado"; "Items (JSON)" es
+// lo que se pidió en formato máquina ([{id, tiendas?, texto?}]) para avisar de peticiones repetidas.
+const CABECERAS_PETICIONES_CONSUMIBLES = ["Fecha", "Hora", "Jefe de Equipo", "Peticion", "Comentario", "Correo", "Items (JSON)"];
+
 const CABECERAS_MAQUINARIA = [
   "ID Interno", "Maquina", "Propietaria", "Designacion", "Serial", "Estado",
   "Observacion", "Fecha Estado", "Fecha Envio SAT", "Presupuestado",
@@ -179,7 +272,7 @@ const CABECERAS_MAQUINARIA = [
 const CABECERAS_HISTORIAL_MAQUINARIA = [
   "ID Interno", "Maquina", "Propietaria", "Serial", "Estado", "Observacion",
   "Fecha Inicio", "Fecha Resuelto", "Presupuestado", "Aceptado",
-  "Observaciones Revision", "Resuelto Por"
+  "Observaciones Revision", "Resuelto Por", "Fecha Envio SAT"
 ];
 
 // Inventario real de partida (18 máquinas). Las #14 y #18 ya estaban
@@ -263,7 +356,7 @@ function crearHojaCentinela_() {
 
   const historialMaquinaria = ss.insertSheet(CONFIG.SHEET_NAME_HISTORIAL_MAQUINARIA);
   escribirCabeceras(historialMaquinaria, CABECERAS_HISTORIAL_MAQUINARIA);
-  historialMaquinaria.getRange(2, 1, HISTORIAL_INICIAL.length, CABECERAS_HISTORIAL_MAQUINARIA.length).setValues(HISTORIAL_INICIAL);
+  historialMaquinaria.getRange(2, 1, HISTORIAL_INICIAL.length, CABECERAS_HISTORIAL_MAQUINARIA.length).setValues(historialInicialConCabeceras_());
 
   const residuos = ss.insertSheet(CONFIG.SHEET_NAME_RESIDUOS);
   escribirCabeceras(residuos, CABECERAS_RESIDUOS);
@@ -306,7 +399,7 @@ function asegurarPestanas_(ss) {
   if (!hojaHistorialMaquinaria) {
     hojaHistorialMaquinaria = ss.insertSheet(CONFIG.SHEET_NAME_HISTORIAL_MAQUINARIA);
     escribirCabeceras(hojaHistorialMaquinaria, CABECERAS_HISTORIAL_MAQUINARIA);
-    hojaHistorialMaquinaria.getRange(2, 1, HISTORIAL_INICIAL.length, CABECERAS_HISTORIAL_MAQUINARIA.length).setValues(HISTORIAL_INICIAL);
+    hojaHistorialMaquinaria.getRange(2, 1, HISTORIAL_INICIAL.length, CABECERAS_HISTORIAL_MAQUINARIA.length).setValues(historialInicialConCabeceras_());
   }
   let hojaResiduos = ss.getSheetByName(CONFIG.SHEET_NAME_RESIDUOS);
   if (!hojaResiduos) {
@@ -368,6 +461,51 @@ function prepararHojaTareas_(sheet) {
 function prepararHojaTareasFotos_(sheet) {
   escribirCabeceras(sheet, CABECERAS_TAREAS_FOTOS);
   formatoTextoColumnas_(sheet, [1, 4]);
+}
+
+function prepararHojaTareasRecurrentes_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_TAREAS_RECURRENTES);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10]);
+}
+
+function prepararHojaTareasProgramadas_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_TAREAS_PROGRAMADAS);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+}
+
+function prepararHojaAprobaciones_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_APROBACIONES);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+}
+
+function prepararHojaAprobacionesFotos_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_APROBACIONES_FOTOS);
+  formatoTextoColumnas_(sheet, [1, 4]);
+}
+
+function prepararHojaActividad_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_ACTIVIDAD);
+  formatoTextoColumnas_(sheet, [1, 2, 3, 4, 5, 6]);
+}
+
+function prepararHojaNotas_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_NOTAS);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+}
+
+function prepararHojaNotasFotos_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_NOTAS_FOTOS);
+  formatoTextoColumnas_(sheet, [1, 4]);
+}
+
+function prepararHojaPeticionesConsumibles_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_PETICIONES_CONSUMIBLES);
+  formatoTextoColumnas_(sheet, [1, 2, 3, 4, 5, 6, 7]);
+}
+
+function prepararHojaTurnoZonas_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_TURNO_ZONAS);
+  formatoTextoColumnas_(sheet, [1, 3, 4]);
 }
 
 // Patrón "asegurar" perezoso: devuelve la hoja lista para usar; si no existe (o le
@@ -497,3 +635,12 @@ const HISTORIAL_INICIAL = [
   [1, "TRANSPALETA ELECT", "Linde", "W41156P05118", "Averiada", "Tuti.", "16/09/2026 14:31", "16/09/2026 14:31", "", "", "", "francisco-javier.camara@ext.leroymerlin.es"],
   [1, "TRANSPALETA ELECT", "Linde", "W41156P05118", "OK", "", "16/09/2026 14:31", "16/09/2026 14:31", "", "", "", "francisco-javier.camara@ext.leroymerlin.es"]
 ];
+
+// HISTORIAL_INICIAL es de antes de la columna "Fecha Envio SAT": rellena con "" las filas
+// que tengan menos columnas que CABECERAS_HISTORIAL_MAQUINARIA, para que setValues() no falle.
+function historialInicialConCabeceras_() {
+  return HISTORIAL_INICIAL.map(function (fila) {
+    const faltan = CABECERAS_HISTORIAL_MAQUINARIA.length - fila.length;
+    return faltan > 0 ? fila.concat(new Array(faltan).fill("")) : fila;
+  });
+}

@@ -1,6 +1,6 @@
 <style>
-  .tar-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
-  .tar-acciones { display:flex; gap:8px; flex-shrink:0; }
+  .tar-top { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .tar-acciones { display:flex; flex-wrap:wrap; gap:8px; }
   .tar-btn-sec { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; min-height:44px; min-width:44px; font-size:13px; font-weight:700; font-family:inherit; background:var(--ink-800); color:var(--text-300); transition:transform .15s ease, background .15s ease; white-space:nowrap; }
   .tar-btn-sec:active { transform:scale(.96); background:var(--ink-700); }
 
@@ -46,6 +46,7 @@
   .tar-card.alta { border-left-color:var(--accent); }
   .tar-card.vencida { border-left-color:var(--danger-fg); }
   .tar-card.hecha { border-left-color:var(--ok); }
+  .tar-card.no-realizada { border-left-color:var(--warn-fg); }
   .tar-card.anulada { opacity:.6; }
   .tar-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
   .tar-titulo { font-weight:700; font-size:14.5px; color:var(--text-100); overflow-wrap:anywhere; }
@@ -61,11 +62,17 @@
   .tar-desc { margin:8px 0 0; font-size:13px; line-height:1.5; color:var(--text-300); white-space:pre-line; overflow-wrap:anywhere; }
   .tar-meta { margin-top:8px; font-size:11.5px; color:var(--text-500); line-height:1.6; }
   .tar-fb { margin-top:10px; background:var(--ink-950); border:1px solid var(--ink-800); border-left:3px solid var(--ok); border-radius:var(--radius-btn); padding:10px 12px; }
+  .tar-fb.motivo { border-left-color:var(--warn-fg); }
   .tar-fb .quien { font-size:11px; color:var(--text-500); margin-bottom:3px; }
   .tar-fb .texto { font-size:13px; color:var(--text-100); white-space:pre-line; overflow-wrap:anywhere; line-height:1.5; }
   .tar-accion { margin-top:12px; }
-  .tar-btn-completar { width:100%; cursor:pointer; border:1px solid var(--accent-line); background:var(--accent-dim); color:var(--accent-text); border-radius:var(--radius-btn); min-height:46px; padding:10px; font-size:14px; font-weight:800; font-family:inherit; transition:transform .15s ease; }
+  .tar-accion-botones { display:flex; gap:8px; }
+  .tar-btn-completar { flex:1; width:100%; cursor:pointer; border:1px solid var(--accent-line); background:var(--accent-dim); color:var(--accent-text); border-radius:var(--radius-btn); min-height:46px; padding:10px; font-size:14px; font-weight:800; font-family:inherit; transition:transform .15s ease; }
   .tar-btn-completar:active { transform:scale(.98); }
+  .tar-btn-norealizada { flex:1; width:100%; cursor:pointer; border:1px solid var(--warn-line); background:var(--warn-bg); color:var(--warn-fg); border-radius:var(--radius-btn); min-height:46px; padding:10px; font-size:14px; font-weight:800; font-family:inherit; transition:transform .15s ease; }
+  .tar-btn-norealizada:active { transform:scale(.98); }
+  .tar-btn-guardar.warn { background:var(--warn-fg); color:#241400; box-shadow:0 3px 10px -3px color-mix(in srgb, var(--warn-fg) 55%, transparent), 0 1px 0 rgba(255,255,255,.15) inset; }
+  .tar-link-cancelar { display:block; width:100%; text-align:center; cursor:pointer; border:none; background:none; color:var(--text-500); font-size:12.5px; font-weight:700; font-family:inherit; padding:10px 0 0; text-decoration:underline; }
   .tar-btn-anular { cursor:pointer; border:1px solid var(--ink-700); background:transparent; color:var(--text-500); border-radius:var(--radius-btn); min-height:44px; padding:8px 14px; font-size:12.5px; font-weight:700; font-family:inherit; }
   .tar-btn-anular.confirmar { border-color:var(--danger-line); background:var(--danger-bg); color:var(--danger-fg); }
   .tar-cierre { display:none; margin-top:4px; }
@@ -79,6 +86,63 @@
   .tar-chip.activo b { color:inherit; }
   .tar-filtro-jefe { max-width:340px; margin-bottom:6px; }
   .tar-aviso-venc { color:var(--danger-fg); font-size:12.5px; font-weight:700; margin:0 0 10px; }
+
+  /* Lo ya cerrado va plegado bajo un botón (igual que "Ver cerradas" en Incidencias PC) */
+  .tar-cerradas-toggle { cursor:pointer; border:1px solid var(--ink-800); background:var(--ink-900); color:var(--text-500); padding:10px 14px; min-height:44px; border-radius:var(--radius-btn); font-size:12.5px; font-weight:700; font-family:inherit; width:100%; text-align:left; margin-top:18px; display:flex; align-items:center; gap:6px; }
+  .tar-cerradas-toggle:active { background:var(--ink-800); }
+  .tar-cerradas-toggle .car { transition:transform .15s ease; }
+  .tar-cerradas-toggle.abierto .car { transform:rotate(90deg); }
+  .tar-cerradas-cuerpo { display:none; margin-top:10px; }
+  .tar-cerradas-cuerpo.abierto { display:block; }
+
+  /* Tareas recurrentes */
+  .trec-item { background:var(--ink-950); border:1px solid var(--ink-800); border-radius:var(--radius-btn); padding:10px 12px; margin-bottom:8px; }
+  .trec-item.inactiva { opacity:.55; }
+  .trec-cab { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .trec-titulo { font-weight:700; font-size:13.5px; color:var(--text-100); overflow-wrap:anywhere; }
+  .trec-meta { margin-top:5px; font-size:11.5px; color:var(--text-500); line-height:1.5; }
+  .trec-badge { display:inline-block; font-size:10px; font-weight:800; padding:2px 8px; border-radius:var(--radius-chip); text-transform:uppercase; letter-spacing:.03em; background:var(--ink-800); color:var(--text-300); margin-right:5px; }
+  .trec-badge.on { background:color-mix(in srgb, var(--ok) 20%, transparent); color:var(--ok); }
+  .trec-badge.off { background:var(--danger-bg); color:var(--danger-fg); }
+  .trec-toggle { flex-shrink:0; cursor:pointer; border:1px solid var(--ink-700); background:transparent; color:var(--text-300); border-radius:var(--radius-btn); min-height:36px; padding:6px 12px; font-size:12px; font-weight:700; font-family:inherit; }
+  .trec-toggle.activar { border-color:var(--accent-line); color:var(--accent-text); }
+
+  /* Días de la semana de una plantilla recurrente */
+  .trec-dias { display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; }
+  .trec-dia { cursor:pointer; min-height:44px; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); font-size:14px; font-weight:800; font-family:inherit; padding:0; transition:all .15s ease; }
+  .trec-dia:active { transform:scale(.94); }
+  .trec-dia.sel { border-color:var(--accent-line); background:var(--accent-dim); color:var(--accent-text); }
+  .trec-dia.mini { min-height:34px; font-size:12.5px; }
+  .trec-atajos { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .trec-atajo { cursor:pointer; min-height:36px; border:1px solid var(--ink-700); background:transparent; color:var(--text-300); border-radius:var(--radius-chip); padding:6px 12px; font-size:12px; font-weight:700; font-family:inherit; }
+  .trec-atajo:active { background:var(--ink-800); }
+  .trec-dias-edit { margin-top:10px; }
+  .trec-dias-txt { margin-top:5px; font-size:11.5px; color:var(--text-500); }
+  .trec-guardar-dias { margin-top:8px; cursor:pointer; min-height:40px; border:1px solid var(--accent-line); background:var(--accent-dim); color:var(--accent-text); border-radius:var(--radius-btn); padding:6px 14px; font-size:12.5px; font-weight:800; font-family:inherit; display:none; }
+  .trec-guardar-dias.visible { display:inline-block; }
+  .trec-guardar-dias:disabled { opacity:.6; cursor:default; }
+
+  /* Estado de la generación automática (panel del supervisor) */
+  .tgen-caja { margin-top:16px; background:var(--ink-950); border:1px solid var(--ink-800); border-radius:var(--radius-btn); padding:11px 13px; font-size:12.5px; color:var(--text-300); line-height:1.55; }
+  .tgen-caja b { color:var(--text-100); }
+  .tgen-caja.aviso { border-color:var(--warn-line); background:var(--warn-bg); color:var(--warn-fg); }
+  .tgen-caja.aviso b { color:inherit; }
+  .tgen-caja ul { margin:6px 0 0; padding-left:18px; }
+  .tgen-fila { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .tgen-fila button { flex-shrink:0; cursor:pointer; min-height:40px; border:1px solid var(--ink-700); background:transparent; color:var(--text-300); border-radius:var(--radius-btn); padding:6px 12px; font-size:12px; font-weight:700; font-family:inherit; }
+  .tgen-fila button:disabled { opacity:.6; cursor:default; }
+
+  /* Tareas programadas (para el futuro) */
+  .tar-ayuda { margin:8px 0 0; font-size:12px; color:var(--text-500); line-height:1.5; }
+  .tar-atajos-fecha { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .tpr-item { background:var(--ink-950); border:1px solid var(--ink-800); border-left:4px solid var(--accent); border-radius:var(--radius-btn); padding:10px 12px; margin-bottom:8px; }
+  .tpr-item.cerrada { border-left-color:var(--ink-600); opacity:.7; }
+  .tpr-cab { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .tpr-titulo { font-weight:700; font-size:13.5px; color:var(--text-100); overflow-wrap:anywhere; }
+  .tpr-cuando { flex-shrink:0; text-align:right; font-size:11.5px; font-weight:800; color:var(--accent-text); line-height:1.4; }
+  .tpr-cuando small { display:block; font-weight:600; color:var(--text-500); }
+  .tpr-meta { margin-top:5px; font-size:11.5px; color:var(--text-500); line-height:1.5; }
+  .tpr-acciones { margin-top:8px; }
 
   /* Fotos opcionales */
   .tar-foto-zona { margin-top:4px; }
@@ -101,6 +165,8 @@
   </div>
   <div class="tar-acciones">
     <button type="button" class="tar-btn-sec" id="tarBtnNueva" style="display:none;" onclick="tarToggleNueva()">➕ Nueva</button>
+    <button type="button" class="tar-btn-sec" id="tarBtnRecurrentes" style="display:none;" onclick="trecToggle()">🔁 Recurrentes</button>
+    <button type="button" class="tar-btn-sec" id="tarBtnFuturas" style="display:none;" onclick="tprToggle()">🗓️ Futuras</button>
     <button type="button" class="tar-btn-sec" onclick="tarCargar(true)" aria-label="Actualizar">↻</button>
   </div>
 </div>
@@ -112,11 +178,22 @@
 
 <div class="tar-nueva-card" id="tarNuevaCard">
   <label for="tarNTitulo">Título</label>
-  <input type="text" class="tar-input" id="tarNTitulo" maxlength="120" placeholder="¿Qué hay que hacer?" autocomplete="off">
+  <input type="text" class="tar-input" id="tarNTitulo" maxlength="120" placeholder="¿Qué hay que hacer?" autocomplete="off" onkeydown="if (event.key === 'Enter') tarCrear()">
   <label for="tarNDesc">Descripción <small>(opcional)</small></label>
   <textarea class="tar-textarea" id="tarNDesc" maxlength="1000" placeholder="Detalles, dónde, cómo…"></textarea>
   <label>Asignar a</label>
   <div class="tar-jefes" id="tarNJefes"></div>
+  <label>¿Cuándo se asigna?</label>
+  <div class="tar-prio">
+    <button type="button" class="tar-opcion sel" id="tarNCuandoAhora" onclick="tarElegirCuando('ahora')">⚡ Ahora</button>
+    <button type="button" class="tar-opcion" id="tarNCuandoLuego" onclick="tarElegirCuando('luego')">🗓️ Más adelante</button>
+  </div>
+  <div id="tarNAplicarBox" style="display:none;">
+    <label for="tarNAplicar">Se aplica el día</label>
+    <input type="date" class="tar-input" id="tarNAplicar">
+    <div class="tar-atajos-fecha" id="tarNAtajos"></div>
+    <p class="tar-ayuda">Hasta ese día solo la verás tú. Ese día le aparece al jefe y le llega el correo. Una tarea programada no lleva foto.</p>
+  </div>
   <div class="tar-fila2">
     <div>
       <label for="tarNLimite">Fecha límite <small>(opcional)</small></label>
@@ -130,9 +207,47 @@
       </div>
     </div>
   </div>
-  <label>Foto <small>(opcional)</small></label>
-  <div class="tar-foto-zona" id="tarNFotoZona"></div>
+  <div id="tarNFotoBox">
+    <label>Foto <small>(opcional)</small></label>
+    <div class="tar-foto-zona" id="tarNFotoZona"></div>
+  </div>
   <button type="button" class="tar-btn-guardar" id="tarNBtnCrear" onclick="tarCrear()">Crear tarea</button>
+</div>
+
+<div class="tar-nueva-card" id="trecPanel">
+  <p style="margin:0 0 14px;font-size:12.5px;color:var(--text-500);line-height:1.5;">Una plantilla que, los <b>días que elijas</b> y mientras esté <b>activa</b>, crea sola una tarea nueva (vence ese mismo día). Se crea al abrir la app cualquier jefe, o al momento si hoy toca. Solo la primera vez avisa por correo; se salta a quien esté de vacaciones, de baja o libre según el cuadrante.</p>
+  <label for="trecTitulo">Título</label>
+  <input type="text" class="tar-input" id="trecTitulo" maxlength="120" placeholder="Ej. Revisar extintores" autocomplete="off" onkeydown="if (event.key === 'Enter') trecCrear()">
+  <label for="trecDesc">Descripción <small>(opcional)</small></label>
+  <textarea class="tar-textarea" id="trecDesc" maxlength="1000" placeholder="Detalles, dónde, cómo…"></textarea>
+  <label>Asignar a</label>
+  <div class="tar-jefes" id="trecJefes"></div>
+  <label>Días de la semana</label>
+  <div class="trec-dias" id="trecDias"></div>
+  <div class="trec-atajos">
+    <button type="button" class="trec-atajo" onclick="trecAtajoDias('LMXJV')">Lunes a viernes</button>
+    <button type="button" class="trec-atajo" onclick="trecAtajoDias('LMXJVSD')">Todos los días</button>
+    <button type="button" class="trec-atajo" onclick="trecAtajoDias('SD')">Fines de semana</button>
+  </div>
+  <label>Prioridad</label>
+  <div class="tar-prio">
+    <button type="button" class="tar-opcion sel" id="trecPrioNormal" onclick="trecElegirPrio('Normal')">Normal</button>
+    <button type="button" class="tar-opcion" id="trecPrioAlta" onclick="trecElegirPrio('Alta')">Alta</button>
+  </div>
+  <button type="button" class="tar-btn-guardar" id="trecBtnCrear" onclick="trecCrear()">Crear plantilla recurrente</button>
+
+  <h3 class="tar-sec" style="margin-top:22px;">Plantillas <span class="n" id="trecContador">0</span></h3>
+  <div id="trecLista"><p class="tar-vacio">Cargando…</p></div>
+  <div id="tgenEstado"></div>
+</div>
+
+<div class="tar-nueva-card" id="tprPanel">
+  <p style="margin:0 0 12px;font-size:12.5px;color:var(--text-500);line-height:1.5;">Tareas que dejas preparadas para un día futuro. No las ve nadie (ni llega correo) hasta ese día; entonces se convierten en una tarea normal del jefe. Para crear una: <b>➕ Nueva</b> → <b>Más adelante</b>.</p>
+  <button type="button" class="tar-btn-sec" style="width:100%;margin-bottom:6px;" onclick="tprNueva()">➕ Programar una tarea</button>
+  <h3 class="tar-sec" style="margin-top:16px;">Pendientes de aplicar <span class="n" id="tprContador">0</span></h3>
+  <div id="tprLista"><p class="tar-vacio">Cargando…</p></div>
+  <h3 class="tar-sec" style="margin-top:18px;">Últimas aplicadas o canceladas</h3>
+  <div id="tprRecientes"></div>
 </div>
 
 <input type="file" id="tarFotoInput" accept="image/*" style="display:none;" onchange="tarAlElegirFoto(this)">
@@ -156,13 +271,18 @@
   let tarFirma = '';
   let tarDatosJefe = null;
   let tarDatosSup = null;
-  let tarFiltroEstado = 'Pendiente';
+  let tarFiltroCerradas = '';       // supervisor, dentro de "cerradas": '' (todas) | Completada | No realizada | Anulada
+  let tarCerradasAbierto = false;   // ¿está desplegada la sección de tareas ya cerradas? (plegada por defecto)
   let tarFiltroJefe = '';
   let tarBorrador = {};
   let tarAbiertas = {};
+  let tarBorradorNo = {};       // motivo de "no realizada", por id de tarea
+  let tarAbiertasNo = {};       // formulario de "no realizada" abierto, por id de tarea
   let tarNJefe = '';
   let tarNPrio = 'Normal';
-  const TAR_FOTO_MAX = 340000;       // caracteres de la data URI (el servidor admite 350.000)
+  let tarNCuando = 'ahora';          // 'ahora' o 'luego' (tarea programada para un día futuro)
+  let tarDiaGenerado = '';           // yyyy-mm-dd en que esta página ya pidió generar las tareas automáticas
+  const TAR_FOTO_MAX = 340000;      // caracteres de la data URI (el servidor admite 350.000)
   let tarFotoNueva = '';             // foto elegida al crear una tarea (data URI)
   let tarFotoCierre = {};            // foto elegida al completar, por id de tarea
   let tarFotoDestino = null;         // 'nueva' o id de la tarea que está pidiendo foto
@@ -201,7 +321,7 @@
 
   // ── Ganchos del cascarón ─────────────────────────────────
   // Se abre la pestaña: se refresca siempre y arranca el refresco automático.
-  function tareasAlMostrar() { tarCargar(false); tarProgramarRefresco(); }
+  function tareasAlMostrar() { tarGenerarHoy(); tarCargar(false); tarProgramarRefresco(); }
   // Se eligió un jefe: se descarta cualquier resto anterior y se cargan SUS tareas.
   function tareasRecibirJefe() { tarLimpiar(); tarCargar(true); }
   // "Cambiar" identidad: no debe quedar nada del jefe anterior en pantalla.
@@ -233,7 +353,25 @@
   function tarTick() {
     if (!tarPanelActivo() || tarModo() === 'sin') { tarDetenerRefresco(); return; }
     if (document.hidden || tarCargando || tarEditando()) return;
+    tarGenerarHoy();     // si la página lleva abierta desde ayer, hoy toca generar de nuevo
     tarCargar(true);
+  }
+
+  // ── Generación automática de las tareas de hoy ────────────
+  // Las recurrentes de hoy y las programadas que ya tocan se crean al abrir la app (cualquier jefe o el
+  // supervisor), sin depender de ningún disparador. Es idempotente en el servidor, así que pedirlo de
+  // más no duplica nada. Una vez por día y por página abierta; si crea algo, se recarga la lista.
+  function tarGenerarHoy() {
+    const hoy = tarHoyISO();
+    if (tarDiaGenerado === hoy) return;
+    tarDiaGenerado = hoy;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok && r.creadas > 0 && typeof CentinelaState !== 'undefined' && tarModo() !== 'sin') { tarCargando = false; tarCargar(true); }
+        if (r && !r.ok) tarDiaGenerado = '';      // falló: que el siguiente intento (45 s) lo reintente
+      })
+      .withFailureHandler(function () { tarDiaGenerado = ''; })
+      .generarTareasPendientesHoy();
   }
 
   function tarLimpiar() {
@@ -243,10 +381,13 @@
     tarFirma = '';
     tarDatosJefe = null;
     tarDatosSup = null;
-    tarFiltroEstado = 'Pendiente';
+    tarFiltroCerradas = '';
+    tarCerradasAbierto = false;
     tarFiltroJefe = '';
     tarBorrador = {};
     tarAbiertas = {};
+    tarBorradorNo = {};
+    tarAbiertasNo = {};
     tarNJefe = '';
     tarNPrio = 'Normal';
     tarFotoNueva = '';
@@ -257,6 +398,19 @@
     document.getElementById('tarNuevaCard').classList.remove('abierto');
     document.getElementById('tarContenido').innerHTML = '<p class="tar-vacio">Cargando…</p>';
     tarActualizarBadge(0);
+    trecDatos = null;
+    trecJefe = '';
+    trecPrio = 'Normal';
+    trecDiasNuevo = 'LMXJV';
+    trecBorrador = {};
+    document.getElementById('trecPanel').classList.remove('abierto');
+    document.getElementById('trecLista').innerHTML = '<p class="tar-vacio">Cargando…</p>';
+    document.getElementById('tgenEstado').innerHTML = '';
+    tprDatos = null;
+    document.getElementById('tprPanel').classList.remove('abierto');
+    document.getElementById('tprLista').innerHTML = '<p class="tar-vacio">Cargando…</p>';
+    document.getElementById('tprRecientes').innerHTML = '';
+    tarElegirCuando('ahora');
     tarAplicarModo();
   }
 
@@ -264,7 +418,9 @@
     const modo = tarModo();
     document.getElementById('tarSupBanner').classList.toggle('visible', modo === 'supervisor');
     document.getElementById('tarBtnNueva').style.display = modo === 'supervisor' ? '' : 'none';
-    if (modo !== 'supervisor') document.getElementById('tarNuevaCard').classList.remove('abierto');
+    document.getElementById('tarBtnRecurrentes').style.display = modo === 'supervisor' ? '' : 'none';
+    document.getElementById('tarBtnFuturas').style.display = modo === 'supervisor' ? '' : 'none';
+    if (modo !== 'supervisor') { document.getElementById('tarNuevaCard').classList.remove('abierto'); document.getElementById('trecPanel').classList.remove('abierto'); document.getElementById('tprPanel').classList.remove('abierto'); }
     document.getElementById('tarSubtitulo').textContent = modo === 'supervisor'
       ? 'Asigna tareas a los jefes de equipo y revisa su feedback.'
       : 'Tareas que te ha asignado el responsable. Solo tú las ves.';
@@ -342,14 +498,20 @@
   function tarTarjetaPendienteJefe(t) {
     const clase = t.vencida ? ' vencida' : (t.prioridad === 'Alta' ? ' alta' : '');
     const abierta = !!tarAbiertas[t.id];
+    const abiertaNo = !!tarAbiertasNo[t.id];
     const borrador = tarBorrador[t.id] || '';
+    const borradorNo = tarBorradorNo[t.id] || '';
     const meta = 'Asignada ' + tarEsc(t.fechaAsignacion || '—') + (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : ' · Sin fecha límite');
     let accion;
     if (t.id === null) {
       accion = '<p class="tar-meta">Esta tarea aún no tiene identificador. Actualiza la lista.</p>';
     } else {
-      accion = '<div class="tar-accion">' +
-        '<button type="button" class="tar-btn-completar" id="tarBtnAbrir-' + t.id + '" style="' + (abierta ? 'display:none;' : '') + '" onclick="tarAbrirCierre(' + t.id + ')">✔ Completar tarea…</button>' +
+      const botones = (abierta || abiertaNo) ? '' :
+        '<div class="tar-accion-botones" id="tarBotones-' + t.id + '">' +
+          '<button type="button" class="tar-btn-completar" id="tarBtnAbrir-' + t.id + '" onclick="tarAbrirCierre(' + t.id + ')">✔ Completar…</button>' +
+          '<button type="button" class="tar-btn-norealizada" id="tarBtnAbrirNo-' + t.id + '" onclick="tarAbrirCierreNo(' + t.id + ')">✖ No se pudo…</button>' +
+        '</div>';
+      accion = '<div class="tar-accion">' + botones +
         '<div class="tar-cierre' + (abierta ? ' abierto' : '') + '" id="tarCierre-' + t.id + '">' +
           '<label for="tarFb-' + t.id + '">Feedback <small>(qué has hecho; mínimo 5 caracteres)</small></label>' +
           '<textarea class="tar-textarea" id="tarFb-' + t.id + '" maxlength="500" placeholder="Ej. Revisado, todo correcto." oninput="tarAlEscribir(' + t.id + ')">' + tarEsc(borrador) + '</textarea>' +
@@ -357,6 +519,16 @@
           '<label>Foto <small>(opcional)</small></label>' +
           '<div class="tar-foto-zona" id="tarFotoZona-' + t.id + '">' + tarHtmlFotoZona(t.id) + '</div>' +
           '<button type="button" class="tar-btn-guardar" id="tarBtnCerrar-' + t.id + '" onclick="tarCompletar(' + t.id + ')">Completar tarea</button>' +
+          '<button type="button" class="tar-link-cancelar" onclick="tarCancelarCierre(' + t.id + ')">Cancelar</button>' +
+        '</div>' +
+        '<div class="tar-cierre' + (abiertaNo ? ' abierto' : '') + '" id="tarCierreNo-' + t.id + '">' +
+          '<label for="tarMotivo-' + t.id + '">Motivo <small>(por qué no se pudo hacer; mínimo 5 caracteres)</small></label>' +
+          '<textarea class="tar-textarea" id="tarMotivo-' + t.id + '" maxlength="500" placeholder="Ej. Faltaba material, no dio tiempo…" oninput="tarAlEscribirMotivo(' + t.id + ')">' + tarEsc(borradorNo) + '</textarea>' +
+          '<div class="tar-contador" id="tarContNo-' + t.id + '">' + borradorNo.length + '/500</div>' +
+          '<label>Foto <small>(opcional)</small></label>' +
+          '<div class="tar-foto-zona" id="tarFotoZonaNo-' + t.id + '">' + tarHtmlFotoZona(t.id) + '</div>' +
+          '<button type="button" class="tar-btn-guardar warn" id="tarBtnCerrarNo-' + t.id + '" onclick="tarNoRealizar(' + t.id + ')">Marcar como no realizada</button>' +
+          '<button type="button" class="tar-link-cancelar" onclick="tarCancelarCierre(' + t.id + ')">Cancelar</button>' +
         '</div></div>';
     }
     return '<div class="tar-card' + clase + '">' +
@@ -380,28 +552,99 @@
     '</div>';
   }
 
+  function tarTarjetaNoRealizadaJefe(t) {
+    let badges = t.global ? '<span class="tar-badge tar-b-glob">🌐 Global</span>' : '';
+    badges += '<span class="tar-badge tar-b-aviso">No realizada</span>';
+    return '<div class="tar-card no-realizada">' +
+      '<div class="tar-card-head"><div class="tar-titulo">' + tarEsc(t.titulo) + '</div><div class="tar-badges">' + badges + '</div></div>' +
+      '<div class="tar-meta">Cerrada ' + tarEsc(t.fechaCierre || '—') + (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : '') + '</div>' +
+      (t.feedback ? '<div class="tar-fb motivo"><div class="quien">Tu motivo</div><div class="texto">' + tarEsc(t.feedback) + '</div></div>' : '') +
+      tarBotonesFoto(t) +
+    '</div>';
+  }
+
   function tarPintarJefe() {
     const d = tarDatosJefe;
     if (!d) return;
     const pend = d.pendientes || [];
     const comp = d.completadas || [];
+    const noReal = d.noRealizadas || [];
     let h = '<h3 class="tar-sec">Pendientes <span class="n">' + pend.length + '</span></h3>';
     h += pend.length
       ? '<div class="tar-list">' + pend.map(tarTarjetaPendienteJefe).join('') + '</div>'
       : '<p class="tar-vacio">No tienes tareas pendientes.</p>';
-    h += '<h3 class="tar-sec">Completadas recientes</h3>';
-    h += comp.length
-      ? '<div class="tar-list">' + comp.map(tarTarjetaCompletadaJefe).join('') + '</div>'
-      : '<p class="tar-vacio">Todavía no has completado ninguna.</p>';
+    // Lo ya hecho (completadas y no realizadas) queda plegado: la pantalla principal es solo lo que falta.
+    let cuerpo = '';
+    if (comp.length) cuerpo += '<h3 class="tar-sec">Completadas recientes <span class="n">' + comp.length + '</span></h3><div class="tar-list">' + comp.map(tarTarjetaCompletadaJefe).join('') + '</div>';
+    if (noReal.length) cuerpo += '<h3 class="tar-sec">No realizadas <span class="n">' + noReal.length + '</span></h3><div class="tar-list">' + noReal.map(tarTarjetaNoRealizadaJefe).join('') + '</div>';
+    h += tarBloqueCerradas_('realizadas', comp.length + noReal.length, cuerpo);
     document.getElementById('tarContenido').innerHTML = h;
   }
 
+  // Botón "Ver realizadas (n)" + el cuerpo plegable. El cuerpo se pinta siempre (oculto por CSS) para que
+  // desplegar/plegar no repinte la lista (no se pierde lo que se esté escribiendo en una tarea pendiente).
+  function tarBloqueCerradas_(nombre, n, cuerpoHtml) {
+    if (!n) return '';
+    return '<button type="button" class="tar-cerradas-toggle' + (tarCerradasAbierto ? ' abierto' : '') + '" id="tarCerradasToggle" data-n="' + n + '" data-nombre="' + nombre + '" onclick="tarToggleCerradas()">' +
+      '<span class="car">▸</span><span id="tarCerradasTexto">' + (tarCerradasAbierto ? 'Ocultar ' : 'Ver ') + nombre + ' (' + n + ')</span></button>' +
+      '<div class="tar-cerradas-cuerpo' + (tarCerradasAbierto ? ' abierto' : '') + '" id="tarCerradasCuerpo">' + cuerpoHtml + '</div>';
+  }
+
+  function tarToggleCerradas() {
+    tarCerradasAbierto = !tarCerradasAbierto;
+    const t = document.getElementById('tarCerradasToggle');
+    const c = document.getElementById('tarCerradasCuerpo');
+    if (!t || !c) return;
+    t.classList.toggle('abierto', tarCerradasAbierto);
+    c.classList.toggle('abierto', tarCerradasAbierto);
+    document.getElementById('tarCerradasTexto').textContent = (tarCerradasAbierto ? 'Ocultar ' : 'Ver ') + t.getAttribute('data-nombre') + ' (' + t.getAttribute('data-n') + ')';
+  }
+
+  // Abrir un formulario de cierre oculta los dos botones y cierra el otro formulario,
+  // si estuviera abierto (manipulación directa del DOM: no repinta toda la lista).
   function tarAbrirCierre(id) {
     tarAbiertas[id] = true;
-    document.getElementById('tarBtnAbrir-' + id).style.display = 'none';
+    tarAbiertasNo[id] = false;
+    const botones = document.getElementById('tarBotones-' + id);
+    if (botones) botones.style.display = 'none';
+    const cierreNo = document.getElementById('tarCierreNo-' + id);
+    if (cierreNo) cierreNo.classList.remove('abierto');
     document.getElementById('tarCierre-' + id).classList.add('abierto');
     const ta = document.getElementById('tarFb-' + id);
     if (ta) ta.focus();
+  }
+
+  function tarAbrirCierreNo(id) {
+    tarAbiertasNo[id] = true;
+    tarAbiertas[id] = false;
+    const botones = document.getElementById('tarBotones-' + id);
+    if (botones) botones.style.display = 'none';
+    const cierre = document.getElementById('tarCierre-' + id);
+    if (cierre) cierre.classList.remove('abierto');
+    document.getElementById('tarCierreNo-' + id).classList.add('abierto');
+    const ta = document.getElementById('tarMotivo-' + id);
+    if (ta) ta.focus();
+  }
+
+  // Vuelve a mostrar los dos botones, cierre lo que estuviera abierto (sin perder lo escrito).
+  function tarCancelarCierre(id) {
+    tarAbiertas[id] = false;
+    tarAbiertasNo[id] = false;
+    const cierre = document.getElementById('tarCierre-' + id);
+    const cierreNo = document.getElementById('tarCierreNo-' + id);
+    if (cierre) cierre.classList.remove('abierto');
+    if (cierreNo) cierreNo.classList.remove('abierto');
+    const botones = document.getElementById('tarBotones-' + id);
+    if (botones) botones.style.display = '';
+  }
+
+  // Texto demasiado corto: se dice AL LADO del campo, en rojo, sin depender de que se vea el aviso emergente.
+  function tarAvisoCorto(id, prefijo, n) {
+    const c = document.getElementById(prefijo + id);
+    if (!c) return;
+    c.textContent = 'Escribe al menos 5 caracteres (llevas ' + n + ')';
+    c.style.color = 'var(--danger-fg)';
+    c.style.fontWeight = '700';
   }
 
   function tarAlEscribir(id) {
@@ -409,13 +652,21 @@
     if (!ta) return;
     tarBorrador[id] = ta.value;
     const c = document.getElementById('tarCont-' + id);
-    if (c) c.textContent = ta.value.length + '/500';
+    if (c) { c.textContent = ta.value.length + '/500'; c.style.color = ''; c.style.fontWeight = ''; }
+  }
+
+  function tarAlEscribirMotivo(id) {
+    const ta = document.getElementById('tarMotivo-' + id);
+    if (!ta) return;
+    tarBorradorNo[id] = ta.value;
+    const c = document.getElementById('tarContNo-' + id);
+    if (c) { c.textContent = ta.value.length + '/500'; c.style.color = ''; c.style.fontWeight = ''; }
   }
 
   function tarCompletar(id) {
     const ta = document.getElementById('tarFb-' + id);
     const feedback = ta ? ta.value.trim() : '';
-    if (feedback.length < 5) { showToast('❌ Escribe un pequeño feedback (mínimo 5 caracteres)'); return; }
+    if (feedback.length < 5) { tarAvisoCorto(id, 'tarCont-', feedback.length); showToast('❌ Escribe un pequeño feedback (mínimo 5 caracteres)'); if (ta) ta.focus(); return; }
     if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
 
     const boton = document.getElementById('tarBtnCerrar-' + id);
@@ -423,6 +674,7 @@
     boton.textContent = 'Guardando…';
     const restaurar = function () { boton.disabled = false; boton.textContent = 'Completar tarea'; };
 
+    try {
     google.script.run
       .withSuccessHandler(function (r) {
         if (r && r.success) {
@@ -448,12 +700,54 @@
       })
       .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
       .completarTarea({ jefe_equipo: CentinelaState.jefe, id: id, feedback: feedback, foto: tarFotoCierre[id] || '' });
+    } catch (e) { restaurar(); showToast(tarErrorServidor(e)); }
+  }
+
+  function tarNoRealizar(id) {
+    const ta = document.getElementById('tarMotivo-' + id);
+    const motivo = ta ? ta.value.trim() : '';
+    if (motivo.length < 5) { tarAvisoCorto(id, 'tarContNo-', motivo.length); showToast('❌ Explica el motivo (mínimo 5 caracteres)'); if (ta) ta.focus(); return; }
+    if (!CentinelaState.jefe) { showToast('❌ Falta identificarte — recarga la app'); return; }
+
+    const boton = document.getElementById('tarBtnCerrarNo-' + id);
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    const restaurar = function () { boton.disabled = false; boton.textContent = 'Marcar como no realizada'; };
+
+    try {
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.success) {
+          showToast(r.emailEnviado ? '⚠️ Tarea marcada como no realizada — informe enviado' : '⚠️ Marcada como no realizada, pero el correo al responsable no se pudo enviar');
+          delete tarBorradorNo[id];
+          delete tarAbiertasNo[id];
+          delete tarFotoCierre[id];
+          tarCargando = false;
+          tarCargar(true);
+        } else {
+          restaurar();
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+          // Ya cerrada por otro jefe (global), anulada o inexistente: la lista estaba
+          // desfasada, se recarga y la tarea desaparece de pendientes.
+          if (r && r.refrescar) {
+            delete tarBorradorNo[id];
+            delete tarAbiertasNo[id];
+            delete tarFotoCierre[id];
+            tarCargando = false;
+            tarCargar(true);
+          }
+        }
+      })
+      .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
+      .marcarTareaNoRealizada({ jefe_equipo: CentinelaState.jefe, id: id, motivo: motivo, foto: tarFotoCierre[id] || '' });
+    } catch (e) { restaurar(); showToast(tarErrorServidor(e)); }
   }
 
   // ── Vista del supervisor ─────────────────────────────────
   function tarTarjetaSupervisor(t) {
     const clases = ['tar-card'];
     if (t.estado === 'Completada') clases.push('hecha');
+    else if (t.estado === 'No realizada') clases.push('no-realizada');
     else if (t.estado === 'Anulada') clases.push('anulada');
     else if (t.vencida) clases.push('vencida');
     else if (t.prioridad === 'Alta') clases.push('alta');
@@ -463,6 +757,8 @@
       badges += '<span class="tar-badge tar-b-ok">Completada</span>';
       if (t.aTiempo === true) badges += '<span class="tar-badge tar-b-ok">A tiempo</span>';
       else if (t.aTiempo === false) badges += '<span class="tar-badge tar-b-aviso">Con retraso</span>';
+    } else if (t.estado === 'No realizada') {
+      badges += '<span class="tar-badge tar-b-aviso">No realizada</span>';
     } else if (t.estado === 'Anulada') {
       badges += '<span class="tar-badge tar-b-neutro">Anulada</span>';
     } else {
@@ -474,11 +770,12 @@
       (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : ' · Sin fecha límite');
     if (t.estado === 'Anulada') meta += '<br>Anulada ' + tarEsc(t.fechaCierre || '');
     let feedback = '';
-    if (t.estado === 'Completada') {
+    if (t.estado === 'Completada' || t.estado === 'No realizada') {
       meta += '<br>Cerrada ' + tarEsc(t.fechaCierre || '—');
       const correo = t.correoEnviado === 'Sí' ? '✉ Informe enviado' : '✉ Informe NO enviado';
       const quien = t.cerradaPor || (t.asignadoA === TAR_GLOBAL ? 'un jefe' : t.asignadoA);
-      feedback = '<div class="tar-fb"><div class="quien">Feedback de ' + tarEsc(quien) + (t.global ? ' (el primero en cerrarla)' : '') + ' · ' + correo + '</div>' +
+      const etiqueta = t.estado === 'No realizada' ? 'Motivo de ' : 'Feedback de ';
+      feedback = '<div class="tar-fb' + (t.estado === 'No realizada' ? ' motivo' : '') + '"><div class="quien">' + etiqueta + tarEsc(quien) + (t.global ? ' (el primero en cerrarla)' : '') + ' · ' + correo + '</div>' +
         '<div class="texto">' + (t.feedback ? tarEsc(t.feedback) : '—') + '</div></div>';
     }
     const anular = (t.estado === 'Pendiente' && t.id !== null)
@@ -493,32 +790,42 @@
   function tarPintarSupervisor() {
     const d = tarDatosSup;
     if (!d) return;
-    const res = d.resumen || { pendientes: 0, vencidas: 0, completadas: 0, anuladas: 0 };
-    const chips = [
-      { v: 'Pendiente', t: 'Pendientes', n: res.pendientes },
-      { v: 'Completada', t: 'Completadas', n: res.completadas },
-      { v: 'Anulada', t: 'Anuladas', n: res.anuladas },
-      { v: '', t: 'Todas', n: res.pendientes + res.completadas + res.anuladas }
-    ];
-    let h = '<div class="tar-filtros">' + chips.map(function (c, i) {
-      return '<button type="button" class="tar-chip' + (tarFiltroEstado === c.v ? ' activo' : '') + '" data-i="' + i + '">' + tarEsc(c.t) + ' <b>' + c.n + '</b></button>';
-    }).join('') + '</div>';
-    h += '<select class="tar-input tar-filtro-jefe" id="tarSelJefe" aria-label="Filtrar por jefe de equipo"><option value="">Todos los jefes</option>' +
+    const res = d.resumen || { pendientes: 0, vencidas: 0, completadas: 0, noRealizadas: 0, anuladas: 0 };
+    let h = '<select class="tar-input tar-filtro-jefe" id="tarSelJefe" aria-label="Filtrar por jefe de equipo"><option value="">Todos los jefes</option>' +
       JEFES.map(function (j) { return '<option value="' + tarEsc(j) + '"' + (tarFiltroJefe === j ? ' selected' : '') + '>' + tarEsc(j) + '</option>'; }).join('') +
       '<option value="' + TAR_GLOBAL + '"' + (tarFiltroJefe === TAR_GLOBAL ? ' selected' : '') + '>🌐 Solo globales</option></select>';
     if (res.vencidas > 0) h += '<p class="tar-aviso-venc" style="margin-top:10px;">' + res.vencidas + (res.vencidas === 1 ? ' tarea vencida' : ' tareas vencidas') + '</p>';
 
-    const lista = (d.tareas || []).filter(function (t) {
-      return (!tarFiltroEstado || t.estado === tarFiltroEstado) && (!tarFiltroJefe || t.asignadoA === tarFiltroJefe);
-    });
-    h += '<div style="margin-top:10px;">' + (lista.length
-      ? '<div class="tar-list">' + lista.map(tarTarjetaSupervisor).join('') + '</div>'
-      : '<p class="tar-vacio">No hay tareas con este filtro.</p>') + '</div>';
+    const delJefe = (d.tareas || []).filter(function (t) { return !tarFiltroJefe || t.asignadoA === tarFiltroJefe; });
+    const pend = delJefe.filter(function (t) { return t.estado === 'Pendiente'; });
+    const cerr = delJefe.filter(function (t) { return t.estado !== 'Pendiente'; });
+    h += '<h3 class="tar-sec" style="margin-top:14px;">Pendientes <span class="n">' + pend.length + '</span></h3>';
+    h += pend.length
+      ? '<div class="tar-list">' + pend.map(tarTarjetaSupervisor).join('') + '</div>'
+      : '<p class="tar-vacio">' + (tarFiltroJefe ? 'No hay tareas pendientes con este filtro.' : 'No hay tareas pendientes.') + '</p>';
+
+    // Tareas ya cerradas (completadas, no realizadas, anuladas): plegadas bajo un botón, con su filtro dentro.
+    // Sin filtro de jefe el contador es el total real (la lista trae solo las más recientes); con filtro, el de la lista.
+    const cuenta = function (estado, total) { return tarFiltroJefe ? cerr.filter(function (t) { return t.estado === estado; }).length : total; };
+    const chips = [
+      { v: 'Completada', t: 'Completadas', n: cuenta('Completada', res.completadas) },
+      { v: 'No realizada', t: 'No realizadas', n: cuenta('No realizada', res.noRealizadas) },
+      { v: 'Anulada', t: 'Anuladas', n: cuenta('Anulada', res.anuladas) }
+    ];
+    const totalCerr = chips.reduce(function (s, c) { return s + c.n; }, 0);
+    chips.unshift({ v: '', t: 'Todas', n: totalCerr });
+    const mostradas = cerr.filter(function (t) { return !tarFiltroCerradas || t.estado === tarFiltroCerradas; });
+    const cuerpo = '<div class="tar-filtros">' + chips.map(function (c, i) {
+      return '<button type="button" class="tar-chip' + (tarFiltroCerradas === c.v ? ' activo' : '') + '" data-i="' + i + '">' + tarEsc(c.t) + ' <b>' + c.n + '</b></button>';
+    }).join('') + '</div>' + (mostradas.length
+      ? '<div class="tar-list">' + mostradas.map(tarTarjetaSupervisor).join('') + '</div>'
+      : '<p class="tar-vacio">No hay tareas con este filtro.</p>');
+    h += tarBloqueCerradas_('cerradas', totalCerr, cuerpo);
     document.getElementById('tarContenido').innerHTML = h;
 
-    const botones = document.querySelectorAll('#tarContenido .tar-chip');
+    const botones = document.querySelectorAll('#tarCerradasCuerpo .tar-chip');
     for (let i = 0; i < botones.length; i++) {
-      (function (idx) { botones[idx].onclick = function () { tarFiltroEstado = chips[idx].v; tarPintarSupervisor(); }; })(i);
+      (function (idx) { botones[idx].onclick = function () { tarFiltroCerradas = chips[idx].v; tarPintarSupervisor(); }; })(i);
     }
     document.getElementById('tarSelJefe').onchange = function () { tarFiltroJefe = this.value; tarPintarSupervisor(); };
   }
@@ -587,31 +894,96 @@
     if (abrir) {
       tarPintarJefesForm();
       tarElegirPrio(tarNPrio);
+      tarElegirCuando(tarNCuando);
       document.getElementById('tarNLimite').min = tarHoyISO();
       tarPintarFotoNueva();
       document.getElementById('tarNTitulo').focus();
     }
   }
 
+  // yyyy-mm-dd de hoy + n días (hora local del dispositivo).
+  function tarISOMasDias(n) {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    const p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function tarISOaTexto(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : ''; }
+
+  // "Ahora" crea la tarea ya; "Más adelante" la deja programada para el día que se elija.
+  function tarElegirCuando(c) {
+    tarNCuando = c === 'luego' ? 'luego' : 'ahora';
+    const luego = tarNCuando === 'luego';
+    document.getElementById('tarNCuandoAhora').className = 'tar-opcion' + (!luego ? ' sel' : '');
+    document.getElementById('tarNCuandoLuego').className = 'tar-opcion' + (luego ? ' sel' : '');
+    document.getElementById('tarNAplicarBox').style.display = luego ? '' : 'none';
+    document.getElementById('tarNFotoBox').style.display = luego ? 'none' : '';
+    document.getElementById('tarNBtnCrear').textContent = luego ? 'Programar tarea' : 'Crear tarea';
+    if (luego) {
+      const inp = document.getElementById('tarNAplicar');
+      inp.min = tarISOMasDias(1);
+      document.getElementById('tarNAtajos').innerHTML = [['Mañana', 1], ['En 3 días', 3], ['En 1 semana', 7], ['En 2 semanas', 14], ['En 1 mes', 30]].map(function (a) {
+        return '<button type="button" class="trec-atajo" onclick="tarAtajoAplicar(' + a[1] + ')">' + a[0] + '</button>';
+      }).join('');
+    }
+  }
+  function tarAtajoAplicar(n) {
+    document.getElementById('tarNAplicar').value = tarISOMasDias(n);
+  }
+
   function tarCrear() {
     const titulo = document.getElementById('tarNTitulo').value.trim();
     const descripcion = document.getElementById('tarNDesc').value.trim();
     const limite = document.getElementById('tarNLimite').value;
+    const luego = tarNCuando === 'luego';
+    const aplicar = document.getElementById('tarNAplicar').value;
     if (!titulo) { showToast('❌ Escribe un título'); return; }
     if (!tarNJefe) { showToast('❌ Elige a qué jefe de equipo se asigna (o a todos)'); return; }
     if (limite && limite < tarHoyISO()) { showToast('❌ La fecha límite no puede ser anterior a hoy'); return; }
+    if (luego) {
+      if (!aplicar) { showToast('❌ Elige el día en que se aplica la tarea'); return; }
+      if (aplicar <= tarHoyISO()) { showToast('❌ El día de aplicación tiene que ser posterior a hoy (para hoy usa «Ahora»)'); return; }
+      if (limite && limite < aplicar) { showToast('❌ La fecha límite no puede ser anterior al día en que se aplica'); return; }
+    }
 
     const boton = document.getElementById('tarNBtnCrear');
     boton.disabled = true;
-    boton.textContent = 'Creando…';
-    const restaurar = function () { boton.disabled = false; boton.textContent = 'Crear tarea'; };
+    boton.textContent = luego ? 'Programando…' : 'Creando…';
+    const restaurar = function () { boton.disabled = false; boton.textContent = tarNCuando === 'luego' ? 'Programar tarea' : 'Crear tarea'; };
     const jefeElegido = tarNJefe;
+
+    if (luego) {
+      google.script.run
+        .withSuccessHandler(function (r) {
+          restaurar();
+          if (r && r.success) {
+            showToast(r.pendiente ? r.mensaje : '🗓️ Programada para el ' + (r.aplicar || tarISOaTexto(aplicar)) + (jefeElegido === TAR_GLOBAL ? ' (todos los jefes)' : ' (' + jefeElegido + ')'));
+            document.getElementById('tarNTitulo').value = '';
+            document.getElementById('tarNDesc').value = '';
+            document.getElementById('tarNLimite').value = '';
+            document.getElementById('tarNAplicar').value = '';
+            tarNJefe = '';
+            tarNPrio = 'Normal';
+            tarElegirCuando('ahora');
+            tarPintarJefesForm();
+            tarElegirPrio('Normal');
+            document.getElementById('tarNuevaCard').classList.remove('abierto');
+            if (document.getElementById('tprPanel').classList.contains('abierto')) tprCargar();
+          } else {
+            showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+          }
+        })
+        .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
+        .programarTarea({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: tarNPrio, fecha_aplicar: aplicar, fecha_limite: limite, creador: (CentinelaState.jefe || 'Supervisor') });
+      return;
+    }
 
     google.script.run
       .withSuccessHandler(function (r) {
         restaurar();
         if (r && r.success) {
-          showToast(jefeElegido === TAR_GLOBAL ? '✅ Tarea global creada para todos los jefes' : '✅ Tarea asignada a ' + jefeElegido);
+          showToast(r.pendiente ? r.mensaje : jefeElegido === TAR_GLOBAL ? '✅ Tarea global creada para todos los jefes' : '✅ Tarea asignada a ' + jefeElegido);
+          if (r.pendiente && typeof aprContarPendientes === 'function') aprContarPendientes();
           document.getElementById('tarNTitulo').value = '';
           document.getElementById('tarNDesc').value = '';
           document.getElementById('tarNLimite').value = '';
@@ -620,7 +992,6 @@
           tarFotoNueva = '';
           tarPintarFotoNueva();
           document.getElementById('tarNuevaCard').classList.remove('abierto');
-          tarFiltroEstado = 'Pendiente';
           tarCargando = false;
           tarCargar(true);
         } else {
@@ -631,6 +1002,354 @@
       .crearTarea({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: tarNPrio, fecha_limite: limite, foto: tarFotoNueva });
   }
 
+  // ── Tareas recurrentes (solo supervisor) ──────────────────
+  // Plantillas que el servidor convierte en una tarea normal los días que toque (al abrir la app, ver
+  // tarGenerarHoy, o al momento si hoy toca al crearla). Aquí se gestionan: crear, activar/desactivar y
+  // elegir qué días de la semana. Se cargan al abrir el panel, no de fondo (no hace falta refresco automático).
+  const TREC_DIAS = 'LMXJVSD';
+  const TREC_NOMBRES = { L: 'Lunes', M: 'Martes', X: 'Miércoles', J: 'Jueves', V: 'Viernes', S: 'Sábado', D: 'Domingo' };
+  let trecDatos = null;
+  let trecEstado = null;
+  let trecCargando = false;
+  let trecJefe = '';
+  let trecPrio = 'Normal';
+  let trecDiasNuevo = 'LMXJV';      // días elegidos en el formulario de una plantilla nueva
+  let trecBorrador = {};            // días que se están editando en una plantilla ya creada, por id
+
+  // Quita/pone una letra de una cadena de días y la devuelve en orden de semana.
+  function trecAlternarDia(dias, letra) {
+    const s = {};
+    String(dias || '').split('').forEach(function (c) { s[c] = true; });
+    if (s[letra]) delete s[letra]; else s[letra] = true;
+    return TREC_DIAS.split('').filter(function (c) { return s[c]; }).join('');
+  }
+  function trecHtmlDias(dias, onclickFn, mini) {
+    return TREC_DIAS.split('').map(function (c) {
+      return '<button type="button" class="trec-dia' + (mini ? ' mini' : '') + (String(dias).indexOf(c) > -1 ? ' sel' : '') + '" aria-pressed="' + (String(dias).indexOf(c) > -1) + '" aria-label="' + TREC_NOMBRES[c] + '" onclick="' + onclickFn + '(\'' + c + '\')">' + c + '</button>';
+    }).join('');
+  }
+  function trecTextoDias(dias) {
+    const d = String(dias || '');
+    if (d === TREC_DIAS) return 'todos los días';
+    if (d === 'LMXJV') return 'de lunes a viernes';
+    const plural = { L: 'lunes', M: 'martes', X: 'miércoles', J: 'jueves', V: 'viernes', S: 'sábados', D: 'domingos' };
+    const n = d.split('').map(function (c) { return plural[c]; });
+    if (!n.length) return 'ningún día';
+    const ultimo = n.pop();
+    return 'los ' + (n.length ? n.join(', ') + ' y ' : '') + ultimo;
+  }
+  function trecPintarDiasForm() {
+    document.getElementById('trecDias').innerHTML = trecHtmlDias(trecDiasNuevo, 'trecDiaNuevo', false);
+  }
+  function trecDiaNuevo(c) { trecDiasNuevo = trecAlternarDia(trecDiasNuevo, c); trecPintarDiasForm(); }
+  function trecAtajoDias(d) { trecDiasNuevo = d; trecPintarDiasForm(); }
+
+  function trecPintarJefesForm() {
+    const cont = document.getElementById('trecJefes');
+    const opciones = JEFES.concat([TAR_GLOBAL]);
+    cont.innerHTML = opciones.map(function (j, i) {
+      const esGlobal = j === TAR_GLOBAL;
+      return '<button type="button" class="tar-opcion' + (esGlobal ? ' glob' : '') + (trecJefe === j ? ' sel' : '') + '" data-i="' + i + '">' +
+        (esGlobal ? '🌐 Todos los jefes (tarea global)' : tarEsc(j)) + '</button>';
+    }).join('');
+    const botones = cont.querySelectorAll('button');
+    for (let i = 0; i < botones.length; i++) {
+      (function (idx) { botones[idx].onclick = function () { trecJefe = opciones[idx]; trecPintarJefesForm(); }; })(i);
+    }
+  }
+
+  function trecElegirPrio(p) {
+    trecPrio = p;
+    document.getElementById('trecPrioNormal').className = 'tar-opcion' + (p === 'Normal' ? ' sel' : '');
+    document.getElementById('trecPrioAlta').className = 'tar-opcion' + (p === 'Alta' ? ' sel-alta' : '');
+  }
+
+  function trecToggle() {
+    const card = document.getElementById('trecPanel');
+    const abrir = !card.classList.contains('abierto');
+    card.classList.toggle('abierto', abrir);
+    if (abrir) {
+      trecPintarJefesForm();
+      trecElegirPrio(trecPrio);
+      trecPintarDiasForm();
+      document.getElementById('trecTitulo').focus();
+      trecCargar();
+    }
+  }
+
+  function trecCargar() {
+    if (trecCargando) return;
+    trecCargando = true;
+    const cont = document.getElementById('trecLista');
+    if (!trecDatos) cont.innerHTML = '<p class="tar-vacio">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        trecCargando = false;
+        if (!r || !r.ok) { cont.innerHTML = '<p class="tar-vacio">No se pudieron cargar las plantillas (' + tarEsc((r && r.error) || 'error') + ') <button type="button" onclick="trecCargar()">Reintentar</button></p>'; return; }
+        trecDatos = r.plantillas || [];
+        trecEstado = r.estado || null;
+        trecPintar();
+        tgenPintar();
+      })
+      .withFailureHandler(function (err) {
+        trecCargando = false;
+        cont.innerHTML = '<p class="tar-vacio">' + tarEsc(tarErrorServidor(err)) + ' <button type="button" onclick="trecCargar()">Reintentar</button></p>';
+      })
+      .obtenerTareasRecurrentes();
+  }
+
+  function trecPintar() {
+    const cont = document.getElementById('trecLista');
+    const lista = trecDatos || [];
+    document.getElementById('trecContador').textContent = lista.length;
+    if (!lista.length) { cont.innerHTML = '<p class="tar-vacio">Todavía no hay ninguna plantilla.</p>'; return; }
+    cont.innerHTML = lista.map(function (r) {
+      const destinatario = r.global ? '🌐 Todos los jefes' : '👤 ' + tarEsc(r.asignadoA || 'Sin asignar');
+      const generada = r.ultimaGenerada ? 'Última tarea generada: ' + tarEsc(r.ultimaGenerada) : 'Todavía no ha generado ninguna tarea';
+      const dias = Object.prototype.hasOwnProperty.call(trecBorrador, r.id) ? trecBorrador[r.id] : (r.dias || 'LMXJV');
+      const cambiado = dias !== (r.dias || 'LMXJV');
+      return '<div class="trec-item' + (r.activa ? '' : ' inactiva') + '">' +
+        '<div class="trec-cab"><div><div class="trec-titulo">' + tarEsc(r.titulo) + '</div>' +
+        '<div class="trec-meta">' +
+          '<span class="trec-badge ' + (r.activa ? 'on' : 'off') + '">' + (r.activa ? 'Activa' : 'Inactiva') + '</span>' +
+          (r.prioridad === 'Alta' ? '<span class="trec-badge">Alta</span>' : '') +
+          destinatario +
+        '<br>' + generada + '<br>Creada por ' + tarEsc(r.creadaPor || '—') + ' el ' + tarEsc(r.fechaCreacion || '—') + '</div></div>' +
+        '<button type="button" class="trec-toggle' + (r.activa ? '' : ' activar') + '" id="trecBtnToggle-' + r.id + '" onclick="trecActivarDesactivar(' + r.id + ', ' + !r.activa + ')">' + (r.activa ? 'Desactivar' : 'Activar') + '</button></div>' +
+        (r.descripcion ? '<p class="tar-desc" style="margin-top:8px;">' + tarEsc(r.descripcion) + '</p>' : '') +
+        '<div class="trec-dias-edit"><div class="trec-dias" id="trecDiasItem-' + r.id + '">' + trecHtmlDias(dias, 'trecDiaItem.bind(null,' + r.id + ')', true) + '</div>' +
+        '<div class="trec-dias-txt" id="trecDiasTxt-' + r.id + '">Se asigna ' + trecTextoDias(dias) + '.</div>' +
+        '<button type="button" class="trec-guardar-dias' + (cambiado && dias ? ' visible' : '') + '" id="trecBtnDias-' + r.id + '" onclick="trecGuardarDias(' + r.id + ')">Guardar días</button></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Edición de los días de una plantilla ya creada: se marca en local y se guarda con el botón.
+  function trecDiaItem(id, c) {
+    const r = (trecDatos || []).filter(function (x) { return x.id === id; })[0];
+    if (!r) return;
+    const actual = Object.prototype.hasOwnProperty.call(trecBorrador, id) ? trecBorrador[id] : (r.dias || 'LMXJV');
+    trecBorrador[id] = trecAlternarDia(actual, c);
+    trecPintar();
+  }
+  function trecGuardarDias(id) {
+    const dias = trecBorrador[id];
+    if (!dias) { showToast('❌ Elige al menos un día de la semana'); return; }
+    const btn = document.getElementById('trecBtnDias-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.success) {
+          delete trecBorrador[id];
+          showToast(trecMensajeGeneracion(r, '✅ Días guardados: ' + (r.diasTexto || trecTextoDias(dias))));
+        } else {
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+        trecCargar();
+        if (r && r.generadaHoy) { tarCargando = false; tarCargar(true); }
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Guardar días'; }
+        showToast(tarErrorServidor(err));
+      })
+      .actualizarDiasTareaRecurrente({ id: id, dias: dias.split('') });
+  }
+
+  // Texto del aviso tras una acción que pudo generar la tarea de hoy (crear, activar o cambiar días).
+  function trecMensajeGeneracion(r, base) {
+    if (r.generadaHoy) return base + ' — la tarea de hoy ya está asignada' + (r.correoEnviado === true ? ' y el correo ha salido' : (r.correoEnviado === false ? ' (pero el correo NO ha salido)' : ''));
+    if (r.motivoNoHoy) return base + ' — hoy no se genera: ' + r.motivoNoHoy;
+    if (r.errorGenerando) return base + ' — ⚠️ no se pudo generar la de hoy: ' + r.errorGenerando;
+    return base;
+  }
+
+  // ── Estado de la generación automática ──────────────────────
+  function tgenPintar() {
+    const cont = document.getElementById('tgenEstado');
+    const e = trecEstado;
+    let html;
+    if (!e) {
+      html = '<div class="tgen-caja"><div class="tgen-fila"><span>Todavía no se ha generado ninguna pasada automática.</span><button type="button" id="tgenBtn" onclick="tgenAhora()">Generar ahora</button></div></div>';
+    } else {
+      const mal = !!e.error || e.nFallidas > 0;
+      const origen = { app: 'al abrir la app', trigger: 'por el disparador', manual: 'a mano', plantilla: 'al guardar una plantilla' }[e.origen] || e.origen;
+      let detalle = '';
+      const lista = function (arr, fmt) { return arr && arr.length ? '<ul>' + arr.map(function (x) { return '<li>' + tarEsc(fmt(x)) + '</li>'; }).join('') + '</ul>' : ''; };
+      detalle += lista(e.fallidas, function (x) { return '❌ ' + (x.titulo || '') + ': ' + (x.error || ''); });
+      detalle += lista(e.saltadas, function (x) { return '⏭️ ' + (x.titulo || '') + ': ' + (x.motivo || ''); });
+      html = '<div class="tgen-caja' + (mal ? ' aviso' : '') + '"><div class="tgen-fila"><span><b>Última pasada:</b> ' + tarEsc(e.dia) + ' a las ' + tarEsc(e.hora) + ' (' + tarEsc(origen) + '). ' +
+        e.nCreadas + ' creada(s), ' + e.nSaltadas + ' saltada(s), ' + e.nFallidas + ' con fallo' +
+        (e.correos && (e.correos.ok || e.correos.fallo) ? '; correos: ' + e.correos.ok + ' enviados' + (e.correos.fallo ? ', ' + e.correos.fallo + ' fallidos' : '') : '') + '.' +
+        (e.error ? ' <b>Error:</b> ' + tarEsc(e.error) : '') + '</span><button type="button" id="tgenBtn" onclick="tgenAhora()">Generar ahora</button></div>' + detalle + '</div>';
+    }
+    cont.innerHTML = html;
+  }
+  function tgenAhora() {
+    const btn = document.getElementById('tgenBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.ok) {
+          showToast(r.creadas > 0 ? '✅ Generadas ' + r.creadas + ' tarea(s)' + (r.correosFallidos ? ' (' + r.correosFallidos + ' correo(s) sin enviar)' : '') : 'Todo estaba al día: no tocaba generar nada más');
+          tarCargando = false; tarCargar(true);
+        } else {
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+        trecCargar();
+      })
+      .withFailureHandler(function (err) { if (btn) { btn.disabled = false; btn.textContent = 'Generar ahora'; } showToast(tarErrorServidor(err)); })
+      .generarTareasPendientesHoy({ forzar: true });
+  }
+
+  function trecCrear() {
+    const titulo = document.getElementById('trecTitulo').value.trim();
+    const descripcion = document.getElementById('trecDesc').value.trim();
+    if (!titulo) { showToast('❌ Escribe un título'); return; }
+    if (!trecJefe) { showToast('❌ Elige a qué jefe de equipo se asigna (o a todos)'); return; }
+    if (!trecDiasNuevo) { showToast('❌ Elige al menos un día de la semana'); return; }
+
+    const boton = document.getElementById('trecBtnCrear');
+    boton.disabled = true;
+    boton.textContent = 'Creando…';
+    const restaurar = function () { boton.disabled = false; boton.textContent = 'Crear plantilla recurrente'; };
+    const jefeElegido = trecJefe;
+    const diasElegidos = trecDiasNuevo;
+
+    google.script.run
+      .withSuccessHandler(function (r) {
+        restaurar();
+        if (r && r.success) {
+          showToast(r.pendiente ? r.mensaje : trecMensajeGeneracion(r, '✅ Plantilla creada: ' + (r.diasTexto || trecTextoDias(diasElegidos))));
+          document.getElementById('trecTitulo').value = '';
+          document.getElementById('trecDesc').value = '';
+          trecJefe = '';
+          trecPrio = 'Normal';
+          trecDiasNuevo = 'LMXJV';
+          trecPintarJefesForm();
+          trecElegirPrio('Normal');
+          trecPintarDiasForm();
+          trecCargar();
+          if (r.generadaHoy) { tarCargando = false; tarCargar(true); }
+        } else {
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
+      .crearTareaRecurrente({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: trecPrio, dias: diasElegidos.split(''), creador: (CentinelaState.jefe || 'Supervisor') });
+  }
+
+  function trecActivarDesactivar(id, activa) {
+    const btn = document.getElementById('trecBtnToggle-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = activa ? 'Activando…' : 'Desactivando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r && r.success) showToast(r.activa ? trecMensajeGeneracion(r, '✅ Plantilla activada') : '✅ Plantilla desactivada');
+        else showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        trecCargar();
+        if (r && r.generadaHoy) { tarCargando = false; tarCargar(true); }
+      })
+      .withFailureHandler(function (err) {
+        if (btn) { btn.disabled = false; btn.textContent = activa ? 'Activar' : 'Desactivar'; }
+        showToast(tarErrorServidor(err));
+      })
+      .activarDesactivarTareaRecurrente({ id: id, activa: activa });
+  }
+
+  // ── Tareas programadas para el futuro (solo supervisor) ────────
+  // Se crean desde «Nueva» → «Más adelante». Aquí se ven las pendientes (con su día de aplicación) y se
+  // pueden cancelar. El día que toca, el servidor las convierte en una tarea normal y avisa por correo.
+  let tprDatos = null;
+  let tprCargando = false;
+  let tprConfirmar = null;
+
+  function tprToggle() {
+    const card = document.getElementById('tprPanel');
+    const abrir = !card.classList.contains('abierto');
+    card.classList.toggle('abierto', abrir);
+    if (abrir) tprCargar();
+  }
+  function tprNueva() {
+    const card = document.getElementById('tarNuevaCard');
+    if (!card.classList.contains('abierto')) tarToggleNueva();
+    tarElegirCuando('luego');
+    if (card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function tprCargar() {
+    if (tprCargando) return;
+    tprCargando = true;
+    const cont = document.getElementById('tprLista');
+    if (!tprDatos) cont.innerHTML = '<p class="tar-vacio">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        tprCargando = false;
+        if (!r || !r.ok) { cont.innerHTML = '<p class="tar-vacio">No se pudieron cargar las tareas programadas (' + tarEsc((r && r.error) || 'error') + ') <button type="button" onclick="tprCargar()">Reintentar</button></p>'; return; }
+        tprDatos = r;
+        tprPintar();
+      })
+      .withFailureHandler(function (err) {
+        tprCargando = false;
+        cont.innerHTML = '<p class="tar-vacio">' + tarEsc(tarErrorServidor(err)) + ' <button type="button" onclick="tprCargar()">Reintentar</button></p>';
+      })
+      .obtenerTareasProgramadas();
+  }
+
+  // dd/MM/yyyy -> "hoy" / "mañana" / "en N días" respecto al día de hoy del dispositivo.
+  function tprCuanto(txt) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(txt || '');
+    if (!m) return '';
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+    const n = Math.round((d.getTime() - hoy.getTime()) / 86400000);
+    if (n <= 0) return 'toca ya (al abrir la app)';
+    if (n === 1) return 'mañana';
+    return 'en ' + n + ' días';
+  }
+
+  function tprTarjeta(p, cerrada) {
+    const destinatario = p.global ? '🌐 Todos los jefes' : '👤 ' + tarEsc(p.asignadoA || 'Sin asignar');
+    const estado = p.estado === 'Aplicada'
+      ? '✅ Aplicada el ' + tarEsc(p.fechaAplicada || p.aplicar) + (p.idTarea ? ' (tarea #' + tarEsc(p.idTarea) + ')' : '')
+      : p.estado === 'Cancelada' ? '🚫 Cancelada' : '';
+    const pend = !cerrada;
+    const conf = tprConfirmar === p.id;
+    return '<div class="tpr-item' + (cerrada ? ' cerrada' : '') + '">' +
+      '<div class="tpr-cab"><div><div class="tpr-titulo">' + tarEsc(p.titulo) + '</div>' +
+      '<div class="tpr-meta">' + destinatario + (p.prioridad === 'Alta' ? ' · <b>Alta</b>' : '') +
+        (p.limite ? ' · límite ' + tarEsc(p.limite) : '') +
+        '<br>' + (estado ? estado + ' · ' : '') + 'Creada por ' + tarEsc(p.creadaPor || '—') + ' el ' + tarEsc(p.fechaCreacion || '—') + '</div></div>' +
+      (pend ? '<div class="tpr-cuando">' + tarEsc(p.aplicar) + '<small>' + tarEsc(tprCuanto(p.aplicar)) + '</small></div>' : '') + '</div>' +
+      (p.descripcion ? '<p class="tar-desc" style="margin-top:8px;">' + tarEsc(p.descripcion) + '</p>' : '') +
+      (pend ? '<div class="tpr-acciones"><button type="button" class="tar-btn-anular' + (conf ? ' confirmar' : '') + '" id="tprBtnCancelar-' + p.id + '" onclick="tprCancelar(' + p.id + ')">' + (conf ? '¿Seguro? Pulsa otra vez para cancelar' : 'Cancelar esta tarea programada') + '</button></div>' : '') +
+    '</div>';
+  }
+
+  function tprPintar() {
+    const d = tprDatos || { pendientes: [], recientes: [] };
+    document.getElementById('tprContador').textContent = (d.pendientes || []).length;
+    document.getElementById('tprLista').innerHTML = (d.pendientes || []).length
+      ? d.pendientes.map(function (p) { return tprTarjeta(p, false); }).join('')
+      : '<p class="tar-vacio">No hay ninguna tarea programada.</p>';
+    document.getElementById('tprRecientes').innerHTML = (d.recientes || []).length
+      ? d.recientes.map(function (p) { return tprTarjeta(p, true); }).join('')
+      : '<p class="tar-vacio">Todavía no se ha aplicado ni cancelado ninguna.</p>';
+  }
+
+  // Dos pasos, como anular una tarea: el primer toque pide confirmar, el segundo cancela.
+  function tprCancelar(id) {
+    if (tprConfirmar !== id) { tprConfirmar = id; tprPintar(); return; }
+    const btn = document.getElementById('tprBtnCancelar-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = 'Cancelando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        tprConfirmar = null;
+        showToast(r && r.success ? '✅ Tarea programada cancelada' : '❌ ' + ((r && r.error) || 'Error desconocido'));
+        tprCargar();
+      })
+      .withFailureHandler(function (err) { tprConfirmar = null; if (btn) { btn.disabled = false; } showToast(tarErrorServidor(err)); tprPintar(); })
+      .cancelarTareaProgramada({ id: id });
+  }
+
   // ── Fotos (opcionales) ───────────────────────────────────
   // Se reducen aquí (lado mayor 1280 px, JPEG) para que quepan en el servidor y se vean rápido.
   function tarComprimirFoto(file) {
@@ -638,7 +1357,7 @@
       if (!file || !/^image\//.test(file.type || '')) { reject(new Error('El archivo no es una imagen.')); return; }
       const url = URL.createObjectURL(file);
       const img = new Image();
-      img.onload = function () {
+      img.onload = function () { try {
         URL.revokeObjectURL(url);
         const ancho = img.naturalWidth || img.width, alto = img.naturalHeight || img.height;
         if (!ancho || !alto) { reject(new Error('No se pudo leer la imagen.')); return; }
@@ -659,7 +1378,7 @@
           lado = Math.round(lado * 0.75);
         }
         reject(new Error('La foto es demasiado grande.'));
-      };
+      } catch (e) { reject(e); } };
       img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No se pudo abrir la imagen.')); };
       img.src = url;
     });
@@ -700,9 +1419,14 @@
     const z = document.getElementById('tarNFotoZona');
     if (z) z.innerHTML = tarHtmlZonaFoto(tarFotoNueva, 'nueva');
   }
+  // Una tarea tiene una sola foto de cierre, pero puede tener el formulario de completar
+  // o el de no realizada en el DOM (aunque solo uno visible): se actualizan los dos.
   function tarPintarFotoCierre(id) {
-    const z = document.getElementById('tarFotoZona-' + id);
-    if (z) z.innerHTML = tarHtmlFotoZona(id);
+    const html = tarHtmlFotoZona(id);
+    const z1 = document.getElementById('tarFotoZona-' + id);
+    if (z1) z1.innerHTML = html;
+    const z2 = document.getElementById('tarFotoZonaNo-' + id);
+    if (z2) z2.innerHTML = html;
   }
 
   // Botones "Ver foto" de una tarjeta (solo si la tarea las tiene)
@@ -732,6 +1456,9 @@
       .obtenerFotoTarea({ id: id, cual: cual, jefe: quien });
   }
 
-  // Sin arranque propio: CentinelaState y JEFES los define el cascarón DESPUÉS de este
+  // La lista de tareas no arranca sola: CentinelaState y JEFES los define el cascarón DESPUÉS de este
   // script; la pestaña se carga desde los ganchos (tareasRecibirJefe / tareasAlMostrar).
+  // Lo único que sí arranca aquí es la generación de las tareas automáticas de hoy: no necesita
+  // identidad y así ocurre al abrir la app aunque nadie entre en la pestaña Tareas.
+  tarGenerarHoy();
 </script>

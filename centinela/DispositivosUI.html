@@ -113,13 +113,13 @@
   <div class="dis-modal">
     <p style="margin:0;font-size:16px;font-weight:800;color:var(--text-100);" id="disFormTitulo">Nuevo dispositivo</p>
     <label for="disFTipo">Tipo de dispositivo</label>
-    <input type="text" class="dis-input" id="disFTipo" maxlength="60" placeholder="Ej. PDA / Zebra, Tablet, Impresora…" autocomplete="off">
+    <input type="text" class="dis-input" id="disFTipo" maxlength="60" placeholder="Ej. PDA / Zebra, Tablet, Impresora…" autocomplete="off" onkeydown="if (event.key === 'Enter') disGuardarForm()">
     <div class="dis-sug" id="disSugTipo"></div>
     <label>Servicio <small>(a qué área está asignado)</small></label>
     <input type="hidden" id="disFServicio">
     <div class="dis-sug envuelto" id="disSugServicio"></div>
     <label for="disFSerie">Número de serie <small>(vacío si no tiene)</small></label>
-    <input type="text" class="dis-input dis-mono" id="disFSerie" maxlength="40" placeholder="Ej. SN123456789" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <input type="text" class="dis-input dis-mono" id="disFSerie" maxlength="40" placeholder="Ej. SN123456789" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if (event.key === 'Enter') disGuardarForm()">
     <p class="dis-nota">📱 En un móvil marca <b>*#06#</b> para ver su IMEI y anótalo aquí.</p>
     <div class="dis-modal-botones">
       <button type="button" class="dis-btn-cancelar" onclick="disCerrarForm()">Cancelar</button>

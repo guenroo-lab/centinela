@@ -88,7 +88,7 @@
 
   <div class="per-nuevo-card" id="perNuevoCard">
     <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Nombre del operario</label>
-    <input type="text" id="perNuevoNombre" placeholder="Nombre y apellido">
+    <input type="text" id="perNuevoNombre" placeholder="Nombre y apellido" onkeydown="if (event.key === 'Enter') perCrearOperario()">
     <button type="button" class="per-btn-guardar" id="perBtnCrear" onclick="perCrearOperario()">Añadir</button>
   </div>
 
@@ -99,6 +99,8 @@
   let perCache = [];
   let perAbierta = null;
   let perCodigo = '';          // solo en memoria: al recargar la app hay que volver a introducirlo
+  let perViaSupervisor = false; // true si se entró con el token de supervisor, no con el código real
+  const PER_TOKEN_SUPERVISOR = 'SUPERVISOR_467'; // debe coincidir con PERSONAL_TOKEN_SUPERVISOR_ (Personal.gs)
   let perJefeAlEntrar = null;
   let perTimerInactivo = null, perTimerFuera = null;
   const PER_INACTIVIDAD_MS = 10 * 60 * 1000;   // bloquea solo tras 10 min sin tocar nada
@@ -138,9 +140,27 @@
       .desbloquearPersonal(codigo);
   }
 
+  // El supervisor (467) ya pasó su propio filtro en el cascarón — no le pedimos el código de
+  // Personal aparte. Se llama desde los mismos sitios que maquinariaActualizarSupervisor/
+  // turnoActualizarSupervisor (ShellUI.html): entrar en modo supervisor, cambiar de identidad, salir.
+  function personalActualizarSupervisor() {
+    const esSupervisor = (typeof CentinelaState !== 'undefined' && CentinelaState.supervisor);
+    if (esSupervisor && !perCodigo) {
+      perCodigo = PER_TOKEN_SUPERVISOR;
+      perViaSupervisor = true;
+      perJefeAlEntrar = (typeof CentinelaState !== 'undefined') ? CentinelaState.jefe : null;
+      document.getElementById('perBloqueo').style.display = 'none';
+      document.getElementById('perContenido').classList.add('abierto');
+      perReiniciarInactividad();
+      perInit();
+    } else if (!esSupervisor && perViaSupervisor) {
+      perBloquear();
+    }
+  }
+
   // Vuelve a la pantalla de bloqueo y borra del navegador todo lo que se había cargado
   function perBloquear(aviso) {
-    perCodigo = ''; perCache = []; perAbierta = null; perJefeAlEntrar = null; perForm = {};
+    perCodigo = ''; perViaSupervisor = false; perCache = []; perAbierta = null; perJefeAlEntrar = null; perForm = {};
     clearTimeout(perTimerInactivo); clearTimeout(perTimerFuera);
     document.getElementById('perLista').innerHTML = '';
     document.getElementById('perNuevoNombre').value = '';

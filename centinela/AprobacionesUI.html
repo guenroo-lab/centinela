@@ -1,0 +1,502 @@
+<style>
+  .apr-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; }
+  .apr-top h1 { font-size:19px; font-weight:800; margin:0 0 4px; }
+  .apr-top p { color:var(--text-500); font-size:13px; margin:0; line-height:1.45; }
+  .apr-btn-sec { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; min-height:44px; min-width:44px; font-size:13px; font-weight:700; font-family:inherit; background:var(--ink-800); color:var(--text-300); transition:transform .15s ease; flex-shrink:0; }
+  .apr-btn-sec:active { transform:scale(.96); }
+
+  .apr-perfil { display:flex; align-items:center; gap:12px; background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--accent-line); border-radius:var(--radius-card); padding:12px 14px; margin-bottom:6px; }
+  .apr-avatar { flex:none; width:40px; height:40px; border-radius:50%; background:var(--accent-dim); color:var(--accent-text); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+  .apr-perfil b { display:block; font-size:14px; color:var(--text-100); }
+  .apr-perfil span { display:block; font-size:12px; color:var(--text-500); overflow-wrap:anywhere; }
+
+  .apr-sec { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin:20px 0 10px; }
+  .apr-sec .n { background:var(--ink-800); color:var(--text-300); border-radius:var(--radius-chip); padding:2px 9px; font-size:11px; }
+  .apr-sec .n.alerta { background:var(--accent); color:var(--accent-ink); }
+  .apr-vacio { color:var(--text-500); font-size:13px; margin:6px 0; line-height:1.5; }
+  .apr-aviso { background:var(--warn-bg); color:var(--warn-fg); border:1px solid var(--warn-line); border-radius:var(--radius-btn); padding:10px 12px; font-size:13px; font-weight:600; line-height:1.45; margin:8px 0; }
+  .apr-aviso button { cursor:pointer; border:none; background:none; color:inherit; font-weight:800; text-decoration:underline; font-family:inherit; font-size:13px; padding:0; }
+
+  .apr-lista { display:flex; flex-direction:column; gap:10px; }
+  @media (min-width: 900px) { .apr-lista { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:12px; align-items:start; } }
+  .apr-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-left:4px solid var(--warn-fg); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:13px 14px; }
+  .apr-card.est-aprobada { border-left-color:var(--ok); }
+  .apr-card.est-rechazada { border-left-color:var(--danger-fg); }
+  .apr-card.est-cancelada { border-left-color:var(--ink-600); opacity:.75; }
+  .apr-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .apr-tipo { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; background:var(--ink-800); color:var(--accent-text); border-radius:var(--radius-chip); padding:3px 10px; }
+  .apr-cuando { font-size:11.5px; color:var(--text-500); font-weight:600; white-space:nowrap; }
+  .apr-titulo { font-weight:800; font-size:15px; color:var(--text-100); overflow-wrap:anywhere; }
+  .apr-quien { font-size:12.5px; color:var(--text-300); margin-top:3px; }
+  .apr-filas { margin-top:10px; display:grid; gap:6px; }
+  .apr-fila { display:flex; gap:10px; font-size:12.5px; line-height:1.4; }
+  .apr-fila .k { flex:none; width:128px; color:var(--text-500); }
+  .apr-fila .v { color:var(--text-100); font-weight:600; overflow-wrap:anywhere; }
+  .apr-texto { margin-top:10px; background:var(--ink-950); border:1px solid var(--ink-800); border-left:3px solid var(--accent-line); border-radius:var(--radius-btn); padding:10px 12px; font-size:13px; line-height:1.5; color:var(--text-300); white-space:pre-line; overflow-wrap:anywhere; }
+  .apr-error { margin-top:10px; font-size:12.5px; font-weight:700; color:var(--danger-fg); }
+  .apr-estado { margin-top:10px; font-size:12.5px; color:var(--text-500); line-height:1.5; }
+  .apr-estado b { color:var(--text-100); }
+  .apr-badge { display:inline-block; font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:var(--radius-chip); text-transform:uppercase; letter-spacing:.03em; margin-right:6px; }
+  .apr-badge.ok { background:var(--ink-800); color:var(--ok); }
+  .apr-badge.no { background:var(--danger-bg); color:var(--danger-fg); }
+  .apr-badge.ne { background:var(--ink-800); color:var(--text-300); }
+  .apr-badge.esp { background:var(--warn-bg); color:var(--warn-fg); }
+
+  .apr-ver-foto { cursor:pointer; min-height:40px; margin-top:10px; border:1px solid var(--accent-line); background:var(--accent-dim); color:var(--accent-text); border-radius:var(--radius-btn); padding:0 12px; font-size:12.5px; font-weight:800; font-family:inherit; }
+  .apr-foto { margin-top:8px; text-align:center; font-size:12.5px; color:var(--text-500); }
+  .apr-foto img { max-width:100%; max-height:60vh; border-radius:12px; display:block; margin:0 auto; }
+
+  .apr-acciones { display:flex; gap:8px; margin-top:12px; }
+  .apr-btn-ok, .apr-btn-no { flex:1; cursor:pointer; min-height:46px; border-radius:var(--radius-btn); font-size:14px; font-weight:800; font-family:inherit; padding:10px; transition:transform .15s ease; }
+  .apr-btn-ok { border:1px solid var(--accent-line); background:var(--accent); color:var(--accent-ink); }
+  .apr-btn-no { border:1px solid var(--ink-700); background:transparent; color:var(--text-300); }
+  .apr-btn-ok:active, .apr-btn-no:active { transform:scale(.98); }
+  .apr-btn-ok:disabled, .apr-btn-no:disabled { opacity:.6; cursor:default; }
+  .apr-btn-cancelar { cursor:pointer; min-height:44px; border:1px solid var(--ink-700); background:transparent; color:var(--text-500); border-radius:var(--radius-btn); padding:8px 14px; font-size:12.5px; font-weight:700; font-family:inherit; margin-top:12px; }
+  .apr-btn-cancelar.confirmar { border-color:var(--danger-line); background:var(--danger-bg); color:var(--danger-fg); }
+  .apr-rech { display:none; margin-top:12px; }
+  .apr-rech.abierto { display:block; }
+  .apr-rech label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-500); margin-bottom:6px; }
+  .apr-rech textarea { width:100%; min-height:72px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px 12px; font-size:16px; font-family:inherit; box-sizing:border-box; resize:vertical; color-scheme:dark; }
+  [data-kmode="light"] .apr-rech textarea { color-scheme:light; }
+  .apr-rech textarea:focus { outline:none; border-color:var(--accent); }
+  .apr-rech .apr-acciones { margin-top:10px; }
+  .apr-btn-rechazo { background:var(--danger-fg); border-color:var(--danger-fg); color:#fff; }
+
+  .apr-reglas { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:6px 14px; }
+  .apr-regla { display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--ink-800); }
+  .apr-regla:first-child { border-top:none; }
+  .apr-regla span { flex:1; font-size:13.5px; line-height:1.4; color:var(--text-100); }
+  .apr-switch { flex:none; cursor:pointer; width:52px; height:30px; border-radius:99px; border:1px solid var(--ink-700); background:var(--ink-800); position:relative; transition:background .15s ease; padding:0; }
+  .apr-switch::after { content:''; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:var(--text-300); transition:transform .15s ease, background .15s ease; }
+  .apr-switch[aria-checked="true"] { background:var(--accent); border-color:var(--accent); }
+  .apr-switch[aria-checked="true"]::after { transform:translateX(22px); background:var(--accent-ink); }
+  .apr-switch:disabled { opacity:.6; cursor:default; }
+  .apr-nota-reglas { font-size:12px; color:var(--text-500); line-height:1.5; margin:8px 2px 0; }
+  .apr-lista-reglas { margin:0; padding-left:18px; font-size:13px; line-height:1.6; color:var(--text-300); }
+
+  .apr-toggle { cursor:pointer; border:1px solid var(--ink-800); background:var(--ink-900); color:var(--text-500); padding:10px 14px; min-height:44px; border-radius:var(--radius-btn); font-size:12.5px; font-weight:700; font-family:inherit; width:100%; text-align:left; margin-top:18px; display:flex; align-items:center; gap:6px; }
+  .apr-toggle:active { background:var(--ink-800); }
+  .apr-toggle .car { transition:transform .15s ease; }
+  .apr-toggle.abierto .car { transform:rotate(90deg); }
+  .apr-cuerpo { display:none; margin-top:10px; }
+  .apr-cuerpo.abierto { display:block; }
+
+  .apr-persona { background:var(--ink-950); border:1px solid var(--ink-800); border-radius:var(--radius-btn); padding:10px 12px; margin-bottom:8px; }
+  .apr-persona b { font-size:13.5px; color:var(--text-100); }
+  .apr-persona small { color:var(--text-500); font-weight:600; margin-left:6px; }
+  .apr-persona .linea { font-size:12.5px; color:var(--text-300); margin-top:5px; line-height:1.5; }
+  .apr-persona .linea em { font-style:normal; color:var(--text-500); display:inline-block; min-width:78px; }
+  .apr-acc { font-size:12.5px; color:var(--text-300); padding:8px 0; border-top:1px solid var(--ink-800); line-height:1.45; overflow-wrap:anywhere; }
+  .apr-acc em { font-style:normal; color:var(--text-500); font-size:11.5px; display:block; }
+</style>
+
+<div class="apr-top">
+  <div>
+    <h1>✅ Aprobaciones</h1>
+    <p id="aprSub">Lo que piden los mandos y necesita visto bueno.</p>
+  </div>
+  <button type="button" class="apr-btn-sec" id="aprBtnActualizar" onclick="aprCargar(false)" aria-label="Actualizar">↻</button>
+</div>
+<div id="aprContenido"><p class="apr-vacio">Cargando…</p></div>
+
+<script>
+  var APR_REFRESCO_MS = 60000;
+  var APR_BADGE_MS = 120000;
+  var APR_FOTO_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/]+={0,2}$/;
+
+  var aprPerfil = null;          // respuesta de obtenerPerfil (null = no se pudo saber)
+  var aprDatos = null;           // última respuesta buena de obtenerAprobaciones
+  var aprError = '';             // error de obtenerAprobaciones (cuenta sin perfil, etc.)
+  var aprCargando = false;
+  var aprFirma = '';
+  var aprTimer = null;
+  var aprBadgeTimer = null;
+  var aprResAbierto = false;
+  var aprActAbierta = false;
+  var aprActDatos = null;
+  var aprActCargando = false;
+  var aprRechazando = {};        // id -> formulario de rechazo abierto
+  var aprMotivos = {};           // id -> motivo escrito
+  var aprFotos = {};             // id -> data URI | 'cargando' | 'error'
+  var aprFotoAbierta = {};       // id -> foto desplegada
+  var aprEnviando = {};          // id -> petición en curso (doble toque)
+
+  function aprEsc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function aprErrorServidor(err) { return '❌ Error del servidor: ' + (err && err.message ? err.message : err); }
+  function aprEl(id) { return document.getElementById(id); }
+  function aprPanelActivo() { var p = aprEl('tab-aprobaciones'); return !!(p && p.classList.contains('activo')); }
+  function aprRol() { return aprDatos ? aprDatos.rol : (aprPerfil ? aprPerfil.rol : ''); }
+
+  function aprDiasDesde(fecha) {
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(fecha || '');
+    if (!m) return null;
+    var hoy = new Date();
+    var t0 = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    return Math.round((t0 - new Date(+m[3], +m[2] - 1, +m[1])) / 86400000);
+  }
+  function aprFechaLegible(fecha, hora) {
+    var d = aprDiasDesde(fecha);
+    if (d === null) return ((fecha || '') + ' ' + (hora || '')).trim();
+    return (d === 0 ? 'Hoy' : d === 1 ? 'Ayer' : fecha.slice(0, 5)) + (hora ? ' · ' + hora : '');
+  }
+
+  // ── Perfil y pestaña en la barra ─────────────────────────────
+  // La pestaña SOLO se enseña al jefe de área, según la CUENTA con la que el servidor lo reconoce (los mandos no la ven).
+  // El «modo supervisor» (pulsación larga + 467) NO la abre: es un filtro de pantalla que cualquiera con el código
+  // puede activar, y esto es de gestión. (El servidor tampoco da datos a quien no sea jefe de área o mando.)
+  function aprIniciar() {
+    google.script.run
+      .withSuccessHandler(function (r) { aprPerfil = r && r.ok ? r : null; aprActualizarNav(); aprProgramarBadge(); })
+      .withFailureHandler(function () { aprPerfil = null; aprActualizarNav(); })
+      .obtenerPerfil();
+  }
+
+  function aprActualizarNav() {
+    var nav = aprEl('navAprobaciones');
+    if (!nav) return;
+    var visible = !!(aprPerfil && aprPerfil.rol === 'area');
+    nav.style.display = visible ? '' : 'none';
+    if (!visible) {
+      aprBadge(0);
+      if (aprPanelActivo() && typeof mostrarTab === 'function') mostrarTab('tareas');
+    }
+  }
+
+  function aprBadge(n) {
+    var b = aprEl('tabBadgeAprob');
+    if (!b) return;
+    if (n > 0) { b.textContent = n > 9 ? '9+' : String(n); b.style.display = 'block'; } else { b.style.display = 'none'; }
+  }
+
+  // Solo el jefe de área necesita enterarse sin abrir la pestaña: insignia con lo pendiente, cada 2 min.
+  function aprProgramarBadge() {
+    if (aprBadgeTimer !== null) { clearInterval(aprBadgeTimer); aprBadgeTimer = null; }
+    if (!aprPerfil || aprPerfil.rol !== 'area') { aprBadge(0); return; }
+    aprContarPendientes();
+    aprBadgeTimer = setInterval(function () { if (!document.hidden && aprPerfil && aprPerfil.rol === 'area') aprContarPendientes(); }, APR_BADGE_MS);
+  }
+  function aprContarPendientes() {
+    google.script.run
+      .withSuccessHandler(function (r) { if (r && r.ok && r.rol === 'area') aprBadge((r.pendientes || []).length); })
+      .withFailureHandler(function () {})
+      .obtenerAprobaciones();
+  }
+
+  // ── Ganchos del cascarón ─────────────────────────────────────
+  function aprAlMostrar() { aprCargar(false); aprProgramarRefresco(); }
+  function aprAlCambiarModo() {
+    aprActualizarNav();
+    if (aprPanelActivo()) { aprFirma = ''; aprCargar(true); }
+  }
+
+  function aprProgramarRefresco() {
+    if (aprTimer !== null) { clearInterval(aprTimer); aprTimer = null; }
+    aprTimer = setInterval(function () {
+      if (!aprPanelActivo()) { clearInterval(aprTimer); aprTimer = null; return; }
+      var a = document.activeElement;
+      if (document.hidden || aprCargando || (a && /^(TEXTAREA|INPUT)$/.test(a.tagName))) return;
+      aprCargar(true);
+    }, APR_REFRESCO_MS);
+  }
+
+  // ── Carga ────────────────────────────────────────────────────
+  function aprCargar(silencioso) {
+    if (aprCargando) return;
+    aprCargando = true;
+    var btn = aprEl('aprBtnActualizar');
+    if (btn) btn.disabled = true;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        aprCargando = false;
+        if (btn) btn.disabled = false;
+        if (!r || !r.ok) {
+          aprDatos = null;
+          aprError = (r && r.error) || 'No se pudieron leer las peticiones.';
+          aprFirma = '';
+          aprPintar();
+          return;
+        }
+        aprError = '';
+        if (r.rol === 'area') aprBadge((r.pendientes || []).length);
+        var firma = JSON.stringify(r);
+        var igual = firma === aprFirma;
+        aprFirma = firma;
+        aprDatos = r;
+        if (!igual) aprPintar();
+      })
+      .withFailureHandler(function (err) {
+        aprCargando = false;
+        if (btn) btn.disabled = false;
+        if (!silencioso) { aprError = aprErrorServidor(err); aprDatos = null; aprFirma = ''; aprPintar(); }
+      })
+      .obtenerAprobaciones();
+  }
+
+  // ── Pintado ──────────────────────────────────────────────────
+  function aprIniciales(nombre) {
+    var p = String(nombre || '?').trim().split(/\s+/);
+    return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase();
+  }
+
+  function aprTarjeta(p, modo) {
+    var h = '<div class="apr-card est-' + aprEsc(String(p.estado).toLowerCase()) + '" id="aprCard-' + p.id + '">' +
+      '<div class="apr-card-head"><span class="apr-tipo">' + aprEsc(p.emoji) + ' ' + aprEsc(p.tipoEtiqueta) + '</span><span class="apr-cuando">' + aprEsc(aprFechaLegible(p.fecha, p.hora)) + '</span></div>' +
+      '<div class="apr-titulo">' + aprEsc(p.resumen) + '</div>' +
+      '<div class="apr-quien">👤 ' + aprEsc(p.solicitante) + (p.propia ? ' (tú)' : '') + '</div>';
+    var filas = (p.detalle && p.detalle.filas) || [];
+    if (filas.length) {
+      h += '<div class="apr-filas">' + filas.map(function (f) {
+        return '<div class="apr-fila"><span class="k">' + aprEsc(f.icono || '') + ' ' + aprEsc(f.etiqueta) + '</span><span class="v">' + aprEsc(f.valor) + '</span></div>';
+      }).join('') + '</div>';
+    }
+    if (p.detalle && p.detalle.texto) h += '<div class="apr-texto">' + aprEsc(p.detalle.texto) + '</div>';
+    if (p.tieneFoto) {
+      h += '<button type="button" class="apr-ver-foto" onclick="aprVerFoto(' + p.id + ')">📷 ' + (aprFotoAbierta[p.id] ? 'Ocultar foto' : 'Ver foto') + '</button><div class="apr-foto" id="aprFoto-' + p.id + '">' + aprHtmlFoto(p.id) + '</div>';
+    }
+
+    if (p.estado === 'Pendiente') {
+      if (/^ERROR/.test(p.resultado || '')) h += '<div class="apr-error">⚠ ' + aprEsc(p.resultado) + '</div>';
+      if (modo === 'area') {
+        var abierto = !!aprRechazando[p.id];
+        h += '<div class="apr-acciones" id="aprBotones-' + p.id + '"' + (abierto ? ' style="display:none;"' : '') + '>' +
+          '<button type="button" class="apr-btn-ok" id="aprBtnOk-' + p.id + '" onclick="aprAprobar(' + p.id + ')">✔ Aprobar</button>' +
+          '<button type="button" class="apr-btn-no" onclick="aprAbrirRechazo(' + p.id + ')">✖ Rechazar…</button></div>' +
+          '<div class="apr-rech' + (abierto ? ' abierto' : '') + '" id="aprRech-' + p.id + '">' +
+          '<label for="aprMotivo-' + p.id + '">Motivo del rechazo <small style="text-transform:none;letter-spacing:0;">(le llegará por correo a ' + aprEsc(p.solicitante) + ')</small></label>' +
+          '<textarea id="aprMotivo-' + p.id + '" maxlength="500" placeholder="Ej. Ya existe una igual, no hace falta, hablamos primero…" oninput="aprMotivos[' + p.id + '] = this.value">' + aprEsc(aprMotivos[p.id] || '') + '</textarea>' +
+          '<div class="apr-acciones"><button type="button" class="apr-btn-no" onclick="aprCerrarRechazo(' + p.id + ')">Volver</button>' +
+          '<button type="button" class="apr-btn-ok apr-btn-rechazo" id="aprBtnNo-' + p.id + '" onclick="aprRechazar(' + p.id + ')">Rechazar</button></div></div>';
+      } else {
+        h += '<div class="apr-estado"><span class="apr-badge esp">⏳ Esperando a ' + aprEsc((aprDatos && aprDatos.nombreArea) || 'el jefe de área') + '</span></div>' +
+          '<button type="button" class="apr-btn-cancelar" id="aprBtnCancelar-' + p.id + '" onclick="aprCancelar(' + p.id + ')">Cancelar petición</button>';
+      }
+    } else {
+      var clase = p.estado === 'Aprobada' ? 'ok' : p.estado === 'Rechazada' ? 'no' : 'ne';
+      h += '<div class="apr-estado"><span class="apr-badge ' + clase + '">' + aprEsc(p.estado) + '</span>' +
+        (p.resueltaPor ? ' por <b>' + aprEsc(p.resueltaPor) + '</b>' : '') + (p.fechaRes ? ' · ' + aprEsc(p.fechaRes) : '') +
+        (p.motivo ? '<br>' + (p.estado === 'Rechazada' ? 'Motivo: ' : 'Comentario: ') + aprEsc(p.motivo) : '') +
+        (p.estado === 'Aprobada' && p.resultado ? '<br>✅ ' + aprEsc(p.resultado) : '') + '</div>';
+    }
+    return h + '</div>';
+  }
+
+  function aprHtmlFoto(id) {
+    if (!aprFotoAbierta[id]) return '';
+    var f = aprFotos[id];
+    if (f === 'cargando' || f === undefined) return 'Cargando foto…';
+    if (f === 'error') return 'No se pudo cargar la foto.';
+    return APR_FOTO_RE.test(f) ? '<img src="' + f + '" alt="Foto de la petición">' : 'La foto no es válida.';
+  }
+
+  function aprBloque(idToggle, idCuerpo, texto, abierto, onclick, cuerpoHtml) {
+    return '<button type="button" class="apr-toggle' + (abierto ? ' abierto' : '') + '" id="' + idToggle + '" onclick="' + onclick + '"><span class="car">▸</span><span>' + aprEsc(texto) + '</span></button>' +
+      '<div class="apr-cuerpo' + (abierto ? ' abierto' : '') + '" id="' + idCuerpo + '">' + cuerpoHtml + '</div>';
+  }
+
+  function aprPintar() {
+    var cont = aprEl('aprContenido');
+    var sub = aprEl('aprSub');
+    if (!aprDatos) {
+      sub.textContent = 'Lo que piden los mandos y necesita visto bueno.';
+      cont.innerHTML = '<div class="apr-aviso">' + aprEsc(aprError || 'Cargando…') + (aprError ? ' <button type="button" onclick="aprCargar(false)">Reintentar</button>' : '') + '</div>';
+      return;
+    }
+    var d = aprDatos;
+    var area = d.rol === 'area';
+    sub.textContent = area ? 'Lo que piden los mandos espera tu visto bueno.' : 'Tus peticiones y lo que necesita aprobación de ' + (d.nombreArea || 'el jefe de área') + '.';
+    var pend = d.pendientes || [], rec = d.recientes || [];
+    var h = '<div class="apr-perfil"><div class="apr-avatar">' + aprEsc(aprIniciales(d.nombre)) + '</div><div><b>' + aprEsc(d.nombre) + '</b><span>' + aprEsc(d.cargo) + ' · ' + aprEsc(d.email) + '</span></div></div>';
+
+    h += '<h3 class="apr-sec">' + (area ? 'Pendientes de tu aprobación' : 'Mis peticiones pendientes') + ' <span class="n' + (area && pend.length ? ' alerta' : '') + '">' + pend.length + '</span></h3>';
+    h += pend.length
+      ? '<div class="apr-lista">' + pend.map(function (p) { return aprTarjeta(p, area ? 'area' : 'mando'); }).join('') + '</div>'
+      : '<p class="apr-vacio">' + (area ? 'Nada pendiente. Todo al día ✅' : 'No tienes peticiones pendientes.') + '</p>';
+
+    if (area) {
+      h += '<h3 class="apr-sec">Qué pide aprobación</h3><div class="apr-reglas" id="aprReglas">' +
+        Object.keys(d.reglasTexto || {}).map(function (k) {
+          return '<div class="apr-regla"><span>' + aprEsc(d.reglasTexto[k]) + '</span><button type="button" class="apr-switch" role="switch" aria-checked="' + (d.reglas[k] ? 'true' : 'false') + '" aria-label="' + aprEsc(d.reglasTexto[k]) + '" onclick="aprRegla(\'' + k + '\')"></button></div>';
+        }).join('') + '</div>' +
+        '<p class="apr-nota-reglas">Si algo está apagado, los mandos lo hacen directamente como antes. Tú nunca necesitas aprobación.</p>';
+      h += aprBloque('aprActToggle', 'aprActCuerpo', (aprActAbierta ? 'Ocultar' : 'Ver') + ' actividad de los mandos', aprActAbierta, 'aprToggleActividad()', aprHtmlActividad());
+    } else {
+      var activas = Object.keys(d.reglasTexto || {}).filter(function (k) { return d.reglas[k]; });
+      h += '<h3 class="apr-sec">Qué necesita aprobación</h3>' + (activas.length
+        ? '<ul class="apr-lista-reglas">' + activas.map(function (k) { return '<li>' + aprEsc(d.reglasTexto[k]) + '</li>'; }).join('') + '</ul>'
+        : '<p class="apr-vacio">Ahora mismo nada: puedes hacerlo todo directamente.</p>');
+    }
+    if (rec.length) {
+      h += aprBloque('aprResToggle', 'aprResCuerpo', (aprResAbierto ? 'Ocultar' : 'Ver') + ' resueltas (' + rec.length + ')', aprResAbierto, 'aprToggleResueltas()',
+        '<div class="apr-lista">' + rec.map(function (p) { return aprTarjeta(p, area ? 'area' : 'mando'); }).join('') + '</div>');
+    }
+    cont.innerHTML = h;
+  }
+
+  function aprToggleResueltas() {
+    aprResAbierto = !aprResAbierto;
+    var t = aprEl('aprResToggle'), c = aprEl('aprResCuerpo');
+    if (!t || !c) return;
+    t.classList.toggle('abierto', aprResAbierto); c.classList.toggle('abierto', aprResAbierto);
+    t.lastChild.textContent = (aprResAbierto ? 'Ocultar' : 'Ver') + ' resueltas (' + ((aprDatos && aprDatos.recientes) || []).length + ')';
+  }
+
+  // ── Acciones ─────────────────────────────────────────────────
+  function aprAprobar(id) {
+    if (aprEnviando[id]) return;
+    aprEnviando[id] = true;
+    var btn = aprEl('aprBtnOk-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = 'Aprobando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        delete aprEnviando[id];
+        if (r && r.success) showToast('✅ Aprobada' + (r.resultado ? ': ' + r.resultado : '') + (r.correoEnviado === false ? ' · el aviso por correo NO se pudo enviar' : ''));
+        else showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        aprFirma = ''; aprCargando = false; aprCargar(true);
+        if (typeof tarCargar === 'function' && r && r.success) { tarCargando = false; tarCargar(true); }
+      })
+      .withFailureHandler(function (err) { delete aprEnviando[id]; if (btn) { btn.disabled = false; btn.textContent = '✔ Aprobar'; } showToast(aprErrorServidor(err)); })
+      .resolverAprobacion({ id: id, accion: 'aprobar', motivo: '' });
+  }
+
+  function aprAbrirRechazo(id) {
+    aprRechazando[id] = true;
+    var b = aprEl('aprBotones-' + id), r = aprEl('aprRech-' + id);
+    if (b) b.style.display = 'none';
+    if (r) r.classList.add('abierto');
+    var t = aprEl('aprMotivo-' + id);
+    if (t) t.focus();
+  }
+  function aprCerrarRechazo(id) {
+    delete aprRechazando[id];
+    var b = aprEl('aprBotones-' + id), r = aprEl('aprRech-' + id);
+    if (b) b.style.display = '';
+    if (r) r.classList.remove('abierto');
+  }
+
+  function aprRechazar(id) {
+    if (aprEnviando[id]) return;
+    var motivo = String(aprMotivos[id] || '').trim();
+    if (motivo.length < 3) { showToast('❌ Escribe el motivo del rechazo (mínimo 3 caracteres)'); return; }
+    aprEnviando[id] = true;
+    var btn = aprEl('aprBtnNo-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = 'Rechazando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        delete aprEnviando[id];
+        if (r && r.success) { showToast('✅ Rechazada' + (r.correoEnviado === false ? ' · el aviso por correo NO se pudo enviar' : ' · se le ha avisado')); delete aprMotivos[id]; delete aprRechazando[id]; }
+        else showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        aprFirma = ''; aprCargando = false; aprCargar(true);
+      })
+      .withFailureHandler(function (err) { delete aprEnviando[id]; if (btn) { btn.disabled = false; btn.textContent = 'Rechazar'; } showToast(aprErrorServidor(err)); })
+      .resolverAprobacion({ id: id, accion: 'rechazar', motivo: motivo });
+  }
+
+  // Doble toque para cancelar (se desarma sola a los 4 s), como anular una tarea.
+  function aprCancelar(id) {
+    var btn = aprEl('aprBtnCancelar-' + id);
+    if (!btn) return;
+    if (btn.getAttribute('data-confirmar') !== '1') {
+      btn.setAttribute('data-confirmar', '1'); btn.classList.add('confirmar'); btn.textContent = '¿Seguro? Pulsa otra vez para cancelar';
+      setTimeout(function () {
+        var b = aprEl('aprBtnCancelar-' + id);
+        if (b && b.getAttribute('data-confirmar') === '1') { b.removeAttribute('data-confirmar'); b.classList.remove('confirmar'); b.textContent = 'Cancelar petición'; }
+      }, 4000);
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Cancelando…';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        showToast(r && r.success ? '✅ Petición cancelada' : '❌ ' + ((r && r.error) || 'Error desconocido'));
+        aprFirma = ''; aprCargando = false; aprCargar(true);
+      })
+      .withFailureHandler(function (err) { btn.disabled = false; btn.textContent = 'Cancelar petición'; showToast(aprErrorServidor(err)); })
+      .cancelarAprobacion({ id: id });
+  }
+
+  function aprVerFoto(id) {
+    aprFotoAbierta[id] = !aprFotoAbierta[id];
+    var cont = aprEl('aprFoto-' + id);
+    var btn = cont && cont.previousSibling;
+    if (btn) btn.textContent = '📷 ' + (aprFotoAbierta[id] ? 'Ocultar foto' : 'Ver foto');
+    if (aprFotoAbierta[id] && !aprFotos[id]) {
+      aprFotos[id] = 'cargando';
+      google.script.run
+        .withSuccessHandler(function (r) { aprFotos[id] = r && r.ok && r.foto ? r.foto : 'error'; var c = aprEl('aprFoto-' + id); if (c) c.innerHTML = aprHtmlFoto(id); })
+        .withFailureHandler(function () { aprFotos[id] = 'error'; var c = aprEl('aprFoto-' + id); if (c) c.innerHTML = aprHtmlFoto(id); })
+        .obtenerFotoAprobacion({ id: id });
+    }
+    if (cont) cont.innerHTML = aprHtmlFoto(id);
+  }
+
+  // Interruptores de «qué pide aprobación»: se guardan al tocar; si el servidor falla, vuelven como estaban.
+  function aprRegla(clave) {
+    if (!aprDatos || aprDatos.rol !== 'area') return;
+    var nuevo = !aprDatos.reglas[clave];
+    var sw = document.querySelectorAll('#aprReglas .apr-switch');
+    var claves = Object.keys(aprDatos.reglasTexto || {});
+    var idx = claves.indexOf(clave);
+    if (sw[idx]) { sw[idx].setAttribute('aria-checked', nuevo ? 'true' : 'false'); sw[idx].disabled = true; }
+    var datos = {}; datos[clave] = nuevo;
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (sw[idx]) sw[idx].disabled = false;
+        if (r && r.success) { aprDatos.reglas = r.reglas; aprFirma = JSON.stringify(aprDatos); showToast(nuevo ? '✅ Ahora pide tu aprobación' : '✅ Ya no pide aprobación: los mandos lo hacen directamente'); }
+        else { if (sw[idx]) sw[idx].setAttribute('aria-checked', nuevo ? 'false' : 'true'); showToast('❌ ' + ((r && r.error) || 'Error desconocido')); }
+      })
+      .withFailureHandler(function (err) { if (sw[idx]) { sw[idx].disabled = false; sw[idx].setAttribute('aria-checked', nuevo ? 'false' : 'true'); } showToast(aprErrorServidor(err)); })
+      .guardarReglasAprobacion(datos);
+  }
+
+  // ── Actividad de los mandos (solo jefe de área; se pide al desplegar) ──
+  function aprToggleActividad() {
+    aprActAbierta = !aprActAbierta;
+    var t = aprEl('aprActToggle'), c = aprEl('aprActCuerpo');
+    if (t && c) {
+      t.classList.toggle('abierto', aprActAbierta); c.classList.toggle('abierto', aprActAbierta);
+      t.lastChild.textContent = (aprActAbierta ? 'Ocultar' : 'Ver') + ' actividad de los mandos';
+    }
+    if (aprActAbierta && !aprActCargando) aprCargarActividad();
+  }
+
+  function aprCargarActividad() {
+    aprActCargando = true;
+    var c = aprEl('aprActCuerpo');
+    if (c && !aprActDatos) c.innerHTML = '<p class="apr-vacio">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        aprActCargando = false;
+        aprActDatos = r && r.ok ? r : { error: (r && r.error) || 'No se pudo leer la actividad.' };
+        var cc = aprEl('aprActCuerpo'); if (cc) cc.innerHTML = aprHtmlActividad();
+      })
+      .withFailureHandler(function (err) {
+        aprActCargando = false;
+        aprActDatos = { error: aprErrorServidor(err) };
+        var cc = aprEl('aprActCuerpo'); if (cc) cc.innerHTML = aprHtmlActividad();
+      })
+      .obtenerActividad();
+  }
+
+  function aprHtmlActividad() {
+    var a = aprActDatos;
+    if (!a) return '<p class="apr-vacio">Cargando…</p>';
+    if (a.error) return '<p class="apr-vacio">' + aprEsc(a.error) + ' <button type="button" class="apr-btn-cancelar" style="margin:0;" onclick="aprCargarActividad()">Reintentar</button></p>';
+    var linea = function (o) { return '🗂️ ' + o.tareas + ' tareas · 🔁 ' + o.recurrentes + ' recurrentes · 📣 ' + o.notas + ' notas · 📨 ' + o.peticiones + ' peticiones'; };
+    var h = '<p class="apr-nota-reglas" style="margin:0 0 10px;">Lo que ha creado cada persona (tareas, recurrentes, notas y peticiones a aprobar).</p>';
+    h += a.resumen.length ? a.resumen.map(function (p) {
+      return '<div class="apr-persona"><b>' + aprEsc(p.quien) + '</b><small>' + aprEsc(p.rol === 'area' ? 'jefe de área' : p.rol) + '</small>' +
+        '<div class="linea"><em>7 días</em>' + linea(p.d7) + '</div><div class="linea"><em>30 días</em>' + linea(p.d30) + '</div></div>';
+    }).join('') : '<p class="apr-vacio">Todavía no hay actividad en los últimos 30 días.</p>';
+    if (a.ultimos.length) {
+      h += '<h3 class="apr-sec" style="margin-top:16px;">Últimas acciones</h3>' + a.ultimos.map(function (f) {
+        return '<div class="apr-acc"><em>' + aprEsc(aprFechaLegible(f.fecha, f.hora)) + ' · ' + aprEsc(f.quien) + '</em>' + aprEsc(f.detalle) + '</div>';
+      }).join('');
+    }
+    return h;
+  }
+
+  // Arranca solo: pregunta al servidor quién eres para decidir si se enseña la pestaña (no necesita identidad).
+  aprIniciar();
+</script>

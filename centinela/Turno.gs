@@ -9,21 +9,37 @@ function procesarRegistro(data) {
   // Validación de entrada (antes se asumía que todo llegaba bien).
   if (!data) throw new Error("No se han recibido datos del formulario.");
   if (!data.jefe_equipo) throw new Error("Falta el jefe de equipo.");
+  data.jefe_equipo = jefeVigente_(data.jefe_equipo);
   if (JEFES_EQUIPO.indexOf(data.jefe_equipo) === -1) {
     throw new Error("Jefe de equipo no reconocido: " + data.jefe_equipo);
   }
   if (!data.turno_id) throw new Error("Falta el rol de turno.");
 
-  const turno = TURNOS[data.turno_id];
+  const turno = turnosConZonas_()[data.turno_id];
   if (!turno) throw new Error("Rol de turno no encontrado: " + data.turno_id);
 
   if (!Array.isArray(data.zonas) || data.zonas.length === 0) {
     throw new Error("El informe no contiene ninguna zona.");
   }
-  if (data.zonas.length !== turno.zonas.length) {
-    throw new Error("El numero de zonas no coincide con el rol seleccionado (" +
-      data.zonas.length + " recibidas, se esperaban " + turno.zonas.length + ").");
+  if (data.zonas.length > Math.max(TURNO_ZONAS_MAX_, turno.zonas.length)) {
+    throw new Error("El informe tiene demasiadas zonas (" + data.zonas.length + ").");
   }
+
+  // El supervisor puede cambiar las zonas de un rol mientras un jefe ya está haciendo el control con
+  // las anteriores (la pantalla las cargó al abrirse). Rechazar el envío haría perder todas las
+  // fotos, así que se acepta lo que el jefe fotografió y se le avisa. Los nombres vienen del cliente:
+  // se normalizan igual que al guardarlos en el editor.
+  const avisos = [];
+  if (data.zonas.length !== turno.zonas.length) {
+    Logger.log("⚠️ Zonas recibidas (" + data.zonas.length + ") distintas a las configuradas (" +
+      turno.zonas.length + ") para " + data.turno_id);
+    avisos.push("Las zonas de este rol se han modificado mientras hacías el control. El informe recoge las que fotografiaste.");
+  }
+  data.zonas = data.zonas.map(function (z) {
+    const zona = (z && typeof z === "object") ? z : {};
+    const nombre = String(zona.nombre || "").replace(/\s+/g, " ").trim().slice(0, TURNO_ZONA_NOMBRE_MAX_);
+    return Object.assign({}, zona, { nombre: nombre || "Zona sin nombre" });
+  });
 
   const ahora = new Date();
   const tz = Session.getScriptTimeZone();
@@ -52,7 +68,6 @@ function procesarRegistro(data) {
 
   const guardado = guardarEnHoja(data, turno, meta, emailOk);
 
-  const avisos = [];
   if (!emailOk) avisos.push("El email no se pudo enviar. Avisa a Pedro Gil.");
   if (!guardado.ok) avisos.push("No se pudo guardar en la hoja: " + guardado.error);
 
@@ -171,7 +186,7 @@ function enviarInformeEmail(data, turno, meta) {
       .concat(data.comentario_general ? ["", "Comentario general: " + data.comentario_general] : [])
       .join("\n");
 
-    GmailApp.sendEmail(destinatario, asunto, cuerpoTexto, {
+    GmailApp.sendEmail(destinatario, asuntoSeguro_(asunto), sinAstrales_(cuerpoTexto), {
       cc: ccConResponsables_(destinatario),
       htmlBody: htmlSeguro_(email.html),
       inlineImages: email.inlineImages,

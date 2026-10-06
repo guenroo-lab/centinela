@@ -1,0 +1,222 @@
+<style>
+  .ip-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:4px; }
+  .ip-sub { color:var(--text-500); font-size:13px; margin:0 0 4px; }
+  .ip-btn { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; font-size:13px; font-weight:700; background:var(--ink-800); color:var(--text-300); white-space:nowrap; transition:transform .15s ease; }
+  .ip-btn:active { transform:scale(.96); background:var(--ink-700); }
+  .ip-btn:disabled { opacity:.6; }
+  .ip-origen { font-size:11.5px; color:var(--text-600); margin:0 0 12px; }
+  .ip-origen.copia { color:var(--warn-fg); }
+  .ip-error { background:var(--danger-bg); border:1px solid var(--danger-line); color:var(--danger-fg); border-radius:var(--radius-card); padding:14px; font-size:13px; line-height:1.45; }
+
+  .ip-resumen { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .ip-resumen-chip { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:var(--radius-chip); background:var(--ink-850); border:1px solid var(--ink-800); font-size:12.5px; font-weight:700; color:var(--text-300); }
+  .ip-resumen-chip b { font-size:14px; color:var(--text-100); }
+
+  .ip-filtros { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .ip-chip { cursor:pointer; border:1px solid var(--ink-700); background:var(--ink-900); color:var(--text-500); padding:7px 12px; border-radius:var(--radius-chip); font-size:12px; font-weight:700; }
+  .ip-chip.activo { background:var(--accent-dim); border-color:var(--accent-line); color:var(--accent-text); }
+  .ip-buscar { width:100%; max-width:320px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px 12px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
+
+  .ip-list { display:flex; flex-direction:column; gap:8px; }
+  @media (min-width: 900px) {
+    .ip-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:10px; align-items:start; }
+  }
+  .ip-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:12px 14px; }
+  /* Color fijo por tienda (mismo criterio que el resto de herramientas de Málaga: verde/azul/morado/naranja claros). */
+  .ip-card.ip-t-malaga { --th:#38b26e; }
+  .ip-card.ip-t-marbella { --th:#3f9be0; }
+  .ip-card.ip-t-mijas { --th:#9a6ee0; }
+  .ip-card.ip-t-granada { --th:#e79338; }
+  .ip-card[class*="ip-t-"] { border-left:3px solid var(--th); background:linear-gradient(160deg, color-mix(in srgb, var(--th) 16%, var(--ink-850)) 0%, var(--ink-900) 100%); }
+  .ip-card-tienda { display:flex; align-items:center; gap:5px; }
+  .ip-card-tienda .dot { width:8px; height:8px; border-radius:50%; background:var(--th); flex:none; }
+  .ip-texto { font-size:12.5px; color:var(--text-300); line-height:1.45; margin-top:8px; white-space:pre-wrap; word-break:break-word; }
+  .ip-card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .ip-card-ped { font-weight:800; font-size:14.5px; color:var(--text-100); }
+  .ip-card-tienda { color:var(--text-500); font-size:12px; margin-top:1px; }
+  .ip-badge { font-size:10.5px; font-weight:800; padding:4px 10px; border-radius:var(--radius-chip); white-space:nowrap; }
+  .ip-badge-PENDIENTE { background:var(--warn-bg); color:var(--warn-fg); }
+  .ip-badge-EN_CURSO { background:var(--ink-800); color:var(--accent-text); }
+  .ip-badge-POSPUESTA { background:var(--ink-800); color:var(--text-500); }
+  .ip-badge-RESUELTA { background:var(--ink-800); color:var(--ok); }
+  .ip-badge-CANCELADA { background:var(--danger-bg); color:var(--danger-fg); }
+  .ip-meta-row { display:flex; flex-wrap:wrap; gap:6px 10px; font-size:12px; color:var(--text-500); margin-top:6px; }
+  .ip-meta-row b { color:var(--text-300); font-weight:600; }
+  .ip-urgente { color:var(--danger-fg); font-weight:800; }
+  .ip-vacio-msg { color:var(--text-500); font-size:13px; padding:16px; }
+
+  .ip-cerradas-toggle { cursor:pointer; border:1px solid var(--ink-800); background:var(--ink-900); color:var(--text-500); padding:10px 14px; border-radius:var(--radius-btn); font-size:12.5px; font-weight:700; width:100%; text-align:left; margin-top:16px; display:flex; align-items:center; gap:6px; }
+  .ip-cerradas-toggle:active { background:var(--ink-800); }
+  .ip-cerradas-toggle .car { transition:transform .15s ease; }
+  .ip-cerradas-toggle.abierto .car { transform:rotate(90deg); }
+  .ip-cerradas-cuerpo { display:none; margin-top:10px; }
+  .ip-cerradas-cuerpo.abierto { display:block; }
+</style>
+
+<h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">📋 Incidencias Pedido cliente</h1>
+
+<div class="ip-top">
+  <p class="ip-sub">Estado de las incidencias registradas en Última Milla — solo consulta, se gestionan allí.</p>
+  <button type="button" class="ip-btn" id="ipBtnRecargar" onclick="ipCargar(true)">↻ Actualizar</button>
+</div>
+<p class="ip-origen" id="ipOrigen"></p>
+
+<div class="ip-resumen" id="ipResumen"></div>
+
+<div class="ip-filtros" id="ipFiltros"></div>
+<input type="search" class="ip-buscar" id="ipBuscar" placeholder="Buscar por pedido o tienda…" autocomplete="off" oninput="ipRender()">
+
+<div id="ipContenido"><p class="ip-vacio-msg">Cargando…</p></div>
+
+<button type="button" class="ip-cerradas-toggle" id="ipCerradasToggle" onclick="ipToggleCerradas()" style="display:none;">
+  <span class="car">▸</span><span id="ipCerradasTexto">Ver cerradas (pospuestas, resueltas, canceladas)</span>
+</button>
+<div class="ip-cerradas-cuerpo" id="ipCerradasCuerpo"></div>
+
+<script>
+  let ipDatos = null;
+  let ipCargadoEn = 0;
+  let ipCargando = false;
+  let ipFiltroEstado = '';
+  let ipCerradasAbierto = false;
+  const IP_RECARGA_MS = 5 * 60 * 1000;
+  const IP_ETIQUETA_ESTADO = { PENDIENTE: 'Pendiente', EN_CURSO: 'En curso', POSPUESTA: 'Pospuesta', RESUELTA: 'Resuelta', CANCELADA: 'Cancelada' };
+  const IP_ORDEN_ESTADO = ['PENDIENTE', 'EN_CURSO', 'POSPUESTA', 'RESUELTA', 'CANCELADA'];
+  // Pantalla principal = solo lo que sigue vivo (pendiente/en marcha); lo cerrado (pospuesta,
+  // resuelta, cancelada) va aparte, plegado, para no tapar lo que de verdad hay que mirar hoy.
+  const IP_ABIERTOS = ['PENDIENTE', 'EN_CURSO'];
+  const IP_CERRADOS = ['POSPUESTA', 'RESUELTA', 'CANCELADA'];
+
+  function ipEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function ipSinTildes(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function ipClaseTienda(t) {
+    const n = ipSinTildes(t);
+    if (n.indexOf('malaga') >= 0) return 'ip-t-malaga';
+    if (n.indexOf('marbella') >= 0) return 'ip-t-marbella';
+    if (n.indexOf('mijas') >= 0) return 'ip-t-mijas';
+    if (n.indexOf('granada') >= 0) return 'ip-t-granada';
+    return '';
+  }
+
+  function incpcAlMostrar() {
+    if (!ipDatos || (Date.now() - ipCargadoEn) > IP_RECARGA_MS) ipCargar(false);
+  }
+
+  function ipCargar(forzar) {
+    if (ipCargando) return;
+    ipCargando = true;
+    const boton = document.getElementById('ipBtnRecargar');
+    boton.disabled = true;
+    if (!ipDatos || forzar) document.getElementById('ipContenido').innerHTML = '<p class="ip-vacio-msg">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        ipCargando = false; boton.disabled = false;
+        if (r && r.ok) { ipDatos = r; ipCargadoEn = Date.now(); ipRender(); }
+        else ipError((r && r.error) || 'No se pudieron cargar las incidencias.');
+      })
+      .withFailureHandler(function (err) {
+        ipCargando = false; boton.disabled = false;
+        ipError('Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .obtenerIncidenciasPC();
+  }
+
+  function ipError(msg) {
+    ipDatos = null;
+    ipCerradasAbierto = false;
+    document.getElementById('ipContenido').innerHTML = '<div class="ip-error">' + ipEsc(msg) + '</div>';
+    ['ipResumen', 'ipFiltros', 'ipOrigen'].forEach(function (id) { document.getElementById(id).innerHTML = ''; });
+    document.getElementById('ipCerradasToggle').style.display = 'none';
+    document.getElementById('ipCerradasCuerpo').innerHTML = '';
+    document.getElementById('ipCerradasCuerpo').classList.remove('abierto');
+  }
+
+  function ipElegirEstado(estado) {
+    ipFiltroEstado = (ipFiltroEstado === estado) ? '' : estado;
+    ipRender();
+  }
+
+  function ipToggleCerradas() {
+    ipCerradasAbierto = !ipCerradasAbierto;
+    ipRender();
+  }
+
+  function ipTarjeta_(f) {
+    const badge = IP_ETIQUETA_ESTADO[f.estado] ? f.estado : '';
+    const claseTienda = ipClaseTienda(f.tienda);
+    return '<div class="ip-card' + (claseTienda ? ' ' + claseTienda : '') + '">' +
+      '<div class="ip-card-top">' +
+        '<div><div class="ip-card-ped">' + ipEsc(f.ped) + '</div><div class="ip-card-tienda">' + (claseTienda ? '<span class="dot"></span>' : '') + ipEsc(f.tienda) + '</div></div>' +
+        '<span class="ip-badge ip-badge-' + badge + '">' + ipEsc(IP_ETIQUETA_ESTADO[f.estado] || f.estado) + '</span>' +
+      '</div>' +
+      '<div class="ip-meta-row">' +
+        '<span><b>' + ipEsc(f.tipo) + '</b></span>' +
+        (f.prioridad === 'URGENTE' ? '<span class="ip-urgente">⚠ URGENTE</span>' : '') +
+        (f.asignado ? '<span>Asignado: <b>' + ipEsc(f.asignado) + '</b></span>' : '<span>Sin asignar</span>') +
+      '</div>' +
+      (f.texto ? '<div class="ip-texto">' + ipEsc(f.texto) + '</div>' : '') +
+      (f.articulosResumen || f.ubicacionManual ? '<div class="ip-meta-row">' +
+        (f.articulosResumen ? '<span>📦 ' + ipEsc(f.articulosResumen) + '</span>' : '') +
+        (f.ubicacionManual ? '<span>📍 Última ubicación: <b>' + ipEsc(f.ubicacionManual) + '</b></span>' : '') +
+      '</div>' : '') +
+      '<div class="ip-meta-row">' +
+        (f.creadoTs ? '<span>Creada: ' + ipEsc(f.creadoTs) + '</span>' : '') +
+        (f.resueltoTs ? '<span>Resuelta: ' + ipEsc(f.resueltoTs) + '</span>' : (f.actualizado ? '<span>Actualizada: ' + ipEsc(f.actualizado) + '</span>' : '')) +
+      '</div>' +
+    '</div>';
+  }
+
+  function ipRender() {
+    const d = ipDatos;
+    if (!d) return;
+
+    const origen = document.getElementById('ipOrigen');
+    origen.className = 'ip-origen' + (d.origen === 'copia' ? ' copia' : '');
+    origen.textContent = d.origen === 'copia'
+      ? 'Copia guardada (tu cuenta no abre la hoja de Última Milla) · actualizada el ' + d.actualizado
+      : 'Leído en vivo el ' + d.actualizado;
+
+    document.getElementById('ipResumen').innerHTML = IP_ORDEN_ESTADO.map(function (e) {
+      return '<span class="ip-resumen-chip"><b>' + (d.resumen[e] || 0) + '</b>' + IP_ETIQUETA_ESTADO[e] + '</span>';
+    }).join('');
+
+    // Chips de filtro: solo Pendiente/En curso -- lo cerrado no se filtra aquí, se ve aparte.
+    document.getElementById('ipFiltros').innerHTML = IP_ABIERTOS.map(function (e) {
+      return '<span class="ip-chip' + (ipFiltroEstado === e ? ' activo' : '') + '" onclick="ipElegirEstado(\'' + e + '\')">' + IP_ETIQUETA_ESTADO[e] + '</span>';
+    }).join('');
+
+    const filtroTexto = ipSinTildes(document.getElementById('ipBuscar').value.trim());
+    const coincideTexto = function (f) {
+      return !filtroTexto || ipSinTildes(f.ped).indexOf(filtroTexto) >= 0 || ipSinTildes(f.tienda).indexOf(filtroTexto) >= 0;
+    };
+
+    const todas = d.filas || [];
+    const abiertas = todas.filter(function (f) {
+      return IP_ABIERTOS.indexOf(f.estado) >= 0 && (!ipFiltroEstado || f.estado === ipFiltroEstado) && coincideTexto(f);
+    });
+    const cerradas = todas.filter(function (f) { return IP_CERRADOS.indexOf(f.estado) >= 0 && coincideTexto(f); });
+
+    const cont = document.getElementById('ipContenido');
+    cont.innerHTML = abiertas.length
+      ? '<div class="ip-list">' + abiertas.map(ipTarjeta_).join('') + '</div>'
+      : '<p class="ip-vacio-msg">' + (todas.filter(function (f) { return IP_ABIERTOS.indexOf(f.estado) >= 0; }).length ? 'Nada coincide con ese filtro.' : 'No hay incidencias pendientes ni en marcha.') + '</p>';
+
+    const toggle = document.getElementById('ipCerradasToggle');
+    const cuerpo = document.getElementById('ipCerradasCuerpo');
+    const totalCerradas = todas.filter(function (f) { return IP_CERRADOS.indexOf(f.estado) >= 0; }).length;
+    if (!totalCerradas) {
+      toggle.style.display = 'none';
+      cuerpo.classList.remove('abierto');
+    } else {
+      toggle.style.display = 'flex';
+      toggle.classList.toggle('abierto', ipCerradasAbierto);
+      document.getElementById('ipCerradasTexto').textContent = (ipCerradasAbierto ? 'Ocultar' : 'Ver') + ' cerradas (' + totalCerradas + ')';
+      cuerpo.classList.toggle('abierto', ipCerradasAbierto);
+      if (ipCerradasAbierto) {
+        cuerpo.innerHTML = cerradas.length
+          ? '<div class="ip-list">' + cerradas.map(ipTarjeta_).join('') + '</div>'
+          : '<p class="ip-vacio-msg">Nada coincide con ese filtro.</p>';
+      }
+    }
+  }
+</script>

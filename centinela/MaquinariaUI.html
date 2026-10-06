@@ -65,16 +65,16 @@
 
 <div class="maq-nueva-card" id="maqNuevaCard">
   <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Tipo de máquina</label>
-  <input type="text" id="maqNuevaTipo" placeholder="Ej. TRANSPALETA ELECT" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;">
+  <input type="text" id="maqNuevaTipo" placeholder="Ej. TRANSPALETA ELECT" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;" onkeydown="if (event.key === 'Enter') maqCrearMaquina()">
   <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Propietaria</label>
   <select id="maqNuevaPropietaria" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;">
     <option value="Linde">Linde</option>
     <option value="Still">Still</option>
   </select>
   <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Designación (código corto, opcional)</label>
-  <input type="text" id="maqNuevaDesignacion" placeholder="Ej. MOTO, RT, ELV, TORO" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;">
+  <input type="text" id="maqNuevaDesignacion" placeholder="Ej. MOTO, RT, ELV, TORO" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:8px;box-sizing:border-box;" onkeydown="if (event.key === 'Enter') maqCrearMaquina()">
   <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-500);">Serial</label>
-  <input type="text" id="maqNuevaSerial" placeholder="Identificador físico" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:10px;box-sizing:border-box;">
+  <input type="text" id="maqNuevaSerial" placeholder="Identificador físico" style="width:100%;background:var(--ink-950);border:1px solid var(--ink-700);border-radius:var(--radius-btn);color:var(--text-100);padding:10px;font-size:14px;margin-top:6px;margin-bottom:10px;box-sizing:border-box;" onkeydown="if (event.key === 'Enter') maqCrearMaquina()">
   <button type="button" class="maq-btn-guardar" id="maqBtnCrear" onclick="maqCrearMaquina()">Añadir máquina</button>
 </div>
 
@@ -137,29 +137,40 @@
       .crearMaquina({ maquina: tipo, propietaria: propietaria, designacion: designacion, serial: serial });
   }
 
+  // Texto de estado del SAT para la máquina m, o '' si no aplica (OK, o "Revision" nunca lo avisa).
+  function maqTextoSat_(m) {
+    if (m.estado === 'OK') return '';
+    if (m.fechaEnvioSat) return '📨 SAT avisado: ' + m.fechaEnvioSat;
+    if (m.estado === 'Revision') return '';
+    return '⚠️ SAT sin avisar (propietaria no reconocida u otro fallo — avisa a mano)';
+  }
+
   function maqRenderLista() {
     const cont = document.getElementById('maqLista');
     if (!maqCache.length) { cont.innerHTML = '<p style="color:var(--text-500);font-size:13px;">Sin máquinas todavía — añade la primera con "➕ Añadir".</p>'; return; }
     cont.innerHTML = maqCache.map(function (m) {
       const obsInicial = m.estado !== 'OK' ? m.observacion : '';
+      const satTexto = maqTextoSat_(m);
+      const satTag = satTexto ? ('<div class="maq-card-meta" style="' + (m.fechaEnvioSat ? '' : 'color:var(--warn-fg);') + '">' + satTexto + '</div>') : '';
       return '<div class="maq-card">' +
         '<div class="maq-card-head" onclick="maqToggle(' + m.id + ')">' +
           '<div><div class="maq-card-nombre">' + m.id + ' · ' + m.maquina + '</div>' +
-          '<div class="maq-card-meta">' + m.propietaria + ' · ' + m.serial + '</div></div>' +
+          '<div class="maq-card-meta">' + m.propietaria + ' · ' + m.serial + '</div>' + satTag + '</div>' +
           '<span class="maq-badge maq-badge-' + m.estado + '">' + (MAQ_ETIQUETA_ESTADO[m.estado] || m.estado) + '</span>' +
         '</div>' +
         '<div class="maq-card-body" id="maqBody-' + m.id + '">' +
           '<span class="maq-editar-toggle" onclick="maqToggleEditar(' + m.id + ')">✏️ Editar datos de la máquina</span>' +
           '<div class="maq-editar-box" id="maqEditarBox-' + m.id + '">' +
-            '<label>Tipo</label><input type="text" id="maqEditTipo-' + m.id + '" value="' + m.maquina + '">' +
+            '<label>Tipo</label><input type="text" id="maqEditTipo-' + m.id + '" value="' + m.maquina + '" onkeydown="if (event.key === \'Enter\') maqGuardarDatos(' + m.id + ')">' +
             '<label>Propietaria</label><select id="maqEditPropietaria-' + m.id + '">' +
               '<option value="Linde"' + (m.propietaria === 'Linde' ? ' selected' : '') + '>Linde</option>' +
               '<option value="Still"' + (m.propietaria === 'Still' ? ' selected' : '') + '>Still</option>' +
             '</select>' +
-            '<label>Designación</label><input type="text" id="maqEditDesignacion-' + m.id + '" value="' + (m.designacion || '') + '">' +
-            '<label>Serial</label><input type="text" id="maqEditSerial-' + m.id + '" value="' + m.serial + '">' +
+            '<label>Designación</label><input type="text" id="maqEditDesignacion-' + m.id + '" value="' + (m.designacion || '') + '" onkeydown="if (event.key === \'Enter\') maqGuardarDatos(' + m.id + ')">' +
+            '<label>Serial</label><input type="text" id="maqEditSerial-' + m.id + '" value="' + m.serial + '" onkeydown="if (event.key === \'Enter\') maqGuardarDatos(' + m.id + ')">' +
             '<button type="button" onclick="maqGuardarDatos(' + m.id + ')">Guardar datos</button>' +
           '</div>' +
+          (satTexto ? ('<div style="' + (m.fechaEnvioSat ? '' : 'color:var(--warn-fg);') + 'font-size:12.5px;font-weight:700;margin-bottom:10px;">' + satTexto + (m.fechaEnvioSat ? ' — no lo dupliques' : '') + '</div>') : '') +
           '<div class="maq-estados">' +
             MAQ_ESTADOS.map(function (e) {
               return '<div class="maq-estado-btn" id="maqEstadoBtn-' + m.id + '-' + e + '" onclick="maqElegirEstado(' + m.id + ',\'' + e + '\')">' + MAQ_ETIQUETA_ESTADO[e] + '</div>';
@@ -237,8 +248,9 @@
       if (!boxAhora) return;
       if (!historial || !historial.length) { boxAhora.textContent = 'Sin averías registradas.'; return; }
       boxAhora.innerHTML = historial.map(function (h) {
+        const sat = h.fechaEnvioSat ? ('<div class="fecha">SAT avisado: ' + h.fechaEnvioSat + '</div>') : '<div class="fecha">SAT no avisado</div>';
         return '<div class="maq-hist-item"><div class="fecha">' + h.fechaInicio + ' → ' + h.fechaResuelto + '</div>' +
-          '<div><b>' + h.estado + ':</b> ' + h.observacion + '</div></div>';
+          '<div><b>' + h.estado + ':</b> ' + h.observacion + '</div>' + sat + '</div>';
       }).join('');
     }).obtenerHistorialMaquina(id);
   }
@@ -296,12 +308,14 @@
     google.script.run.withSuccessHandler(function (maquinas) {
       if (!maquinas || !maquinas.length) { lista.innerHTML = '<p style="color:var(--text-500);font-size:13px;">No hay averías activas.</p>'; return; }
       lista.innerHTML = maquinas.map(function (m) {
+        const satTexto = maqTextoSat_(m);
         return '<div class="maq-sup-card">' +
           '<b>' + m.id + ' · ' + m.maquina + '</b> (' + m.serial + ') — ' + (MAQ_ETIQUETA_ESTADO[m.estado] || m.estado) + '<br>' +
           '<span style="color:var(--text-500);font-size:12px;">' + m.observacion + '</span>' +
-          '<input type="text" id="maqPresu-' + m.id + '" placeholder="Presupuestado" value="' + (m.presupuestado || '') + '">' +
-          '<input type="text" id="maqAcept-' + m.id + '" placeholder="Aceptado" value="' + (m.aceptado || '') + '">' +
-          '<input type="text" id="maqObsRev-' + m.id + '" placeholder="Observaciones tras revisión" value="' + (m.observacionesRevision || '') + '">' +
+          (satTexto ? ('<br><span style="font-size:12px;font-weight:700;' + (m.fechaEnvioSat ? '' : 'color:var(--warn-fg);') + '">' + satTexto + '</span>') : '') +
+          '<input type="text" id="maqPresu-' + m.id + '" placeholder="Presupuestado" value="' + (m.presupuestado || '') + '" onkeydown="if (event.key === \'Enter\') maqGuardarRevision(\'' + m.id + '\')">' +
+          '<input type="text" id="maqAcept-' + m.id + '" placeholder="Aceptado" value="' + (m.aceptado || '') + '" onkeydown="if (event.key === \'Enter\') maqGuardarRevision(\'' + m.id + '\')">' +
+          '<input type="text" id="maqObsRev-' + m.id + '" placeholder="Observaciones tras revisión" value="' + (m.observacionesRevision || '') + '" onkeydown="if (event.key === \'Enter\') maqGuardarRevision(\'' + m.id + '\')">' +
           '<button type="button" onclick="maqGuardarRevision(\'' + m.id + '\')">Guardar revisión</button>' +
           '</div>';
       }).join('');

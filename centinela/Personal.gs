@@ -9,6 +9,13 @@
 const PERSONAL_CODIGO_DEFECTO_ = "Taisa";
 const PERSONAL_MAX_FALLOS_ = 5;
 const PERSONAL_BLOQUEO_SEG_ = 300;
+// El supervisor (pulsación larga + 467 en el cascarón, ShellUI.html) ya pasó su propio filtro;
+// PersonalUI.html se lo salta y manda este token fijo en vez del código real de Personal, para
+// no pedir el código dos veces. El "modo supervisor" en Centinela es solo del cliente (igual que
+// en Maquinaria/Turno/Tareas, sin comprobación real en el servidor) — aceptar este token aquí baja
+// Personal al MISMO nivel de confianza que esas otras pestañas, ya NO es una segunda barrera real
+// para quien sepa activar el modo supervisor. Decisión explícita del usuario (29/09/2026).
+const PERSONAL_TOKEN_SUPERVISOR_ = "SUPERVISOR_467";
 
 // El código se puede cambiar sin tocar el código fuente: propiedad de script PERSONAL_CODIGO.
 function personalCodigo_() {
@@ -33,6 +40,7 @@ function cachePersonal_(accion, clave, valor) {
 
 // Lanza "ACCESO_DENEGADO" (la UI la reconoce y vuelve a bloquear) o "DEMASIADOS_INTENTOS".
 function exigirAccesoPersonal_(codigo) {
+  if (codigo === PERSONAL_TOKEN_SUPERVISOR_) return;
   const fallos = parseInt(cachePersonal_("get", "personal_fallos") || "0", 10) || 0;
   if (fallos >= PERSONAL_MAX_FALLOS_) throw new Error("DEMASIADOS_INTENTOS");
   const esperado = normalizarCodigoPersonal_(personalCodigo_());
@@ -163,6 +171,7 @@ function procesarIncidencia(data) {
   if (!data) throw new Error("No se han recibido datos.");
   exigirAccesoPersonal_(data.codigo);
   if (!data.jefe_equipo) throw new Error("Falta indicar quién eres.");
+  data.jefe_equipo = jefeVigente_(data.jefe_equipo);
   if (JEFES_EQUIPO.indexOf(data.jefe_equipo) === -1) {
     throw new Error("Jefe de equipo no reconocido: " + data.jefe_equipo);
   }

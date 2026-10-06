@@ -527,21 +527,25 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* El aviso (#toast) vive en el cascarón (ShellUI.html), NO dentro de esta pestaña: dentro de #tab-turno quedaba
+       oculto (display:none) mientras se usaba cualquier otra pestaña y nadie veía los errores ni las confirmaciones.
+       Va por encima de la barra inferior y de los cuadros a pantalla completa, y nunca captura toques. */
     .toast {
       position: fixed;
-      bottom: 24px;
+      bottom: calc(80px + env(safe-area-inset-bottom, 0px));
       left: 50%;
-      transform: translateX(-50%) translateY(140px);
+      transform: translateX(-50%) translateY(200px);
       background: var(--ink-900);
       border: 1px solid var(--ink-800);
       color: var(--text-100);
       padding: 16px 26px;
       border-radius: 12px;
       font-size: 15px;
-      z-index: 1000;
+      z-index: 3000;
       transition: transform 0.3s;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       max-width: 90%;
+      pointer-events: none;
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
 
@@ -573,6 +577,34 @@
       .logo-wrap img { height: 40px; }
     }
 
+    /* ── Editor de zonas (solo supervisor) ── */
+    .tz-fila {
+      background: var(--ink-950);
+      border: 1px solid var(--ink-800);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .tz-controles { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .tz-num { font-size: 11px; color: var(--text-500); width: 18px; flex-shrink: 0; }
+    .tz-mini-btn {
+      min-width: 34px; min-height: 34px;
+      background: var(--ink-900); border: 1px solid var(--ink-700); border-radius: 8px;
+      color: var(--text-100); font-size: 14px; cursor: pointer;
+    }
+    .tz-mini-btn:disabled { opacity: 0.35; cursor: default; }
+    .tz-quitar { margin-left: auto; width: auto; background: transparent; border: none; color: #ff8a93; font-size: 12.5px; min-height: 34px; cursor: pointer; }
+    .tz-fila input {
+      width: 100%; background: var(--ink-900); border: 1px solid var(--ink-700); border-radius: 8px;
+      color: var(--text-100); padding: 9px 10px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+      margin-bottom: 6px; box-sizing: border-box;
+    }
+    .tz-fila input:last-child { margin-bottom: 0; }
+    .tz-rol-btn {
+      width: auto; margin: 0; padding: 8px 12px; font-size: 12.5px; min-height: 0;
+    }
+    .tz-rol-btn.activo { border-color: var(--accent); color: var(--text-100); background: var(--accent-dim); }
+
     /* Respeta a quien tiene desactivadas las animaciones en el sistema */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -583,8 +615,16 @@
     }
 </style>
 
+  <div class="header">
+    <h1 class="header-title">CierreTurno</h1>
+    <p class="header-sub">Control de turno por zonas</p>
+    <div class="divider"></div>
+  </div>
+
   <!-- SCREEN 0: INICIO -->
   <div class="screen active" id="screen-0">
+    <button type="button" class="btn-secondary" id="btnEditarZonas" style="display:none;" onclick="tzAbrir()">⚙️ Editar zonas de los roles</button>
+
     <div class="card">
       <div class="card-title">🎯 Rol del turno</div>
       <label for="turnoSelect">¿En qué rol estás en este turno?</label>
@@ -604,6 +644,19 @@
     <button class="btn-primary" id="btnStart" onclick="iniciarControl()" disabled>
       Iniciar Control →
     </button>
+  </div>
+
+  <!-- EDITOR DE ZONAS (solo supervisor) -->
+  <div class="koverlay" id="tzOverlay" onclick="if (event.target === this) tzCerrar()">
+    <div class="kmodal" style="max-width:520px; max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px); overflow-y:auto;">
+      <h2 style="font-size:16px;font-weight:800;margin:0 0 4px;color:var(--text-100);">⚙️ Zonas por rol</h2>
+      <p style="font-size:12.5px;color:var(--text-500);margin:0 0 14px;line-height:1.5;">Reordena, cambia el nombre/localización o añade y quita zonas. Se aplica desde el próximo control.</p>
+      <div id="tzSelectorRoles" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
+      <div id="tzListaZonas"></div>
+      <button type="button" class="btn-secondary" id="tzBtnAnadir" onclick="tzAnadirZona()">➕ Añadir zona</button>
+      <button type="button" class="btn-primary" id="tzBtnGuardar" onclick="tzGuardar()">Guardar cambios</button>
+      <button type="button" class="btn-secondary" onclick="tzCerrar()">Cerrar</button>
+    </div>
   </div>
 
   <div id="zonasScreens"></div>
@@ -646,11 +699,8 @@
     </div>
   </div>
 
-
-<div class="toast" id="toast"></div>
-
 <script>
-  const TURNOS = <?!= JSON.stringify(TURNOS) ?>;
+  const TURNOS = <?!= JSON.stringify(turnosConZonas_()).replace(/</g, '\\u003c') ?>;
 
   const FOTO_MAX_ANCHO = 800;
   const FOTO_CALIDAD = 0.7;
@@ -696,7 +746,7 @@
       document.getElementById('rolPreviewTitle').textContent =
         t.nombre + ' · ' + t.zonas.length + ' zonas a fotografiar';
       document.getElementById('rolPreviewList').innerHTML =
-        t.zonas.map(z => '<li>' + z.nombre + '</li>').join('');
+        t.zonas.map(z => '<li>' + tzEsc(z.nombre) + '</li>').join('');
       preview.classList.add('show');
     } else {
       preview.classList.remove('show');
@@ -705,7 +755,9 @@
 
   function iniciarControl() {
     state.turnoId = document.getElementById('turnoSelect').value;
-    state.turno = TURNOS[state.turnoId];
+    // Copia propia: si el supervisor edita las zonas en otra pantalla, este control no cambia a mitad.
+    const base = TURNOS[state.turnoId];
+    state.turno = base ? Object.assign({}, base, { zonas: base.zonas.map(z => ({ nombre: z.nombre, descripcion: z.descripcion || '' })) }) : null;
 
     if (!state.jefe) {
       showToast('❌ Falta identificarte — recarga la app');
@@ -749,13 +801,13 @@
           <div class="zona-header">
             <div class="zona-number">${idx + 1}/${total}</div>
             <div class="zona-info">
-              <h2>${zona.nombre}</h2>
-              <p>${zona.descripcion}</p>
+              <h2>${tzEsc(zona.nombre)}</h2>
+              <p>${tzEsc(zona.descripcion)}</p>
             </div>
           </div>
 
           <div class="camera-zone" id="cameraZone-${idx}" role="button" tabindex="0"
-               aria-label="Fotografiar ${zona.nombre}"
+               aria-label="Fotografiar ${tzEsc(zona.nombre)}"
                onclick="triggerCamera(${idx})"
                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();triggerCamera(${idx});}">
             <input type="file" id="fileInput-${idx}" accept="image/*" capture="environment" onchange="handlePhoto(this, ${idx})">
@@ -763,7 +815,7 @@
               <div class="camera-icon">📷</div>
               <div class="camera-text">
                 <strong>Toca para fotografiar</strong>
-                ${zona.nombre}
+                ${tzEsc(zona.nombre)}
               </div>
             </div>
           </div>
@@ -838,7 +890,7 @@
       if (!zone || !placeholder) return;
       zone.classList.remove('processing');
       placeholder.innerHTML = `
-        <img src="${comprimida}" class="preview-img" alt="Foto de ${state.turno.zonas[idx].nombre}" />
+        <img src="${comprimida}" class="preview-img" alt="Foto de ${tzEsc(state.turno.zonas[idx].nombre)}" />
         <span class="photo-badge">✓ Foto</span>
         <button type="button" class="retake-btn" onclick="event.stopPropagation(); retakePhoto(${idx})">🔄 Repetir</button>
       `;
@@ -864,7 +916,7 @@
       <div class="camera-icon">📷</div>
       <div class="camera-text">
         <strong>Toca para fotografiar</strong>
-        ${state.turno.zonas[idx].nombre}
+        ${tzEsc(state.turno.zonas[idx].nombre)}
       </div>
     `;
     checkZonaComplete(idx);
@@ -919,7 +971,7 @@
       const labels = ['—','⛔ Crítico','🔴 Deficiente','🟡 Aceptable','🟢 Bueno','⭐ Excelente'];
       html += `
         <div class="resumen-item">
-          <span class="resumen-label">${zona.nombre}</span>
+          <span class="resumen-label">${tzEsc(zona.nombre)}</span>
           <span class="resumen-value" style="color:${ec};">${labels[est]}</span>
         </div>
       `;
@@ -1106,10 +1158,132 @@
     t.textContent = msg;
     t.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+    // Los mensajes largos (errores del servidor) necesitan tiempo para leerse: 3 s no bastan.
+    toastTimer = setTimeout(() => t.classList.remove('show'), Math.min(9000, Math.max(3000, 1500 + String(msg).length * 55)));
   }
 
   function turnoRecibirJefe(jefe) {
     state.jefe = jefe;
+  }
+
+  // ── Editor de zonas por rol (solo supervisor) ─────────────
+  let tzDatos = null;          // { turnoId: { nombre, zonas:[{nombre,descripcion}] } }, tal como llega del servidor
+  let tzRolActivo = '';
+  let tzZonasEdit = [];        // copia editable del rol activo (se guarda entera al pulsar Guardar)
+
+  // Enganchado desde ShellUI en los mismos puntos que maquinariaActualizarSupervisor/tareasAlCambiarModo.
+  function turnoActualizarSupervisor() {
+    const btn = document.getElementById('btnEditarZonas');
+    if (btn) btn.style.display = (typeof CentinelaState !== 'undefined' && CentinelaState.supervisor) ? 'block' : 'none';
+    if (!(typeof CentinelaState !== 'undefined' && CentinelaState.supervisor)) tzCerrar();
+  }
+
+  function tzEsc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function tzAbrir() {
+    document.getElementById('tzOverlay').classList.add('abierto');
+    document.getElementById('tzListaZonas').innerHTML = '<p class="hint">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (!r || !r.ok) { document.getElementById('tzListaZonas').innerHTML = '<p class="hint" style="color:#ff8a93;">No se pudo cargar (' + tzEsc((r && r.error) || 'error') + ').</p>'; return; }
+        tzDatos = r.turnos;
+        const primerRol = (tzRolActivo && tzDatos[tzRolActivo]) ? tzRolActivo : Object.keys(tzDatos)[0];
+        tzElegirRol(primerRol);
+      })
+      .withFailureHandler(function (err) {
+        document.getElementById('tzListaZonas').innerHTML = '<p class="hint" style="color:#ff8a93;">Error del servidor: ' + tzEsc(err && err.message ? err.message : err) + '</p>';
+      })
+      .obtenerZonasTurnoAdmin();
+  }
+
+  function tzCerrar() {
+    document.getElementById('tzOverlay').classList.remove('abierto');
+  }
+
+  function tzPintarSelectorRoles() {
+    document.getElementById('tzSelectorRoles').innerHTML = Object.keys(tzDatos).map(id =>
+      '<button type="button" class="btn-secondary tz-rol-btn' + (id === tzRolActivo ? ' activo' : '') + '" onclick="tzElegirRol(\'' + id + '\')">' + tzEsc(tzDatos[id].nombre) + '</button>'
+    ).join('');
+  }
+
+  function tzElegirRol(id) {
+    tzRolActivo = id;
+    tzZonasEdit = (tzDatos[id].zonas || []).map(z => ({ nombre: z.nombre, descripcion: z.descripcion || '' }));
+    tzPintarSelectorRoles();
+    tzPintarZonas();
+  }
+
+  function tzPintarZonas() {
+    const cont = document.getElementById('tzListaZonas');
+    if (!tzZonasEdit.length) { cont.innerHTML = '<p class="hint">Sin zonas — añade al menos una.</p>'; return; }
+    cont.innerHTML = tzZonasEdit.map((z, i) => `
+      <div class="tz-fila">
+        <div class="tz-controles">
+          <span class="tz-num">${i + 1}</span>
+          <button type="button" class="tz-mini-btn" onclick="tzMover(${i},-1)" ${i === 0 ? 'disabled' : ''} aria-label="Subir">↑</button>
+          <button type="button" class="tz-mini-btn" onclick="tzMover(${i},1)" ${i === tzZonasEdit.length - 1 ? 'disabled' : ''} aria-label="Bajar">↓</button>
+          <button type="button" class="tz-quitar" onclick="tzQuitarZona(${i})">🗑 Quitar</button>
+        </div>
+        <input type="text" value="${tzEsc(z.nombre)}" placeholder="Nombre / localización" maxlength="80" oninput="tzZonasEdit[${i}].nombre=this.value">
+        <input type="text" value="${tzEsc(z.descripcion)}" placeholder="Descripción (opcional)" maxlength="200" oninput="tzZonasEdit[${i}].descripcion=this.value">
+      </div>
+    `).join('');
+  }
+
+  function tzMover(i, dir) {
+    const j = i + dir;
+    if (j < 0 || j >= tzZonasEdit.length) return;
+    const tmp = tzZonasEdit[i]; tzZonasEdit[i] = tzZonasEdit[j]; tzZonasEdit[j] = tmp;
+    tzPintarZonas();
+  }
+
+  function tzQuitarZona(i) {
+    if (tzZonasEdit.length <= 1) { showToast('❌ Debe quedar al menos una zona'); return; }
+    tzZonasEdit.splice(i, 1);
+    tzPintarZonas();
+  }
+
+  function tzAnadirZona() {
+    if (tzZonasEdit.length >= 10) { showToast('❌ Máximo 10 zonas'); return; }
+    tzZonasEdit.push({ nombre: '', descripcion: '' });
+    tzPintarZonas();
+  }
+
+  // Tras guardar, refresca también el selector principal (nº de fotos por rol) sin recargar la página.
+  function tzRefrescarSelectorPrincipal() {
+    const sel = document.getElementById('turnoSelect');
+    Array.prototype.forEach.call(sel.options, function (opt) {
+      if (opt.value && TURNOS[opt.value]) opt.textContent = TURNOS[opt.value].nombre + ' (' + TURNOS[opt.value].zonas.length + ' fotos)';
+    });
+    validarSeleccion();
+  }
+
+  function tzGuardar() {
+    const limpio = tzZonasEdit.map(z => ({ nombre: (z.nombre || '').trim(), descripcion: (z.descripcion || '').trim() }));
+    if (!limpio.length || limpio.some(z => !z.nombre)) { showToast('❌ Cada zona necesita un nombre'); return; }
+
+    const boton = document.getElementById('tzBtnGuardar');
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    const restaurar = () => { boton.disabled = false; boton.textContent = 'Guardar cambios'; };
+
+    google.script.run
+      .withSuccessHandler(function (r) {
+        restaurar();
+        if (r && r.success) {
+          showToast('✅ Zonas guardadas');
+          const guardadas = Array.isArray(r.zonas) ? r.zonas : limpio;
+          tzDatos[tzRolActivo].zonas = guardadas;
+          if (TURNOS[tzRolActivo]) TURNOS[tzRolActivo].zonas = guardadas.map(z => ({ nombre: z.nombre, descripcion: z.descripcion || '' }));
+          tzElegirRol(tzRolActivo);
+          tzRefrescarSelectorPrincipal();
+        } else {
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) { restaurar(); showToast('❌ Error del servidor: ' + (err && err.message ? err.message : err)); })
+      .guardarZonasTurno({ turno_id: tzRolActivo, zonas: limpio });
   }
 </script>

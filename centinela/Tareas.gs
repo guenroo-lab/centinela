@@ -4,15 +4,18 @@
 //
 // El responsable (modo supervisor) asigna tareas a UN jefe de equipo, o una tarea
 // GLOBAL a todos ("Asignado a" = "TODOS"): la ven todos los jefes y la cierra el
-// primero que la complete (queda cerrada para los demás). Cada jefe ve solo las
-// suyas, las cierra con un feedback breve y el responsable recibe un correo-informe.
-// Ojo: identidad y modo supervisor son un filtro de cliente (no hay login personal);
-// lo que sí se hace en servidor es no entregar nunca a un jefe las tareas de otro
-// (obtenerTareasDeJefe filtra por jefe validado) y que el cierre sea atómico (bloqueo).
+// primero que la complete o la marque como no realizada (queda cerrada para los demás).
+// Cada jefe ve solo las suyas y las cierra de dos formas: completada (con feedback breve)
+// o no realizada (con el motivo por el que no se pudo hacer); el responsable recibe un
+// correo-informe en los dos casos. Ojo: identidad y modo supervisor son un filtro de
+// cliente (no hay login personal); lo que sí se hace en servidor es no entregar nunca a
+// un jefe las tareas de otro (obtenerTareasDeJefe filtra por jefe validado) y que el
+// cierre sea atómico (bloqueo).
 //
 // Columnas de la hoja Tareas (1-indexadas, para getRange):
 // 1 ID | 2 Titulo | 3 Descripcion | 4 Asignado a | 5 Prioridad | 6 Fecha Asignacion |
-// 7 Fecha Limite | 8 Estado | 9 Feedback | 10 Fecha Cierre | 11 Cerrada por | 12 Correo Enviado |
+// 7 Fecha Limite | 8 Estado (Pendiente/Completada/No realizada/Anulada) | 9 Feedback (o el
+// motivo, si no se pudo realizar) | 10 Fecha Cierre | 11 Cerrada por | 12 Correo Enviado |
 // 13 Foto Tarea ("Sí" si la tarea se creó con foto) | 14 Foto Cierre ("Sí" si se cerró con foto).
 // Las fotos en sí están en la hoja Tareas_Fotos (ver tarGuardarFoto_).
 
@@ -21,7 +24,10 @@ const TAREA_MAX_TITULO = 120;
 const TAREA_MAX_DESCRIPCION = 1000;
 const TAREA_MIN_FEEDBACK = 5;
 const TAREA_MAX_FEEDBACK = 500;
+const TAREA_MIN_MOTIVO = 5;
+const TAREA_MAX_MOTIVO = 500;
 const TAREA_COMPLETADAS_JEFE = 10;
+const TAREA_NO_REALIZADAS_JEFE = 10;
 const TAREA_CERRADAS_SUPERVISOR = 200;
 const TAREA_FOTO_MAX_CHARS = 350000;   // data URI completa: ~260 KB de imagen (el navegador la reduce antes)
 const TAREA_FOTO_TROZO = 40000;        // Sheets admite 50.000 caracteres por celda
@@ -88,9 +94,16 @@ function tarHoyClave_() {
 
 function tarEstadoCanonico_(valor) {
   const s = tarNormalizar_(valor);
+  // Comprobar "no ..." antes que "completada": si no, "no completada" caería en la rama de abajo.
+  if (/^no (realiz|complet|se pudo|pudo|hech)/.test(s)) return "No realizada";
   if (s.indexOf("complet") === 0 || s.indexOf("cerrad") === 0 || s.indexOf("hech") === 0) return "Completada";
   if (s.indexOf("anul") === 0) return "Anulada";
   return "Pendiente";
+}
+
+// Estados en los que la tarea ya está cerrada (no admite otro cierre).
+function tarEstaCerrada_(estado) {
+  return estado === "Completada" || estado === "No realizada" || estado === "Anulada";
 }
 
 function tarPrioridadCanonica_(valor) {
@@ -111,6 +124,7 @@ function tarNombreCanonico_(texto) {
   for (let i = 0; i < JEFES_EQUIPO.length; i++) {
     if (tarNormalizar_(JEFES_EQUIPO[i]) === k) return JEFES_EQUIPO[i];
   }
+  if (JEFES_ALIAS.hasOwnProperty(k)) return JEFES_ALIAS[k];
   return String(texto == null ? "" : texto).trim();
 }
 
@@ -340,7 +354,7 @@ function tarLeerFoto_(fotoId) {
 //  - anuladas: nunca.
 function tarVisibleParaJefe_(t, clave) {
   if (t.estado === "Pendiente") return t.global || t.asignadoClave === clave;
-  if (t.estado === "Completada") {
+  if (t.estado === "Completada" || t.estado === "No realizada") {
     return t.global ? tarNormalizar_(t.cerradaPor) === clave : t.asignadoClave === clave;
   }
   return false;
@@ -349,6 +363,7 @@ function tarVisibleParaJefe_(t, clave) {
 // Vista del jefe: SOLO sus tareas y las globales (filtradas aquí, en el servidor).
 function obtenerTareasDeJefe(jefe) {
   if (!jefe) throw new Error("Falta indicar quién eres.");
+  jefe = jefeVigente_(jefe);
   if (JEFES_EQUIPO.indexOf(jefe) === -1) throw new Error("Jefe de equipo no reconocido: " + jefe);
 
   const h = tarObtenerHoja_();
@@ -367,8 +382,13 @@ function obtenerTareasDeJefe(jefe) {
     .sort(tarCompararCerradas_)
     .slice(0, TAREA_COMPLETADAS_JEFE)
     .map(function (t) { return tarParaCliente_(t, hoy, true); });
+  const noRealizadas = visibles
+    .filter(function (t) { return t.estado === "No realizada"; })
+    .sort(tarCompararCerradas_)
+    .slice(0, TAREA_NO_REALIZADAS_JEFE)
+    .map(function (t) { return tarParaCliente_(t, hoy, true); });
 
-  return { ok: true, pendientes: pendientes, completadas: completadas };
+  return { ok: true, pendientes: pendientes, completadas: completadas, noRealizadas: noRealizadas };
 }
 
 // Vista del supervisor: todas las tareas (las cerradas, acotadas a las más recientes).
@@ -380,23 +400,24 @@ function obtenerTodasLasTareas() {
   const todas = tarLeerReparando_(h.sheet);
   const pendientes = todas.filter(function (t) { return t.estado === "Pendiente"; }).sort(tarCompararPendientes_);
   const completadas = todas.filter(function (t) { return t.estado === "Completada"; }).sort(tarCompararCerradas_);
+  const noRealizadas = todas.filter(function (t) { return t.estado === "No realizada"; }).sort(tarCompararCerradas_);
   const anuladas = todas.filter(function (t) { return t.estado === "Anulada"; }).sort(tarCompararCerradas_);
 
   const resumen = {
     pendientes: pendientes.length,
     vencidas: pendientes.filter(function (t) { return t.limiteClave !== null && t.limiteClave < hoy; }).length,
     completadas: completadas.length,
+    noRealizadas: noRealizadas.length,
     anuladas: anuladas.length
   };
-  const cerradas = completadas.concat(anuladas).sort(tarCompararCerradas_).slice(0, TAREA_CERRADAS_SUPERVISOR);
+  const cerradas = completadas.concat(noRealizadas, anuladas).sort(tarCompararCerradas_).slice(0, TAREA_CERRADAS_SUPERVISOR);
   const tareas = pendientes.concat(cerradas).map(function (t) { return tarParaCliente_(t, hoy, false); });
   return { ok: true, tareas: tareas, resumen: resumen };
 }
 
-function crearTarea(data) {
-  Logger.log("📥 Nueva tarea");
-  if (!data) throw new Error("No se han recibido datos.");
-
+// Valida lo que manda el cliente y lo deja limpio. Lanza Error con un mensaje para el usuario.
+// ajustarLimite: al ejecutar una petición aprobada días después, una fecha límite ya pasada se deja en hoy.
+function tarValidarNueva_(data, ajustarLimite) {
   const titulo = String(data.titulo == null ? "" : data.titulo).replace(/\s+/g, " ").trim();
   if (!titulo) throw new Error("El título es obligatorio.");
   if (titulo.length > TAREA_MAX_TITULO) {
@@ -414,18 +435,39 @@ function crearTarea(data) {
   let limiteTxt = "";
   const limiteEntrada = String(data.fecha_limite == null ? "" : data.fecha_limite).trim();
   if (limiteEntrada) {
-    const clave = tarClaveFecha_(limiteEntrada);
+    let clave = tarClaveFecha_(limiteEntrada);
     if (clave === null) throw new Error("La fecha límite no es válida.");
-    if (clave < tarHoyClave_()) throw new Error("La fecha límite no puede ser anterior a hoy.");
+    if (clave < tarHoyClave_()) {
+      if (!ajustarLimite) throw new Error("La fecha límite no puede ser anterior a hoy.");
+      clave = tarHoyClave_();
+    }
     limiteTxt = tarClaveATexto_(clave);
   }
+  return { titulo: titulo, descripcion: descripcion, asignadoA: data.asignado_a, prioridad: prioridad, limiteTxt: limiteTxt, foto: tarValidarFoto_(data.foto) };
+}
 
-  const foto = tarValidarFoto_(data.foto);
+function crearTarea(data) {
+  Logger.log("📥 Nueva tarea");
+  if (!data) throw new Error("No se han recibido datos.");
+  const v = tarValidarNueva_(data, false);
 
+  // Una tarea para TODOS los jefes de un mando espera el visto bueno del jefe de área (ver Aprobaciones.gs).
+  const perfil = perfilActual_();
+  if (v.asignadoA === TAREA_GLOBAL && perfilNecesitaAprobacion_("globales", perfil)) {
+    return apSolicitarYResponder_("tarea_global", v.titulo,
+      { titulo: v.titulo, descripcion: v.descripcion, asignado_a: v.asignadoA, prioridad: v.prioridad, fecha_limite: v.limiteTxt }, v.foto, perfil);
+  }
+  const r = tarCrearValidada_(v, perfilCreador_(perfil, data.creador));
+  if (r.success) actividadRegistrar_("tarea", "Tarea #" + r.id + " «" + v.titulo + "» → " + (v.asignadoA === TAREA_GLOBAL ? "todos los jefes" : v.asignadoA), perfil);
+  return r;
+}
+
+// Crea la tarea ya validada (sin pedir aprobación: eso se decide antes) y avisa por correo.
+function tarCrearValidada_(v, creador) {
   const h = tarObtenerHoja_();
   if (h.error) return { success: false, error: h.error };
   let hojaFotos = null;
-  if (foto) {
+  if (v.foto) {
     hojaFotos = tarObtenerHojaFotos_();
     if (hojaFotos.error) return { success: false, error: hojaFotos.error };
   }
@@ -433,23 +475,51 @@ function crearTarea(data) {
   const lock = tarTomarLock_();
   if (!lock) return { success: false, error: "No se pudo obtener el bloqueo; intentalo de nuevo." };
 
+  let nuevoId;
   try {
-    const filas = tarLeer_(h.sheet);
-    let maxId = 0;
-    filas.forEach(function (t) { if (t.id !== null && t.id > maxId) maxId = t.id; });
-    const nuevoId = maxId + 1;
-    const hoyTxt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
-    // La foto va primero: si no se puede guardar, la tarea no se crea a medias.
-    if (foto) tarGuardarFoto_(hojaFotos.sheet, nuevoId + "-T", foto);
-    h.sheet.appendRow([nuevoId, titulo, descripcion, data.asignado_a, prioridad, hoyTxt, limiteTxt, "Pendiente", "", "", "", "", foto ? "Sí" : "", ""]);
+    nuevoId = tarInsertarEnLock_(h.sheet, hojaFotos ? hojaFotos.sheet : null, {
+      titulo: v.titulo, descripcion: v.descripcion, asignadoA: v.asignadoA, prioridad: v.prioridad, limiteTxt: v.limiteTxt, foto: v.foto
+    });
     SpreadsheetApp.flush();
-    return { success: true, id: nuevoId };
   } catch (e) {
     Logger.log("❌ Error creando tarea: " + e.message);
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
   }
+
+  // Aviso por correo a quien recibe la tarea, FUERA del bloqueo y sin poder deshacer nada: si el correo
+  // falla la tarea ya está creada y el supervisor lo ve en la respuesta (correoEnviado).
+  const correoEnviado = tarEnviarCorreoNueva_({
+    id: nuevoId, titulo: v.titulo, descripcion: v.descripcion, asignadoA: v.asignadoA, prioridad: v.prioridad,
+    fechaLimite: v.limiteTxt, tipo: "manual", creador: creador || "Supervisor", fotoUri: v.foto
+  });
+  return { success: true, id: nuevoId, correoEnviado: correoEnviado };
+}
+
+// Siguiente ID de tarea (max + 1) mirando solo la columna A.
+function tarSiguienteId_(sheet) {
+  const ultima = sheet.getLastRow();
+  let maxId = 0;
+  if (ultima >= 2) {
+    sheet.getRange(2, 1, ultima - 1, 1).getValues().forEach(function (f) {
+      const n = parseInt(tarTexto_(f[0]), 10);
+      if (!isNaN(n) && n > maxId) maxId = n;
+    });
+  }
+  return maxId + 1;
+}
+
+// Añade una tarea Pendiente a la hoja Tareas y devuelve su ID. EL LLAMADOR YA TIENE EL BLOQUEO (los de
+// Apps Script no son reentrantes: por eso crearTarea y la generación automática comparten esta pieza en
+// vez de llamarse entre sí). d = { titulo, descripcion, asignadoA, prioridad, limiteTxt, foto }.
+function tarInsertarEnLock_(sheet, hojaFotos, d) {
+  const nuevoId = tarSiguienteId_(sheet);
+  const hoyTxt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+  // La foto va primero: si no se puede guardar, la tarea no se crea a medias.
+  if (d.foto) tarGuardarFoto_(hojaFotos, nuevoId + "-T", d.foto);
+  sheet.appendRow([nuevoId, d.titulo, d.descripcion, d.asignadoA, d.prioridad, hoyTxt, d.limiteTxt || "", "Pendiente", "", "", "", "", d.foto ? "Sí" : "", ""]);
+  return nuevoId;
 }
 
 // Anula una tarea que sigue pendiente (no toca las ya completadas).
@@ -484,20 +554,32 @@ function anularTarea(data) {
   }
 }
 
+// " a las 10:35" (o " el 21/09/2026 a las 10:35" si no fue hoy); "" si no hay hora.
+function tarCuandoCerrada_(t) {
+  const hm = (t.fechaCierre.match(/(\d{1,2}:\d{2})/) || [])[1];
+  if (!hm) return "";
+  const diaCierre = tarClaveFecha_(t.fechaCierre);
+  return (diaCierre === null || diaCierre === tarHoyClave_())
+    ? " a las " + hm
+    : " el " + tarClaveATexto_(diaCierre) + " a las " + hm;
+}
+
 // "Ya la ha completado Dani Simo a las 10:35." (con la fecha si no fue hoy).
 function tarMensajeYaCompletada_(t, jefe) {
-  const hm = (t.fechaCierre.match(/(\d{1,2}:\d{2})/) || [])[1];
-  const diaCierre = tarClaveFecha_(t.fechaCierre);
-  let cuando = "";
-  if (hm) {
-    cuando = (diaCierre === null || diaCierre === tarHoyClave_())
-      ? " a las " + hm
-      : " el " + tarClaveATexto_(diaCierre) + " a las " + hm;
-  }
+  const cuando = tarCuandoCerrada_(t);
   if (t.cerradaPor && tarNormalizar_(t.cerradaPor) === tarNormalizar_(jefe)) {
     return "Ya la habías completado tú" + cuando + ".";
   }
   return "Ya la ha completado " + (t.cerradaPor || "otro jefe") + cuando + ".";
+}
+
+// "Ya la marcó Dani Simo como no realizada a las 10:35." (mismo patrón que la de arriba).
+function tarMensajeYaNoRealizada_(t, jefe) {
+  const cuando = tarCuandoCerrada_(t);
+  if (t.cerradaPor && tarNormalizar_(t.cerradaPor) === tarNormalizar_(jefe)) {
+    return "Ya la habías marcado tú como no realizada" + cuando + ".";
+  }
+  return "Ya la marcó " + (t.cerradaPor || "otro jefe") + " como no realizada" + cuando + ".";
 }
 
 // Cierra una tarea del jefe con su feedback y avisa por correo al responsable.
@@ -509,6 +591,7 @@ function completarTarea(data) {
   Logger.log("📥 Completar tarea: " + (data && data.id));
   if (!data) throw new Error("No se han recibido datos.");
   if (!data.jefe_equipo) throw new Error("Falta indicar quién eres.");
+  data.jefe_equipo = jefeVigente_(data.jefe_equipo);
   if (JEFES_EQUIPO.indexOf(data.jefe_equipo) === -1) {
     throw new Error("Jefe de equipo no reconocido: " + data.jefe_equipo);
   }
@@ -534,7 +617,10 @@ function completarTarea(data) {
   try {
     // Se relee bajo bloqueo: así dos cierres a la vez no pasan los dos por "Pendiente".
     const buscado = String(data.id).trim();
-    const t = tarLeer_(h.sheet).filter(function (x) { return x.id !== null && String(x.id) === buscado; })[0];
+    const coincidencias = tarLeer_(h.sheet).filter(function (x) { return x.id !== null && String(x.id) === buscado; });
+    // Un ID repetido en la hoja (apuntado a mano) no debe producir un rechazo absurdo («no está asignada a ti», «ya completada»):
+    // se prefiere la fila PENDIENTE que este jefe sí puede cerrar; si no hay, la primera, para dar el motivo de siempre.
+    const t = coincidencias.filter(function (x) { return x.estado === "Pendiente" && (x.global || x.asignadoClave === tarNormalizar_(jefe)); })[0] || coincidencias[0];
     // `refrescar: true` indica a la interfaz que su lista está desfasada y debe recargarla.
     if (!t) return { success: false, error: "Tarea no encontrada.", refrescar: true };
     if (!t.global && t.asignadoClave !== tarNormalizar_(jefe)) {
@@ -544,6 +630,12 @@ function completarTarea(data) {
       return {
         success: false, refrescar: true,
         error: t.global ? tarMensajeYaCompletada_(t, jefe) : "Esta tarea ya estaba completada."
+      };
+    }
+    if (t.estado === "No realizada") {
+      return {
+        success: false, refrescar: true,
+        error: t.global ? tarMensajeYaNoRealizada_(t, jefe) : "Esta tarea ya se había marcado como no realizada."
       };
     }
     if (t.estado === "Anulada") return { success: false, error: "Esta tarea ha sido anulada.", refrescar: true };
@@ -574,6 +666,91 @@ function completarTarea(data) {
     return { success: true, emailEnviado: emailOk, avisos: avisos };
   } catch (e) {
     Logger.log("❌ Error completando tarea: " + e.message);
+    return { success: false, error: e.message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Cierra una tarea del jefe SIN completarla, con el motivo por el que no se pudo hacer, y avisa
+// por correo al responsable. Mismas reglas que completarTarea: una GLOBAL la cierra el primero
+// (para bien o para mal) y el cierre es atómico bajo bloqueo.
+function marcarTareaNoRealizada(data) {
+  Logger.log("📥 Tarea no realizada: " + (data && data.id));
+  if (!data) throw new Error("No se han recibido datos.");
+  if (!data.jefe_equipo) throw new Error("Falta indicar quién eres.");
+  data.jefe_equipo = jefeVigente_(data.jefe_equipo);
+  if (JEFES_EQUIPO.indexOf(data.jefe_equipo) === -1) {
+    throw new Error("Jefe de equipo no reconocido: " + data.jefe_equipo);
+  }
+  if (data.id === undefined || data.id === null || String(data.id).trim() === "") throw new Error("Falta la tarea.");
+  const motivo = tarLimpiarLargo_(data.motivo, TAREA_MAX_MOTIVO, "El motivo");
+  if (motivo.length < TAREA_MIN_MOTIVO) {
+    throw new Error("Explica el motivo (mínimo " + TAREA_MIN_MOTIVO + " caracteres) por el que no se pudo hacer.");
+  }
+  const jefe = data.jefe_equipo;
+  const foto = tarValidarFoto_(data.foto);
+
+  const h = tarObtenerHoja_();
+  if (h.error) return { success: false, error: h.error };
+  let hojaFotos = null;
+  if (foto) {
+    hojaFotos = tarObtenerHojaFotos_();
+    if (hojaFotos.error) return { success: false, error: hojaFotos.error };
+  }
+
+  const lock = tarTomarLock_();
+  if (!lock) return { success: false, error: "No se pudo obtener el bloqueo; intentalo de nuevo." };
+
+  try {
+    // Se relee bajo bloqueo: así dos cierres a la vez no pasan los dos por "Pendiente".
+    const buscado = String(data.id).trim();
+    const coincidencias = tarLeer_(h.sheet).filter(function (x) { return x.id !== null && String(x.id) === buscado; });
+    // Un ID repetido en la hoja (apuntado a mano) no debe producir un rechazo absurdo («no está asignada a ti», «ya completada»):
+    // se prefiere la fila PENDIENTE que este jefe sí puede cerrar; si no hay, la primera, para dar el motivo de siempre.
+    const t = coincidencias.filter(function (x) { return x.estado === "Pendiente" && (x.global || x.asignadoClave === tarNormalizar_(jefe)); })[0] || coincidencias[0];
+    if (!t) return { success: false, error: "Tarea no encontrada.", refrescar: true };
+    if (!t.global && t.asignadoClave !== tarNormalizar_(jefe)) {
+      return { success: false, error: "Esta tarea no está asignada a ti." };
+    }
+    if (t.estado === "Completada") {
+      return {
+        success: false, refrescar: true,
+        error: t.global ? tarMensajeYaCompletada_(t, jefe) : "Esta tarea ya estaba completada."
+      };
+    }
+    if (t.estado === "No realizada") {
+      return {
+        success: false, refrescar: true,
+        error: t.global ? tarMensajeYaNoRealizada_(t, jefe) : "Esta tarea ya se había marcado como no realizada."
+      };
+    }
+    if (t.estado === "Anulada") return { success: false, error: "Esta tarea ha sido anulada.", refrescar: true };
+
+    const ahora = new Date();
+    const tz = Session.getScriptTimeZone();
+    const cierreTxt = Utilities.formatDate(ahora, tz, "dd/MM/yyyy HH:mm");
+    // La foto (si hay) va primero: si no se puede guardar, la tarea NO se cierra a medias.
+    if (foto) tarGuardarFoto_(hojaFotos.sheet, t.id + "-C", foto);
+    h.sheet.getRange(t.fila, 8, 1, 5).setValues([["No realizada", motivo, cierreTxt, jefe, "No"]]);
+    if (foto) h.sheet.getRange(t.fila, 14).setValue("Sí");
+    SpreadsheetApp.flush();
+
+    const emailOk = tarEnviarCorreoNoRealizada_(t, jefe, motivo, cierreTxt, foto);
+    if (emailOk) {
+      try {
+        h.sheet.getRange(t.fila, 12).setValue("Sí");
+        SpreadsheetApp.flush();
+      } catch (e) {
+        Logger.log("⚠️ No se pudo marcar el correo como enviado: " + e.message);
+      }
+    }
+
+    const avisos = [];
+    if (!emailOk) avisos.push("La tarea se ha marcado como no realizada, pero el correo al responsable no se pudo enviar.");
+    return { success: true, emailEnviado: emailOk, avisos: avisos };
+  } catch (e) {
+    Logger.log("❌ Error marcando tarea como no realizada: " + e.message);
     return { success: false, error: e.message };
   } finally {
     lock.releaseLock();
@@ -666,10 +843,96 @@ function tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, fotoC
     if (blobCierre) imagenes.fotocierre = blobCierre;
     if (Object.keys(imagenes).length) opciones.inlineImages = imagenes;
 
-    GmailApp.sendEmail(CONFIG.EMAIL_RESPONSABLE, asunto, texto, opciones);
+    GmailApp.sendEmail(CONFIG.EMAIL_RESPONSABLE, asuntoSeguro_(asunto), sinAstrales_(texto), opciones);
     return true;
   } catch (e) {
     Logger.log("❌ Error enviando correo de tarea completada: " + e.message);
+    return false;
+  }
+}
+
+// Mismo formato que el de completada, pero en ámbar/aviso y con el motivo en vez del feedback.
+function tarEnviarCorreoNoRealizada_(t, jefe, motivo, cierreTxt, fotoCierre) {
+  try {
+    const blobTarea = t.fotoTarea ? dataUriABlob(tarLeerFoto_(t.id + "-T"), "foto_tarea.jpg") : null;
+    const blobCierre = fotoCierre ? dataUriABlob(fotoCierre, "foto_cierre.jpg") : null;
+    const bloqueFoto = function (cid, titulo, blob) {
+      if (!blob) return "";
+      return "<div style=\"margin:0 0 16px;\"><p style=\"margin:0 0 6px;color:#6b7899;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">" + escapeHtml(titulo) + "</p>" +
+        "<img src=\"cid:" + cid + "\" alt=\"" + escapeHtml(titulo) + "\" width=\"480\" style=\"max-width:100%;height:auto;border-radius:12px;display:block;\"></div>";
+    };
+    const tituloLinea = String(t.titulo).replace(/\s+/g, " ").trim();
+    const asunto = (t.global ? "⚠️ Tarea global NO realizada · " : "⚠️ Tarea NO realizada · ") + tituloLinea + " · " + jefe;
+    const conSaltos = function (texto) { return escapeHtml(texto).replace(/\n/g, "<br>"); };
+
+    const fila = function (etiqueta, valorHtml, conBorde) {
+      const borde = conBorde ? "border-bottom:1px solid rgba(255,255,255,0.06);" : "";
+      return "<tr><td style=\"padding:10px 0;" + borde + "color:#6b7899;font-size:13px;\">" + etiqueta + "</td>" +
+        "<td align=\"right\" style=\"padding:10px 0;" + borde + "color:#f0f4ff;font-size:14px;font-weight:700;\">" + valorHtml + "</td></tr>";
+    };
+    const etiquetaAlta = "<span style=\"background:#e30613;color:#ffffff;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700;text-transform:uppercase;\">Alta</span>";
+    const prioridadHtml = t.prioridad === "Alta" ? etiquetaAlta : "Normal";
+
+    const html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head>" +
+      "<body style=\"margin:0;padding:0;font-family:Helvetica,Arial,sans-serif;background:#080a10;color:#f0f4ff;\">" +
+      "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" bgcolor=\"#080a10\" style=\"background:#080a10;\">" +
+      "<tr><td align=\"center\" style=\"padding:0;\">" +
+      "<div style=\"max-width:560px;margin:0 auto;padding:32px 20px;text-align:left;\">" +
+      "<div style=\"background:#0f1220;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:32px;\">" +
+      "<div style=\"display:inline-block;background:#ffffff;padding:12px 18px;border-radius:12px;margin-bottom:20px;\">" +
+      "<img src=\"cid:logotaisa\" alt=\"Taisa Logistics\" width=\"130\" style=\"width:130px;height:auto;display:block;\"></div>" +
+      "<p style=\"margin:0 0 6px;color:#f0b429;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;\">" + (t.global ? "Tarea global NO realizada" : "Tarea NO realizada") + "</p>" +
+      "<h1 style=\"margin:0 0 20px;font-size:22px;line-height:1.3;color:#f0f4ff;\">" + escapeHtml(tituloLinea) + "</h1>" +
+      (t.global
+        ? "<div style=\"background:#161b2e;border-left:3px solid #4c7dff;border-radius:10px;padding:14px 16px;margin-bottom:16px;\">" +
+          "<p style=\"margin:0;color:#c7cede;font-size:13px;line-height:1.6;\">🌐 Tarea <b>global</b>: estaba asignada a todos los jefes de equipo. La ha cerrado el primero, marcándola como no realizada: <b style=\"color:#f0f4ff;\">" + escapeHtml(jefe) + "</b>.</p></div>"
+        : "") +
+      "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"border-collapse:collapse;margin-bottom:20px;\">" +
+      fila(t.global ? "Cerrada por (el primero)" : "Jefe de equipo", escapeHtml(jefe), true) +
+      (t.global ? fila("Asignada a", "Todos los jefes (global)", true) : "") +
+      fila("Prioridad", prioridadHtml, true) +
+      fila("Asignada", escapeHtml(t.fechaAsignacion || "—"), true) +
+      fila("Fecha límite", escapeHtml(t.fechaLimite || "Sin fecha límite"), true) +
+      fila("Cerrada", escapeHtml(cierreTxt), false) +
+      "</table>" +
+      (t.descripcion
+        ? "<div style=\"background:#161b2e;border-radius:12px;padding:16px;margin-bottom:16px;\">" +
+          "<p style=\"margin:0 0 6px;color:#6b7899;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">Descripción</p>" +
+          "<p style=\"margin:0;color:#a3b0cc;font-size:14px;line-height:1.6;\">" + conSaltos(t.descripcion) + "</p></div>"
+        : "") +
+      bloqueFoto("fototarea", "Foto de la tarea", blobTarea) +
+      "<div style=\"background:#161b2e;border-left:3px solid #f0b429;border-radius:10px;padding:16px;margin-bottom:8px;\">" +
+      "<p style=\"margin:0 0 6px;color:#6b7899;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">Motivo de " + escapeHtml(jefe) + "</p>" +
+      "<p style=\"margin:0;color:#f0f4ff;font-size:14px;line-height:1.6;\">" + conSaltos(motivo) + "</p></div>" +
+      bloqueFoto("fotocierre", "Foto de " + jefe, blobCierre) +
+      "<div style=\"text-align:center;padding-top:24px;margin-top:16px;border-top:1px solid rgba(255,255,255,0.06);color:#6b7899;font-size:12px;\">" +
+      "Centinela — Taisa Logistics</div>" +
+      "</div></div></td></tr></table></body></html>";
+
+    const texto = [
+      (t.global ? "Tarea GLOBAL NO realizada: " : "Tarea NO realizada: ") + tituloLinea,
+      t.global ? "Tarea global (asignada a todos los jefes): la ha cerrado el primero, marcándola como no realizada." : "",
+      (t.global ? "Cerrada por (el primero): " : "Jefe de equipo: ") + jefe,
+      "Prioridad: " + t.prioridad,
+      "Asignada: " + (t.fechaAsignacion || "—"),
+      "Fecha límite: " + (t.fechaLimite || "sin fecha límite"),
+      "Cerrada: " + cierreTxt,
+      t.descripcion ? "\nDescripción:\n" + t.descripcion : "",
+      "\nMotivo:\n" + motivo
+    ].filter(function (linea) { return linea !== ""; }).join("\n");
+
+    const logoBlob = dataUriABlob(LOGO_TAISA_DATA_URI, "logo_taisa.png");
+    const opciones = { cc: ccConResponsables_(CONFIG.EMAIL_RESPONSABLE), htmlBody: htmlSeguro_(html), name: "Centinela — Taisa Logistics" };
+    const imagenes = {};
+    if (logoBlob) imagenes.logotaisa = logoBlob;
+    if (blobTarea) imagenes.fototarea = blobTarea;
+    if (blobCierre) imagenes.fotocierre = blobCierre;
+    if (Object.keys(imagenes).length) opciones.inlineImages = imagenes;
+
+    GmailApp.sendEmail(CONFIG.EMAIL_RESPONSABLE, asuntoSeguro_(asunto), sinAstrales_(texto), opciones);
+    return true;
+  } catch (e) {
+    Logger.log("❌ Error enviando correo de tarea no realizada: " + e.message);
     return false;
   }
 }
@@ -679,7 +942,7 @@ function tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, fotoC
 // data = { id, cual: "tarea"|"cierre", jefe }
 function obtenerFotoTarea(data) {
   if (!data) throw new Error("No se han recibido datos.");
-  const quien = String(data.jefe == null ? "" : data.jefe).trim();
+  const quien = jefeVigente_(String(data.jefe == null ? "" : data.jefe).trim());
   const esSupervisor = quien === IDENTIDAD_SUPERVISOR;
   if (!esSupervisor && JEFES_EQUIPO.indexOf(quien) === -1) throw new Error("Identifícate para ver la foto.");
   if (data.cual !== "tarea" && data.cual !== "cierre") throw new Error("Foto no válida.");

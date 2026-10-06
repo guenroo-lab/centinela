@@ -9,6 +9,7 @@ function procesarPeticionResiduos(data) {
 
   if (!data) throw new Error("No se han recibido datos.");
   if (!data.jefe_equipo) throw new Error("Falta indicar quién eres.");
+  data.jefe_equipo = jefeVigente_(data.jefe_equipo);
   if (JEFES_EQUIPO.indexOf(data.jefe_equipo) === -1) {
     throw new Error("Jefe de equipo no reconocido: " + data.jefe_equipo);
   }
@@ -118,10 +119,10 @@ function enviarEmailRecisur_(jefe, tipo, observacion, esAveria) {
       "</div></div></td></tr></table></body></html>";
 
     const logoBlob = dataUriABlob(LOGO_TAISA_DATA_URI, "logo_taisa.png");
-    const opciones = { to: CONFIG.RECISUR_PARA, cc: ccConResponsables_(CONFIG.RECISUR_PARA, CONFIG.RECISUR_CC), subject: asunto, htmlBody: htmlSeguro_(html), name: "Centinela — Taisa Logistics" };
+    const opciones = { to: CONFIG.RECISUR_PARA, cc: ccConResponsables_(CONFIG.RECISUR_PARA, CONFIG.RECISUR_CC), subject: asuntoSeguro_(asunto), htmlBody: htmlSeguro_(html), name: "Centinela — Taisa Logistics" };
     if (logoBlob) opciones.inlineImages = { logotaisa: logoBlob };
 
-    GmailApp.sendEmail(CONFIG.RECISUR_PARA, asunto, "Solicitud enviada desde Centinela.", opciones);
+    GmailApp.sendEmail(CONFIG.RECISUR_PARA, asuntoSeguro_(asunto), "Solicitud enviada desde Centinela.", opciones);
     return true;
   } catch (e) {
     Logger.log("❌ Error enviando email a Recisur: " + e.message);

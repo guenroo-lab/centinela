@@ -1,0 +1,431 @@
+<style>
+  .cons-top h1 { font-size:19px; font-weight:800; margin:0 0 4px; }
+  .cons-top p { color:var(--text-500); font-size:13px; margin:0 0 14px; line-height:1.45; }
+
+  .cons-items { display:grid; grid-template-columns:1fr; gap:10px; align-items:start; margin-bottom:14px; }
+  /* En ancho, el que despliega tiendas o campo de texto ocupa la fila entera: así no deja un hueco al lado. */
+  @media (min-width: 700px) {
+    .cons-items { grid-template-columns:1fr 1fr; }
+    .cons-item.sel.cons-ancho { grid-column:1 / -1; }
+  }
+  .cons-item { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-radius:var(--radius-card); box-shadow:var(--shadow-card); overflow:hidden; }
+  .cons-item.sel { border-color:var(--accent-line); }
+  .cons-item-btn { width:100%; min-height:52px; display:flex; align-items:center; gap:12px; padding:12px 14px; background:none; border:none; cursor:pointer; text-align:left; font-family:inherit; color:var(--text-100); font-size:14.5px; font-weight:700; transition:background .15s ease; }
+  .cons-item-btn:active { background:rgba(255,255,255,.04); }
+  .cons-item.sel .cons-item-btn { background:var(--accent-dim); color:var(--accent-text); }
+  .cons-check { flex:none; width:24px; height:24px; border-radius:7px; border:2px solid var(--ink-600); display:flex; align-items:center; justify-content:center; transition:all .15s ease; }
+  .cons-item.sel .cons-check { background:var(--accent); border-color:var(--accent); }
+  .cons-item.sel .cons-check::after { content:''; width:6px; height:11px; border:solid var(--accent-ink); border-width:0 2.5px 2.5px 0; transform:translateY(-1px) rotate(45deg); }
+  .cons-item-nombre { overflow-wrap:anywhere; }
+
+  .cons-sub { padding:2px 14px 14px; border-top:1px solid var(--ink-800); }
+  .cons-sub[hidden] { display:none; }
+  .cons-sub-tit { font-size:12px; color:var(--text-500); margin:10px 0 8px; font-weight:600; }
+  .cons-sub-tit small { font-weight:500; }
+  .cons-tiendas { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  @media (min-width: 700px) { .cons-tiendas { grid-template-columns:repeat(4, 1fr); } }
+  .cons-tienda { --th:var(--text-500); cursor:pointer; min-height:46px; display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:8px 6px; font-size:13.5px; font-weight:700; font-family:inherit; transition:all .15s ease; }
+  .cons-tienda:active { transform:scale(.96); }
+  .cons-tienda .dot { width:10px; height:10px; border-radius:50%; background:var(--th); flex:none; }
+  .cons-tienda.cons-t-malaga { --th:#38b26e; }
+  .cons-tienda.cons-t-marbella { --th:#3f9be0; }
+  .cons-tienda.cons-t-mijas { --th:#9a6ee0; }
+  .cons-tienda.cons-t-granada { --th:#e79338; }
+  .cons-tienda[aria-pressed="true"] { border-color:var(--th); background:color-mix(in srgb, var(--th) 24%, var(--ink-900)); color:var(--text-100); }
+
+  .cons-input, .cons-textarea { width:100%; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:12px; font-size:16px; font-family:inherit; box-sizing:border-box; }
+  .cons-input { min-height:46px; margin-top:10px; }
+  .cons-textarea { min-height:90px; resize:vertical; }
+  .cons-input:focus, .cons-textarea:focus { outline:none; border-color:var(--accent); }
+  .cons-label { display:block; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-500); margin:0 0 8px; }
+  .cons-label small { text-transform:none; letter-spacing:0; font-weight:600; }
+
+  .cons-aviso { display:flex; gap:10px; align-items:flex-start; background:var(--warn-bg); color:var(--warn-fg); border:1px solid var(--warn-line); border-radius:var(--radius-btn); padding:10px 12px; font-size:13px; font-weight:600; line-height:1.45; margin:12px 0 0; }
+  .cons-aviso[hidden] { display:none; }
+  .cons-aviso ul { margin:4px 0 0; padding-left:18px; font-weight:500; }
+  .cons-error { color:var(--danger-fg); font-size:13px; font-weight:600; margin:10px 0 0; }
+  .cons-error[hidden] { display:none; }
+
+  .cons-enviar { width:100%; margin-top:14px; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:14px; min-height:50px; font-size:15px; font-weight:800; font-family:inherit; background:var(--accent); color:var(--accent-ink); box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 55%, transparent), 0 1px 0 rgba(255,255,255,.15) inset; transition:transform .15s ease; }
+  .cons-enviar:active { transform:scale(.98); }
+  .cons-enviar:disabled { opacity:.6; cursor:default; }
+
+  .cons-hist-tit { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:26px 0 4px; }
+  .cons-hist-tit h2 { font-size:15px; font-weight:800; margin:0; }
+  .cons-refrescar { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:8px 12px; min-height:44px; font-size:12.5px; font-weight:700; font-family:inherit; background:var(--ink-800); color:var(--text-300); }
+  .cons-refrescar:disabled { opacity:.6; cursor:default; }
+  .cons-hist-nota { font-size:12px; color:var(--text-500); margin:0 0 10px; line-height:1.45; }
+  .cons-vacio { color:var(--text-500); font-size:13px; margin:6px 0; }
+  .cons-hist { display:flex; flex-direction:column; gap:8px; }
+  @media (min-width: 900px) { .cons-hist { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:10px; align-items:start; } }
+  .cons-pet { background:var(--ink-950); border:1px solid var(--ink-800); border-left:4px solid var(--ok); border-radius:var(--radius-card); padding:11px 13px; }
+  .cons-pet.fallo { border-left-color:var(--danger-fg); }
+  .cons-pet-cab { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .cons-pet-quien { font-size:12.5px; font-weight:700; color:var(--text-100); overflow-wrap:anywhere; }
+  .cons-pet-fecha { font-size:11.5px; color:var(--text-500); font-weight:600; }
+  .cons-pet-estado { font-size:11px; font-weight:800; padding:3px 10px; border-radius:var(--radius-chip); white-space:nowrap; flex:none; background:var(--ink-800); color:var(--ok); }
+  .cons-pet.fallo .cons-pet-estado { background:var(--danger-bg); color:var(--danger-fg); }
+  .cons-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .cons-chip { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-300); background:var(--ink-800); border-radius:var(--radius-chip); padding:5px 10px; overflow-wrap:anywhere; }
+  .cons-chip .dot { --th:var(--text-500); width:8px; height:8px; border-radius:50%; background:var(--th); flex:none; }
+  .cons-chip .dot.cons-t-malaga { --th:#38b26e; }
+  .cons-chip .dot.cons-t-marbella { --th:#3f9be0; }
+  .cons-chip .dot.cons-t-mijas { --th:#9a6ee0; }
+  .cons-chip .dot.cons-t-granada { --th:#e79338; }
+  .cons-pet-com { margin:8px 0 0; font-size:12.5px; color:var(--text-500); white-space:pre-line; overflow-wrap:anywhere; }
+</style>
+
+<div class="cons-top">
+  <h1>📦 Petición de consumibles</h1>
+  <p id="consSub">Marca lo que hace falta y se avisa por correo.</p>
+</div>
+
+<div id="consCarga" class="cons-vacio">Cargando…</div>
+
+<div id="consForm" hidden>
+  <div class="cons-items" id="consItems"></div>
+
+  <label class="cons-label" for="consComentario">Comentario <small>(opcional)</small></label>
+  <textarea class="cons-textarea" id="consComentario" maxlength="500" placeholder="Cantidad, urgencia, para qué zona…" onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); consSolicitar(); }"></textarea>
+
+  <div class="cons-aviso" id="consAviso" hidden role="note"></div>
+  <p class="cons-error" id="consError" hidden role="alert"></p>
+
+  <button type="button" class="cons-enviar" id="consBtnEnviar" onclick="consSolicitar()">Solicitar</button>
+</div>
+
+<div class="cons-hist-tit">
+  <h2>Últimas peticiones</h2>
+  <button type="button" class="cons-refrescar" id="consBtnRefrescar" onclick="consCargar(true)">↻ Actualizar</button>
+</div>
+<p class="cons-hist-nota">Mira aquí antes de pedir: si ya se pidió hace poco, no hace falta repetirlo.</p>
+<div class="cons-hist" id="consHist"></div>
+
+<script>
+  var CONS_REFRESCO_MS = 20000;
+
+  var consCatalogo = [];
+  var consTiendas = [];
+  var consRecientes = [];
+  var consSel = {};            // id -> { tiendas: [nombres], texto: '' } (solo los marcados)
+  var consFormListo = false;
+  var consCargando = false;
+  var consRecargar = false;      // se pidió recargar mientras había otra carga en vuelo
+  var consEnviando = false;
+  var consUltimaCarga = 0;
+
+  function consEsc(t) {
+    return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function consQuien() {
+    if (CentinelaState.jefe) return CentinelaState.jefe;
+    return CentinelaState.supervisor ? 'Supervisor' : '';
+  }
+  function consClaseTienda(nombre) {
+    var n = String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    if (n.indexOf('malaga') >= 0) return 'cons-t-malaga';
+    if (n.indexOf('marbella') >= 0) return 'cons-t-marbella';
+    if (n.indexOf('mijas') >= 0) return 'cons-t-mijas';
+    if (n.indexOf('granada') >= 0) return 'cons-t-granada';
+    return '';
+  }
+  function consDef(id) {
+    for (var i = 0; i < consCatalogo.length; i++) if (consCatalogo[i].id === id) return consCatalogo[i];
+    return null;
+  }
+  function consEl(id) { return document.getElementById(id); }
+
+  // ── Carga (catálogo + últimas peticiones) ──────────────────
+  function consumiblesAlMostrar() {
+    // Al volver a la pestaña se refresca, pero sin machacar el servidor si acaba de cargarse.
+    if (consFormListo && Date.now() - consUltimaCarga < CONS_REFRESCO_MS) return;
+    consCargar(false);
+  }
+
+  function consCargar(forzar) {
+    if (consCargando) { consRecargar = true; return; }
+    consCargando = true;
+    var btn = consEl('consBtnRefrescar');
+    btn.disabled = true;
+    if (!consFormListo) { var c0 = consEl('consCarga'); c0.hidden = false; c0.textContent = 'Cargando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        consCargando = false;
+        btn.disabled = false;
+        // Otra carga pedida en el ínterin (p. ej. tras enviar): esta respuesta puede ser anterior a ese envío.
+        if (consRecargar) { consRecargar = false; consCargar(true); return; }
+        if (!r || !r.ok) { consErrorCarga((r && r.error) || 'Error desconocido'); return; }
+        consUltimaCarga = Date.now();
+        consRecientes = r.peticiones || [];
+        if (!consFormListo) {
+          consCatalogo = r.catalogo || [];
+          consTiendas = r.tiendas || [];
+          consEl('consSub').textContent = 'Marca lo que hace falta, añade un comentario si quieres y se avisa por correo a ' + (r.avisaA || 'los responsables') + '.';
+          consConstruirForm();
+          consFormListo = true;
+          consEl('consCarga').hidden = true;
+          consEl('consForm').hidden = false;
+        }
+        consPintar();
+        consPintarHistorial(r.avisoHistorial);
+      })
+      .withFailureHandler(function (err) {
+        consCargando = false;
+        btn.disabled = false;
+        if (consRecargar) { consRecargar = false; consCargar(true); return; }
+        consErrorCarga('Error del servidor: ' + (err && err.message ? err.message : err));
+      })
+      .obtenerPeticionesConsumibles();
+  }
+
+  function consErrorCarga(msg) {
+    if (!consFormListo) {
+      var c = consEl('consCarga');
+      c.hidden = false;
+      c.innerHTML = '<span style="color:var(--danger-fg);font-weight:600;">❌ ' + consEsc(msg) + '</span> <button type="button" class="cons-refrescar" onclick="consCargar(true)">Reintentar</button>';
+    } else {
+      showToast('❌ ' + msg);
+    }
+  }
+
+  // ── Formulario (se construye una vez; luego solo se pinta el estado) ──
+  function consConstruirForm() {
+    consEl('consItems').innerHTML = consCatalogo.map(function (it) {
+      var h = '<div class="cons-item' + (it.tiendas || it.texto ? ' cons-ancho' : '') + '" id="consItem_' + it.id + '">' +
+        '<button type="button" class="cons-item-btn" id="consBtn_' + it.id + '" aria-pressed="false" onclick="consAlternar(\'' + it.id + '\')">' +
+        '<span class="cons-check" aria-hidden="true"></span><span class="cons-item-nombre">' + consEsc(it.nombre) + '</span></button>';
+      if (it.tiendas) {
+        h += '<div class="cons-sub" id="consSub_' + it.id + '" hidden>' +
+          '<p class="cons-sub-tit">¿De qué tienda? <small>Puedes marcar varias</small></p><div class="cons-tiendas">' +
+          consTiendas.map(function (t, i) {
+            return '<button type="button" class="cons-tienda ' + consClaseTienda(t) + '" id="consT_' + it.id + '_' + i + '" aria-pressed="false" onclick="consAlternarTienda(\'' + it.id + '\',' + i + ')"><span class="dot"></span>' + consEsc(t) + '</button>';
+          }).join('') + '</div></div>';
+      }
+      if (it.texto) {
+        h += '<div class="cons-sub" id="consSub_' + it.id + '" hidden>' +
+          '<input type="text" class="cons-input" id="consTexto_' + it.id + '" maxlength="80" placeholder="¿Qué necesitas?" aria-label="¿Qué necesitas?" autocomplete="off" ' +
+          'oninput="consAlEscribir(\'' + it.id + '\', this.value)" ' +
+          'onkeydown="if (event.key === \'Enter\') { event.preventDefault(); consEl(\'consComentario\').focus(); }"></div>';
+      }
+      return h + '</div>';
+    }).join('');
+  }
+
+  function consAlternar(id) {
+    if (consEnviando) return;
+    if (consSel[id]) delete consSel[id];
+    else {
+      // Al volver a marcarlo, el campo puede conservar lo escrito antes: el estado parte de lo que se ve.
+      var campo = consEl('consTexto_' + id);
+      consSel[id] = { tiendas: [], texto: campo ? campo.value : '' };
+    }
+    consPintar();
+    consLimpiarError();
+    var def = consDef(id);
+    if (consSel[id] && def && def.texto) {
+      setTimeout(function () { var i = consEl('consTexto_' + id); if (i) i.focus(); }, 0);
+    }
+  }
+
+  function consAlternarTienda(id, i) {
+    if (consEnviando || !consSel[id]) return;
+    var nombre = consTiendas[i];
+    var pos = consSel[id].tiendas.indexOf(nombre);
+    if (pos >= 0) consSel[id].tiendas.splice(pos, 1);
+    else consSel[id].tiendas.push(nombre);
+    consPintar();
+    consLimpiarError();
+  }
+
+  function consAlEscribir(id, valor) {
+    if (consSel[id]) consSel[id].texto = valor;
+    consLimpiarError();
+    consPintarAviso();
+  }
+
+  function consLimpiarError() {
+    var e = consEl('consError');
+    e.hidden = true;
+    e.textContent = '';
+  }
+
+  function consPintar() {
+    var total = 0;
+    consCatalogo.forEach(function (it) {
+      var sel = !!consSel[it.id];
+      if (sel) total++;
+      consEl('consItem_' + it.id).classList.toggle('sel', sel);
+      consEl('consBtn_' + it.id).setAttribute('aria-pressed', sel ? 'true' : 'false');
+      var sub = consEl('consSub_' + it.id);
+      if (sub) sub.hidden = !sel;
+      if (it.tiendas) {
+        consTiendas.forEach(function (t, i) {
+          var b = consEl('consT_' + it.id + '_' + i);
+          if (b) b.setAttribute('aria-pressed', sel && consSel[it.id].tiendas.indexOf(t) >= 0 ? 'true' : 'false');
+        });
+      }
+    });
+    if (!consEnviando) consEl('consBtnEnviar').textContent = total ? 'Solicitar (' + total + ')' : 'Solicitar';
+    consPintarAviso();
+  }
+
+  // Mismas reglas que consLimpiarPeticion_ (Consumibles.gs); el servidor vuelve a comprobarlas.
+  function consValidar() {
+    var total = 0, err = '';
+    consCatalogo.forEach(function (it) {
+      var s = consSel[it.id];
+      if (!s) return;
+      total++;
+      if (!err && it.tiendas && !s.tiendas.length) err = 'Elige al menos una tienda para «' + it.nombre + '».';
+      if (!err && it.texto && !String(s.texto).trim()) err = 'Escribe qué necesitas en «' + it.nombre + '».';
+    });
+    if (!total) return 'Marca al menos un consumible.';
+    return err;
+  }
+
+  // ── Aviso de petición repetida (informativo, no bloquea) ───
+  function consDiasDesde(fecha) {
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(fecha || '');
+    if (!m) return null;
+    var hoy = new Date();
+    var t0 = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    var d = new Date(+m[3], +m[2] - 1, +m[1]);
+    return Math.round((t0 - d) / 86400000);
+  }
+  function consFechaLegible(fecha, hora) {
+    var dias = consDiasDesde(fecha);
+    if (dias === null) return ((fecha || '') + ' ' + (hora || '')).trim();
+    var dia = dias === 0 ? 'Hoy' : dias === 1 ? 'Ayer' : fecha.slice(0, 5);
+    return dia + (hora ? ' · ' + hora : '');
+  }
+
+  function consPintarAviso() {
+    var caja = consEl('consAviso');
+    var lineas = [];
+    consCatalogo.forEach(function (it) {
+      var s = consSel[it.id];
+      if (!s) return;
+      for (var i = 0; i < consRecientes.length; i++) {
+        var p = consRecientes[i];
+        var dias = consDiasDesde(p.fecha);
+        // Solo cuentan las de hoy/ayer que sí llegaron por correo (si falló, nadie fue avisado).
+        if (!p.correoOk || dias === null || dias < 0 || dias > 1) continue;
+        var previo = null;
+        for (var j = 0; j < p.items.length; j++) if (p.items[j].id === it.id) { previo = p.items[j]; break; }
+        if (!previo) continue;
+        var coincide = [];
+        if (it.tiendas) {
+          coincide = (previo.tiendas || []).filter(function (t) { return !s.tiendas.length || s.tiendas.indexOf(t) >= 0; });
+          if (!coincide.length) continue;
+        }
+        // "Otras" es texto libre: solo es repetido si se pide lo mismo.
+        var otra = '';
+        if (it.texto) {
+          otra = String(s.texto).trim();
+          if (!otra || String(previo.texto || '').trim().toLowerCase() !== otra.toLowerCase()) continue;
+        }
+        lineas.push(consEsc(it.nombre + (coincide.length ? ' (' + coincide.join(', ') + ')' : '') + (otra ? ': ' + otra : '')) + ' — ' + consEsc(consFechaLegible(p.fecha, p.hora)) + ', ' + consEsc(p.jefe));
+        break;
+      }
+    });
+    if (!lineas.length) { caja.hidden = true; caja.innerHTML = ''; return; }
+    caja.hidden = false;
+    caja.innerHTML = '<span aria-hidden="true">⚠️</span><span>Esto ya se pidió hace poco (puedes enviarlo igualmente si hace falta más):<ul><li>' + lineas.join('</li><li>') + '</li></ul></span>';
+  }
+
+  // ── Envío ──────────────────────────────────────────────────
+  function consSolicitar() {
+    if (consEnviando) return;
+    var quien = consQuien();
+    if (!quien) { showToast('❌ Falta identificarte — recarga la app'); return; }
+    var err = consValidar();
+    if (err) {
+      var e = consEl('consError');
+      e.textContent = err;
+      e.hidden = false;
+      showToast('❌ ' + err);
+      return;
+    }
+    consLimpiarError();
+
+    var items = [];
+    consCatalogo.forEach(function (it) {
+      var s = consSel[it.id];
+      if (!s) return;
+      var o = { id: it.id };
+      if (it.tiendas) o.tiendas = s.tiendas.slice().sort(function (a, b) { return consTiendas.indexOf(a) - consTiendas.indexOf(b); });
+      if (it.texto) o.texto = String(s.texto).trim();
+      items.push(o);
+    });
+
+    consEnviando = true;
+    var boton = consEl('consBtnEnviar');
+    boton.disabled = true;
+    boton.textContent = 'Enviando…';
+
+    function terminar() {
+      consEnviando = false;
+      boton.disabled = false;
+      consPintar();
+    }
+
+    google.script.run
+      .withSuccessHandler(function (r) {
+        terminar();
+        if (r && r.success) {
+          consReiniciar();
+          showToast(r.emailEnviado ? '✅ Petición enviada' : '⚠️ Guardada, pero el correo NO salió: ' + ((r.avisos && r.avisos[0]) || 'avisa a los responsables'));
+          consCargar(true);
+        } else {
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (er) {
+        terminar();
+        showToast('❌ Error del servidor: ' + (er && er.message ? er.message : er));
+      })
+      .procesarPeticionConsumibles({ jefe_equipo: quien, items: items, comentario: consEl('consComentario').value });
+  }
+
+  function consReiniciar() {
+    consSel = {};
+    consEl('consComentario').value = '';
+    consCatalogo.forEach(function (it) {
+      var t = consEl('consTexto_' + it.id);
+      if (t) t.value = '';
+    });
+    consLimpiarError();
+    if (consFormListo) consPintar();
+  }
+
+  // Al cambiar de jefe no debe quedar a medias lo del anterior (se enviaría con el nombre del siguiente).
+  function consumiblesAlCambiarIdentidad() { consReiniciar(); consUltimaCarga = 0; }
+
+  // ── Historial ──────────────────────────────────────────────
+  function consChipItem(it) {
+    var def = consDef(it.id);
+    var nombre = def ? def.nombre : it.id;
+    if (it.tiendas && it.tiendas.length) {
+      return '<span class="cons-chip">' + consEsc(nombre) + ' ' + it.tiendas.map(function (t) {
+        return '<span class="cons-chip" style="padding:2px 8px;"><span class="dot ' + consClaseTienda(t) + '"></span>' + consEsc(t) + '</span>';
+      }).join('') + '</span>';
+    }
+    if (it.texto) return '<span class="cons-chip">' + consEsc(nombre + ': ' + it.texto) + '</span>';
+    return '<span class="cons-chip">' + consEsc(nombre) + '</span>';
+  }
+
+  function consPintarHistorial(aviso) {
+    var cont = consEl('consHist');
+    if (aviso) { cont.innerHTML = '<p class="cons-vacio" style="color:var(--danger-fg);">⚠️ ' + consEsc(aviso) + '</p>'; return; }
+    if (!consRecientes.length) { cont.innerHTML = '<p class="cons-vacio">Todavía no hay peticiones.</p>'; return; }
+    cont.innerHTML = consRecientes.map(function (p) {
+      var chips = p.items.length ? p.items.map(consChipItem).join('') : '<span class="cons-chip">' + consEsc(p.resumen) + '</span>';
+      return '<div class="cons-pet' + (p.correoOk ? '' : ' fallo') + '">' +
+        '<div class="cons-pet-cab"><div><div class="cons-pet-quien">' + consEsc(p.jefe) + '</div><div class="cons-pet-fecha">' + consEsc(consFechaLegible(p.fecha, p.hora)) + '</div></div>' +
+        '<span class="cons-pet-estado">' + (p.correoOk ? '✓ Correo enviado' : '✗ Correo NO enviado') + '</span></div>' +
+        '<div class="cons-chips">' + chips + '</div>' +
+        (p.comentario ? '<p class="cons-pet-com">' + consEsc(p.comentario) + '</p>' : '') +
+        '</div>';
+    }).join('');
+  }
+</script>

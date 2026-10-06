@@ -48,6 +48,7 @@ function dispEstadoCanonico_(valor) {
 // Solo un jefe de equipo identificado o el supervisor pueden modificar dispositivos.
 function dispValidarIdentidad_(nombre) {
   if (!nombre) throw new Error("Falta indicar quién eres.");
+  nombre = jefeVigente_(nombre);
   if (JEFES_EQUIPO.indexOf(nombre) === -1 && nombre !== IDENTIDAD_SUPERVISOR) {
     throw new Error("Jefe de equipo no reconocido: " + nombre);
   }
