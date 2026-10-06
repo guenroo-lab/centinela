@@ -54,6 +54,34 @@ function tarPad_(n) {
   return (n < 10 ? "0" : "") + n;
 }
 
+// Locales de Sheets que leen "05/10/2026" como mes/día (10 de mayo) en vez de día/mes (5 de octubre).
+const TAR_LOCALE_MES_PRIMERO_ = /^(en|es)_(US|PR|PH)$/;
+
+function tarSheetMesPrimero_(sheet) {
+  try {
+    return TAR_LOCALE_MES_PRIMERO_.test(sheet.getParent().getSpreadsheetLocale());
+  } catch (e) {
+    return false;
+  }
+}
+
+// Como tarTexto_, pero para las columnas de fecha. Si la hoja no tenía formato «texto» en esa celda y su
+// idioma es mes/día, Sheets convirtió nuestro "05/10/2026" en el Date del 10 de mayo: aquí se le da la
+// vuelta para recuperar lo que se escribió. Solo se toca un Date cuyo "día" cabe como mes (≤ 12): un
+// "25/10/2026" jamás se habría convertido en Date, así que un Date con día > 12 es una fecha real de verdad.
+function tarTextoFecha_(valor, conHora, mesPrimero) {
+  if (mesPrimero && Object.prototype.toString.call(valor) === "[object Date]" && !isNaN(valor.getTime())) {
+    const tz = Session.getScriptTimeZone();
+    const mes = parseInt(Utilities.formatDate(valor, tz, "M"), 10);
+    const dia = parseInt(Utilities.formatDate(valor, tz, "d"), 10);
+    if (dia <= 12) {
+      return tarPad_(mes) + "/" + tarPad_(dia) + "/" + Utilities.formatDate(valor, tz, "yyyy") +
+        (conHora ? " " + Utilities.formatDate(valor, tz, "HH:mm") : "");
+    }
+  }
+  return tarTexto_(valor, conHora ? undefined : "dd/MM/yyyy");
+}
+
 // Texto de fecha -> número yyyymmdd (comparable), o null si no es una fecha real.
 // Acepta dd/MM/yyyy (también con - o .) y yyyy-MM-dd, con hora opcional detrás.
 function tarClaveFecha_(texto) {
@@ -151,6 +179,7 @@ function tarObtenerHoja_() {
 // estado, prioridad, fecha de asignación... o traer las fechas en otro formato.
 function tarLeer_(sheet) {
   const datos = sheet.getDataRange().getValues();
+  const mesPrimero = tarSheetMesPrimero_(sheet);
   const filas = [];
   for (let i = 1; i < datos.length; i++) {
     const f = datos[i];
@@ -161,11 +190,11 @@ function tarLeer_(sheet) {
 
     const idNum = parseInt(tarTexto_(f[0]), 10);
     const asignadoA = tarNombreCanonico_(tarTexto_(f[3]));
-    const textoLimite = tarTexto_(f[6], "dd/MM/yyyy");
+    const textoLimite = tarTextoFecha_(f[6], false, mesPrimero);
     const limiteClave = tarClaveFecha_(textoLimite);
-    const textoAsignacion = tarTexto_(f[5], "dd/MM/yyyy");
+    const textoAsignacion = tarTextoFecha_(f[5], false, mesPrimero);
     const asigClave = tarClaveFecha_(textoAsignacion);
-    const textoCierre = tarTexto_(f[9]);
+    const textoCierre = tarTextoFecha_(f[9], true, mesPrimero);
 
     filas.push({
       fila: i + 1,
@@ -212,7 +241,7 @@ function tarRepararIds_(sheet) {
       maxId++;
       sheet.getRange(i + 1, 1).setValue(maxId);
       if (tarTexto_(f[4]) === "") sheet.getRange(i + 1, 5).setValue("Normal");
-      if (tarTexto_(f[5]) === "") sheet.getRange(i + 1, 6).setValue(hoyTxt);
+      if (tarTexto_(f[5]) === "") sheet.getRange(i + 1, 6).setNumberFormat("@").setValue(hoyTxt);
       if (tarTexto_(f[7]) === "") sheet.getRange(i + 1, 8).setValue("Pendiente");
     }
     SpreadsheetApp.flush();
@@ -518,7 +547,13 @@ function tarInsertarEnLock_(sheet, hojaFotos, d) {
   const hoyTxt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
   // La foto va primero: si no se puede guardar, la tarea no se crea a medias.
   if (d.foto) tarGuardarFoto_(hojaFotos, nuevoId + "-T", d.foto);
-  sheet.appendRow([nuevoId, d.titulo, d.descripcion, d.asignadoA, d.prioridad, hoyTxt, d.limiteTxt || "", "Pendiente", "", "", "", "", d.foto ? "Sí" : "", ""]);
+  // Sin appendRow: la fila nueva se pone en «texto sin formato» ANTES de escribirla. Si la celda no lo tiene (hoja
+  // creada antes de esa regla, o filas añadidas por debajo de lo formateado) Sheets convierte "05/10/2026" en
+  // fecha según su idioma (mes/día) y el día 5 de octubre pasa a ser el 10 de mayo.
+  const fila = sheet.getLastRow() + 1;
+  if (fila > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 1);
+  sheet.getRange(fila, 2, 1, 13).setNumberFormat("@");
+  sheet.getRange(fila, 1, 1, 14).setValues([[nuevoId, d.titulo, d.descripcion, d.asignadoA, d.prioridad, hoyTxt, d.limiteTxt || "", "Pendiente", "", "", "", "", d.foto ? "Sí" : "", ""]]);
   return nuevoId;
 }
 
@@ -543,7 +578,7 @@ function anularTarea(data) {
     if (t.estado === "Anulada") return { success: false, error: "Esta tarea ya estaba anulada." };
 
     const cierre = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
-    h.sheet.getRange(t.fila, 8, 1, 4).setValues([["Anulada", t.feedback, cierre, "Supervisor"]]);
+    h.sheet.getRange(t.fila, 8, 1, 4).setNumberFormat("@").setValues([["Anulada", t.feedback, cierre, "Supervisor"]]);
     SpreadsheetApp.flush();
     return { success: true };
   } catch (e) {
@@ -646,7 +681,7 @@ function completarTarea(data) {
     const cierreDia = parseInt(Utilities.formatDate(ahora, tz, "yyyyMMdd"), 10);
     // La foto (si hay) va primero: si no se puede guardar, la tarea NO se cierra a medias.
     if (foto) tarGuardarFoto_(hojaFotos.sheet, t.id + "-C", foto);
-    h.sheet.getRange(t.fila, 8, 1, 5).setValues([["Completada", feedback, cierreTxt, jefe, "No"]]);
+    h.sheet.getRange(t.fila, 8, 1, 5).setNumberFormat("@").setValues([["Completada", feedback, cierreTxt, jefe, "No"]]);
     if (foto) h.sheet.getRange(t.fila, 14).setValue("Sí");
     SpreadsheetApp.flush();
 
@@ -732,7 +767,7 @@ function marcarTareaNoRealizada(data) {
     const cierreTxt = Utilities.formatDate(ahora, tz, "dd/MM/yyyy HH:mm");
     // La foto (si hay) va primero: si no se puede guardar, la tarea NO se cierra a medias.
     if (foto) tarGuardarFoto_(hojaFotos.sheet, t.id + "-C", foto);
-    h.sheet.getRange(t.fila, 8, 1, 5).setValues([["No realizada", motivo, cierreTxt, jefe, "No"]]);
+    h.sheet.getRange(t.fila, 8, 1, 5).setNumberFormat("@").setValues([["No realizada", motivo, cierreTxt, jefe, "No"]]);
     if (foto) h.sheet.getRange(t.fila, 14).setValue("Sí");
     SpreadsheetApp.flush();
 
