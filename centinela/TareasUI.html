@@ -61,6 +61,10 @@
   .tar-b-neutro { background:var(--ink-800); color:var(--text-300); }
   .tar-desc { margin:8px 0 0; font-size:13px; line-height:1.5; color:var(--text-300); white-space:pre-line; overflow-wrap:anywhere; }
   .tar-meta { margin-top:8px; font-size:11.5px; color:var(--text-500); line-height:1.6; }
+  .tar-pide-nota { margin-top:8px; font-size:12px; color:var(--text-300); }
+  .tar-pide-nota b, .tar-dato b { color:var(--text-100); }
+  .tar-dato { margin-top:8px; font-size:13px; color:var(--text-300); }
+  .tar-aviso-dato { font-size:11.5px; font-weight:700; color:var(--danger-fg); margin-top:4px; }
   .tar-fb { margin-top:10px; background:var(--ink-950); border:1px solid var(--ink-800); border-left:3px solid var(--ok); border-radius:var(--radius-btn); padding:10px 12px; }
   .tar-fb.motivo { border-left-color:var(--warn-fg); }
   .tar-fb .quien { font-size:11px; color:var(--text-500); margin-bottom:3px; }
@@ -215,7 +219,7 @@
 </div>
 
 <div class="tar-nueva-card" id="trecPanel">
-  <p style="margin:0 0 14px;font-size:12.5px;color:var(--text-500);line-height:1.5;">Una plantilla que, los <b>días que elijas</b> y mientras esté <b>activa</b>, crea sola una tarea nueva (vence ese mismo día). Se crea al abrir la app cualquier jefe, o al momento si hoy toca. Solo la primera vez avisa por correo; se salta a quien esté de vacaciones, de baja o libre según el cuadrante.</p>
+  <p style="margin:0 0 14px;font-size:12.5px;color:var(--text-500);line-height:1.5;">Una plantilla que, los <b>días que elijas</b> y mientras esté <b>activa</b>, crea sola una tarea nueva (vence ese mismo día). Se crea al abrir la app cualquier jefe, o al momento si hoy toca. Solo la primera vez avisa por correo; se salta a quien esté de vacaciones, de baja o libre según el cuadrante. Con <b>Jefe de tarde</b>, cada día se asigna al jefe que tenga turno de tarde (T) en el cuadrante.</p>
   <label for="trecTitulo">Título</label>
   <input type="text" class="tar-input" id="trecTitulo" maxlength="120" placeholder="Ej. Revisar extintores" autocomplete="off" onkeydown="if (event.key === 'Enter') trecCrear()">
   <label for="trecDesc">Descripción <small>(opcional)</small></label>
@@ -234,6 +238,9 @@
     <button type="button" class="tar-opcion sel" id="trecPrioNormal" onclick="trecElegirPrio('Normal')">Normal</button>
     <button type="button" class="tar-opcion" id="trecPrioAlta" onclick="trecElegirPrio('Alta')">Alta</button>
   </div>
+  <label for="trecPide">Dato a anotar al completar <small>(opcional)</small></label>
+  <input type="text" class="tar-input" id="trecPide" maxlength="40" placeholder="Ej. Flete auditado" autocomplete="off" onkeydown="if (event.key === 'Enter') trecCrear()">
+  <p style="margin:6px 0 14px;font-size:11.5px;color:var(--text-500);line-height:1.5;">Si lo rellenas, el jefe no podrá completar la tarea sin escribirlo; sale en el correo de cierre y en el historial.</p>
   <button type="button" class="tar-btn-guardar" id="trecBtnCrear" onclick="trecCrear()">Crear plantilla recurrente</button>
 
   <h3 class="tar-sec" style="margin-top:22px;">Plantillas <span class="n" id="trecContador">0</span></h3>
@@ -263,6 +270,7 @@
 
 <script>
   const TAR_GLOBAL = 'TODOS';
+  const TAR_TARDE = 'JEFE DE TARDE';     // solo en plantillas recurrentes: cada día va al jefe con turno de tarde
   const TAR_REFRESCO_MS = 45000;
 
   let tarPeticion = 0;
@@ -276,6 +284,7 @@
   let tarFiltroJefe = '';
   let tarBorrador = {};
   let tarAbiertas = {};
+  let tarBorradorDato = {};     // dato que pide la tarea («Flete auditado»), por id de tarea
   let tarBorradorNo = {};       // motivo de "no realizada", por id de tarea
   let tarAbiertasNo = {};       // formulario de "no realizada" abierto, por id de tarea
   let tarNJefe = '';
@@ -502,6 +511,12 @@
     const borrador = tarBorrador[t.id] || '';
     const borradorNo = tarBorradorNo[t.id] || '';
     const meta = 'Asignada ' + tarEsc(t.fechaAsignacion || '—') + (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : ' · Sin fecha límite');
+    // Si la tarea pide un dato (p. ej. «Flete auditado») sin él no se puede completar: campo obligatorio antes del feedback.
+    const pideHtml = (t.pide && t.id !== null)
+      ? '<label for="tarDato-' + t.id + '">' + tarEsc(t.pide) + ' <small>(obligatorio)</small></label>' +
+        '<input type="text" class="tar-input" id="tarDato-' + t.id + '" maxlength="60" autocomplete="off" value="' + tarEsc(tarBorradorDato[t.id] || '') + '" oninput="tarAlEscribirDato(' + t.id + ')">' +
+        '<div class="tar-aviso-dato" id="tarAvisoDato-' + t.id + '"></div>'
+      : '';
     let accion;
     if (t.id === null) {
       accion = '<p class="tar-meta">Esta tarea aún no tiene identificador. Actualiza la lista.</p>';
@@ -513,6 +528,7 @@
         '</div>';
       accion = '<div class="tar-accion">' + botones +
         '<div class="tar-cierre' + (abierta ? ' abierto' : '') + '" id="tarCierre-' + t.id + '">' +
+          pideHtml +
           '<label for="tarFb-' + t.id + '">Feedback <small>(qué has hecho; mínimo 5 caracteres)</small></label>' +
           '<textarea class="tar-textarea" id="tarFb-' + t.id + '" maxlength="500" placeholder="Ej. Revisado, todo correcto." oninput="tarAlEscribir(' + t.id + ')">' + tarEsc(borrador) + '</textarea>' +
           '<div class="tar-contador" id="tarCont-' + t.id + '">' + borrador.length + '/500</div>' +
@@ -536,6 +552,7 @@
       (t.descripcion ? '<p class="tar-desc">' + tarEsc(t.descripcion) + '</p>' : '') +
       (t.fotoTarea && t.id !== null ? '<button type="button" class="tar-btn-ver-foto" onclick="tarVerFoto(' + t.id + ',\'tarea\')">📷 Ver foto de la tarea</button>' : '') +
       '<div class="tar-meta">' + meta + '</div>' +
+      (t.pide ? '<div class="tar-pide-nota">📝 Al completarla tendrás que anotar: <b>' + tarEsc(t.pide) + '</b></div>' : '') +
       (t.global ? '<div class="tar-nota-glob">Tarea global para todos los jefes: la cierra el primero que la complete y después desaparece para los demás.</div>' : '') +
       accion + '</div>';
   }
@@ -547,6 +564,7 @@
     return '<div class="tar-card hecha">' +
       '<div class="tar-card-head"><div class="tar-titulo">' + tarEsc(t.titulo) + '</div><div class="tar-badges">' + puntual + '</div></div>' +
       '<div class="tar-meta">Cerrada ' + tarEsc(t.fechaCierre || '—') + (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : '') + '</div>' +
+      (t.pide && t.dato ? '<div class="tar-dato">📝 ' + tarEsc(t.pide) + ': <b>' + tarEsc(t.dato) + '</b></div>' : '') +
       (t.feedback ? '<div class="tar-fb"><div class="quien">Tu feedback</div><div class="texto">' + tarEsc(t.feedback) + '</div></div>' : '') +
       tarBotonesFoto(t) +
     '</div>';
@@ -610,8 +628,8 @@
     const cierreNo = document.getElementById('tarCierreNo-' + id);
     if (cierreNo) cierreNo.classList.remove('abierto');
     document.getElementById('tarCierre-' + id).classList.add('abierto');
-    const ta = document.getElementById('tarFb-' + id);
-    if (ta) ta.focus();
+    const campo = document.getElementById('tarDato-' + id) || document.getElementById('tarFb-' + id);
+    if (campo) campo.focus();
   }
 
   function tarAbrirCierreNo(id) {
@@ -655,6 +673,14 @@
     if (c) { c.textContent = ta.value.length + '/500'; c.style.color = ''; c.style.fontWeight = ''; }
   }
 
+  function tarAlEscribirDato(id) {
+    const c = document.getElementById('tarDato-' + id);
+    if (!c) return;
+    tarBorradorDato[id] = c.value;
+    const aviso = document.getElementById('tarAvisoDato-' + id);
+    if (aviso) aviso.textContent = '';
+  }
+
   function tarAlEscribirMotivo(id) {
     const ta = document.getElementById('tarMotivo-' + id);
     if (!ta) return;
@@ -664,6 +690,16 @@
   }
 
   function tarCompletar(id) {
+    // El dato que pide la tarea («Flete auditado») es obligatorio: se dice AL LADO del campo y con el aviso.
+    const campoDato = document.getElementById('tarDato-' + id);
+    const dato = campoDato ? campoDato.value.trim() : '';
+    if (campoDato && !dato) {
+      const aviso = document.getElementById('tarAvisoDato-' + id);
+      if (aviso) aviso.textContent = 'Escribe este dato para poder completar la tarea';
+      showToast('❌ Falta el dato que pide la tarea');
+      campoDato.focus();
+      return;
+    }
     const ta = document.getElementById('tarFb-' + id);
     const feedback = ta ? ta.value.trim() : '';
     if (feedback.length < 5) { tarAvisoCorto(id, 'tarCont-', feedback.length); showToast('❌ Escribe un pequeño feedback (mínimo 5 caracteres)'); if (ta) ta.focus(); return; }
@@ -680,6 +716,7 @@
         if (r && r.success) {
           showToast(r.emailEnviado ? '✅ Tarea completada — informe enviado' : '⚠️ Tarea completada, pero el correo al responsable no se pudo enviar');
           delete tarBorrador[id];
+          delete tarBorradorDato[id];
           delete tarAbiertas[id];
           delete tarFotoCierre[id];
           tarCargando = false;
@@ -691,6 +728,7 @@
           // desfasada, se recarga y la tarea desaparece de pendientes.
           if (r && r.refrescar) {
             delete tarBorrador[id];
+            delete tarBorradorDato[id];
             delete tarAbiertas[id];
             delete tarFotoCierre[id];
             tarCargando = false;
@@ -699,7 +737,7 @@
         }
       })
       .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
-      .completarTarea({ jefe_equipo: CentinelaState.jefe, id: id, feedback: feedback, foto: tarFotoCierre[id] || '' });
+      .completarTarea({ jefe_equipo: CentinelaState.jefe, id: id, feedback: feedback, dato: dato, foto: tarFotoCierre[id] || '' });
     } catch (e) { restaurar(); showToast(tarErrorServidor(e)); }
   }
 
@@ -769,6 +807,7 @@
     let meta = destinatario + '<br>Asignada ' + tarEsc(t.fechaAsignacion || '—') +
       (t.fechaLimite ? ' · Límite ' + tarEsc(t.fechaLimite) : ' · Sin fecha límite');
     if (t.estado === 'Anulada') meta += '<br>Anulada ' + tarEsc(t.fechaCierre || '');
+    if (t.pide && t.estado !== 'Anulada') meta += '<br>📝 ' + tarEsc(t.pide) + ': ' + (t.dato ? '<b>' + tarEsc(t.dato) + '</b>' : (t.estado === 'Pendiente' ? 'se pide al completarla' : '—'));
     let feedback = '';
     if (t.estado === 'Completada' || t.estado === 'No realizada') {
       meta += '<br>Cerrada ' + tarEsc(t.fechaCierre || '—');
@@ -1046,11 +1085,12 @@
 
   function trecPintarJefesForm() {
     const cont = document.getElementById('trecJefes');
-    const opciones = JEFES.concat([TAR_GLOBAL]);
+    const opciones = JEFES.concat([TAR_TARDE, TAR_GLOBAL]);
     cont.innerHTML = opciones.map(function (j, i) {
       const esGlobal = j === TAR_GLOBAL;
-      return '<button type="button" class="tar-opcion' + (esGlobal ? ' glob' : '') + (trecJefe === j ? ' sel' : '') + '" data-i="' + i + '">' +
-        (esGlobal ? '🌐 Todos los jefes (tarea global)' : tarEsc(j)) + '</button>';
+      const esTarde = j === TAR_TARDE;
+      return '<button type="button" class="tar-opcion' + ((esGlobal || esTarde) ? ' glob' : '') + (trecJefe === j ? ' sel' : '') + '" data-i="' + i + '">' +
+        (esGlobal ? '🌐 Todos los jefes (tarea global)' : (esTarde ? '🌆 Jefe de tarde (el de turno T cada día)' : tarEsc(j))) + '</button>';
     }).join('');
     const botones = cont.querySelectorAll('button');
     for (let i = 0; i < botones.length; i++) {
@@ -1104,7 +1144,7 @@
     document.getElementById('trecContador').textContent = lista.length;
     if (!lista.length) { cont.innerHTML = '<p class="tar-vacio">Todavía no hay ninguna plantilla.</p>'; return; }
     cont.innerHTML = lista.map(function (r) {
-      const destinatario = r.global ? '🌐 Todos los jefes' : '👤 ' + tarEsc(r.asignadoA || 'Sin asignar');
+      const destinatario = r.global ? '🌐 Todos los jefes' : (r.deTarde ? '🌆 Jefe de tarde (según el cuadrante)' : '👤 ' + tarEsc(r.asignadoA || 'Sin asignar'));
       const generada = r.ultimaGenerada ? 'Última tarea generada: ' + tarEsc(r.ultimaGenerada) : 'Todavía no ha generado ninguna tarea';
       const dias = Object.prototype.hasOwnProperty.call(trecBorrador, r.id) ? trecBorrador[r.id] : (r.dias || 'LMXJV');
       const cambiado = dias !== (r.dias || 'LMXJV');
@@ -1113,6 +1153,7 @@
         '<div class="trec-meta">' +
           '<span class="trec-badge ' + (r.activa ? 'on' : 'off') + '">' + (r.activa ? 'Activa' : 'Inactiva') + '</span>' +
           (r.prioridad === 'Alta' ? '<span class="trec-badge">Alta</span>' : '') +
+          (r.pide ? '<span class="trec-badge">📝 Pide: ' + tarEsc(r.pide) + '</span>' : '') +
           destinatario +
         '<br>' + generada + '<br>Creada por ' + tarEsc(r.creadaPor || '—') + ' el ' + tarEsc(r.fechaCreacion || '—') + '</div></div>' +
         '<button type="button" class="trec-toggle' + (r.activa ? '' : ' activar') + '" id="trecBtnToggle-' + r.id + '" onclick="trecActivarDesactivar(' + r.id + ', ' + !r.activa + ')">' + (r.activa ? 'Desactivar' : 'Activar') + '</button></div>' +
@@ -1204,6 +1245,7 @@
   function trecCrear() {
     const titulo = document.getElementById('trecTitulo').value.trim();
     const descripcion = document.getElementById('trecDesc').value.trim();
+    const pide = document.getElementById('trecPide').value.trim();
     if (!titulo) { showToast('❌ Escribe un título'); return; }
     if (!trecJefe) { showToast('❌ Elige a qué jefe de equipo se asigna (o a todos)'); return; }
     if (!trecDiasNuevo) { showToast('❌ Elige al menos un día de la semana'); return; }
@@ -1222,6 +1264,7 @@
           showToast(r.pendiente ? r.mensaje : trecMensajeGeneracion(r, '✅ Plantilla creada: ' + (r.diasTexto || trecTextoDias(diasElegidos))));
           document.getElementById('trecTitulo').value = '';
           document.getElementById('trecDesc').value = '';
+          document.getElementById('trecPide').value = '';
           trecJefe = '';
           trecPrio = 'Normal';
           trecDiasNuevo = 'LMXJV';
@@ -1235,7 +1278,7 @@
         }
       })
       .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
-      .crearTareaRecurrente({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: trecPrio, dias: diasElegidos.split(''), creador: (CentinelaState.jefe || 'Supervisor') });
+      .crearTareaRecurrente({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: trecPrio, dias: diasElegidos.split(''), pide: pide, creador: (CentinelaState.jefe || 'Supervisor') });
   }
 
   function trecActivarDesactivar(id, activa) {

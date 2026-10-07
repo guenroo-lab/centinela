@@ -16,10 +16,17 @@
 // 1 ID | 2 Titulo | 3 Descripcion | 4 Asignado a | 5 Prioridad | 6 Fecha Asignacion |
 // 7 Fecha Limite | 8 Estado (Pendiente/Completada/No realizada/Anulada) | 9 Feedback (o el
 // motivo, si no se pudo realizar) | 10 Fecha Cierre | 11 Cerrada por | 12 Correo Enviado |
-// 13 Foto Tarea ("Sí" si la tarea se creó con foto) | 14 Foto Cierre ("Sí" si se cerró con foto).
+// 13 Foto Tarea ("Sí" si la tarea se creó con foto) | 14 Foto Cierre ("Sí" si se cerró con foto) |
+// 15 Pide Dato (etiqueta de un dato obligatorio para completarla, p. ej. «Flete auditado»; vacío = no pide nada) |
+// 16 Dato (lo que escribió quien la completó).
 // Las fotos en sí están en la hoja Tareas_Fotos (ver tarGuardarFoto_).
 
 const TAREA_GLOBAL = "TODOS";
+// Solo en las plantillas recurrentes: cada día la tarea va al jefe de equipo con turno de TARDE en el cuadrante
+// (ver TareasRecurrentes.gs). La tarea ya generada lleva el nombre de ese jefe (o "TODOS" si no se pudo saber).
+const TAREA_JEFE_TARDE = "JEFE DE TARDE";
+const TAREA_MAX_PIDE = 40;
+const TAREA_MAX_DATO = 60;
 const TAREA_MAX_TITULO = 120;
 const TAREA_MAX_DESCRIPCION = 1000;
 const TAREA_MIN_FEEDBACK = 5;
@@ -215,7 +222,9 @@ function tarLeer_(sheet) {
       cerradaPor: tarTexto_(f[10]),
       correoEnviado: tarTexto_(f[11]),
       fotoTarea: tarTexto_(f[12]) !== "",
-      fotoCierre: tarTexto_(f[13]) !== ""
+      fotoCierre: tarTexto_(f[13]) !== "",
+      pide: tarTexto_(f[14]),
+      dato: tarTexto_(f[15])
     });
   }
   return filas;
@@ -299,7 +308,9 @@ function tarParaCliente_(t, hoyClave, vistaJefe) {
     fechaCierre: t.fechaCierre,
     aTiempo: aTiempo,
     fotoTarea: t.fotoTarea,
-    fotoCierre: t.fotoCierre
+    fotoCierre: t.fotoCierre,
+    pide: t.pide,
+    dato: t.dato
   };
   if (!vistaJefe) {
     r.asignadoA = t.asignadoA;
@@ -308,6 +319,21 @@ function tarParaCliente_(t, hoyClave, vistaJefe) {
     r.correoEnviado = t.correoEnviado;
   }
   return r;
+}
+
+// Etiqueta del dato que hay que escribir para completar una tarea («Flete auditado»). "" = no pide nada.
+function tarLimpiarPide_(valor) {
+  const t = String(valor == null ? "" : valor).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  if (t.length > TAREA_MAX_PIDE) throw new Error("El dato que se pide al completar es demasiado largo (máximo " + TAREA_MAX_PIDE + " caracteres).");
+  return t;
+}
+
+// Lo que escribe quien completa una tarea que pide un dato. Obligatorio y de una línea.
+function tarLimpiarDato_(valor, etiqueta) {
+  const t = String(valor == null ? "" : valor).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  if (!t) throw new Error("Indica «" + etiqueta + "» para completar la tarea.");
+  if (t.length > TAREA_MAX_DATO) throw new Error("«" + etiqueta + "» es demasiado largo (máximo " + TAREA_MAX_DATO + " caracteres).");
+  return t;
 }
 
 // Texto libre multilínea: normaliza saltos de línea y comprueba el máximo.
@@ -541,7 +567,7 @@ function tarSiguienteId_(sheet) {
 
 // Añade una tarea Pendiente a la hoja Tareas y devuelve su ID. EL LLAMADOR YA TIENE EL BLOQUEO (los de
 // Apps Script no son reentrantes: por eso crearTarea y la generación automática comparten esta pieza en
-// vez de llamarse entre sí). d = { titulo, descripcion, asignadoA, prioridad, limiteTxt, foto }.
+// vez de llamarse entre sí). d = { titulo, descripcion, asignadoA, prioridad, limiteTxt, foto, pide (opcional) }.
 function tarInsertarEnLock_(sheet, hojaFotos, d) {
   const nuevoId = tarSiguienteId_(sheet);
   const hoyTxt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
@@ -552,8 +578,8 @@ function tarInsertarEnLock_(sheet, hojaFotos, d) {
   // fecha según su idioma (mes/día) y el día 5 de octubre pasa a ser el 10 de mayo.
   const fila = sheet.getLastRow() + 1;
   if (fila > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 1);
-  sheet.getRange(fila, 2, 1, 13).setNumberFormat("@");
-  sheet.getRange(fila, 1, 1, 14).setValues([[nuevoId, d.titulo, d.descripcion, d.asignadoA, d.prioridad, hoyTxt, d.limiteTxt || "", "Pendiente", "", "", "", "", d.foto ? "Sí" : "", ""]]);
+  sheet.getRange(fila, 2, 1, 15).setNumberFormat("@");
+  sheet.getRange(fila, 1, 1, 16).setValues([[nuevoId, d.titulo, d.descripcion, d.asignadoA, d.prioridad, hoyTxt, d.limiteTxt || "", "Pendiente", "", "", "", "", d.foto ? "Sí" : "", "", d.pide || "", ""]]);
   return nuevoId;
 }
 
@@ -674,6 +700,8 @@ function completarTarea(data) {
       };
     }
     if (t.estado === "Anulada") return { success: false, error: "Esta tarea ha sido anulada.", refrescar: true };
+    // Una tarea que pide un dato («Flete auditado») no se completa sin él: se comprueba ya, antes de tocar nada.
+    const dato = t.pide ? tarLimpiarDato_(data.dato, t.pide) : "";
 
     const ahora = new Date();
     const tz = Session.getScriptTimeZone();
@@ -681,12 +709,14 @@ function completarTarea(data) {
     const cierreDia = parseInt(Utilities.formatDate(ahora, tz, "yyyyMMdd"), 10);
     // La foto (si hay) va primero: si no se puede guardar, la tarea NO se cierra a medias.
     if (foto) tarGuardarFoto_(hojaFotos.sheet, t.id + "-C", foto);
+    // El dato también va antes del cierre: si falla aquí, la tarea sigue pendiente y se puede reintentar.
+    if (dato) h.sheet.getRange(t.fila, 16).setNumberFormat("@").setValue(dato);
     h.sheet.getRange(t.fila, 8, 1, 5).setNumberFormat("@").setValues([["Completada", feedback, cierreTxt, jefe, "No"]]);
     if (foto) h.sheet.getRange(t.fila, 14).setValue("Sí");
     SpreadsheetApp.flush();
 
     const aTiempo = t.limiteClave === null ? null : cierreDia <= t.limiteClave;
-    const emailOk = tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, foto);
+    const emailOk = tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, foto, dato);
     if (emailOk) {
       try {
         h.sheet.getRange(t.fila, 12).setValue("Sí");
@@ -794,7 +824,7 @@ function marcarTareaNoRealizada(data) {
 
 // ── Correo-informe al responsable ───────────────────────────
 
-function tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, fotoCierre) {
+function tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, fotoCierre, dato) {
   try {
     // Fotos opcionales: la de la tarea (subida al crearla) y la del cierre. Van incrustadas en el correo.
     const blobTarea = t.fotoTarea ? dataUriABlob(tarLeerFoto_(t.id + "-T"), "foto_tarea.jpg") : null;
@@ -805,7 +835,8 @@ function tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, fotoC
         "<img src=\"cid:" + cid + "\" alt=\"" + escapeHtml(titulo) + "\" width=\"480\" style=\"max-width:100%;height:auto;border-radius:12px;display:block;\"></div>";
     };
     const tituloLinea = String(t.titulo).replace(/\s+/g, " ").trim();
-    const asunto = (t.global ? "✅ Tarea global completada · " : "✅ Tarea completada · ") + tituloLinea + " · " + jefe;
+    const conDato = !!(t.pide && dato);
+    const asunto = (t.global ? "✅ Tarea global completada · " : "✅ Tarea completada · ") + tituloLinea + " · " + jefe + (conDato ? " · " + t.pide + ": " + dato : "");
     const conSaltos = function (texto) { return escapeHtml(texto).replace(/\n/g, "<br>"); };
 
     const fila = function (etiqueta, valorHtml, conBorde) {
@@ -844,6 +875,11 @@ function tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, fotoC
       fila("Fecha límite", escapeHtml(t.fechaLimite || "Sin fecha límite"), true) +
       fila("Cerrada", cierreHtml, false) +
       "</table>" +
+      (conDato
+        ? "<div style=\"background:#161b2e;border-left:3px solid #4c7dff;border-radius:10px;padding:14px 16px;margin-bottom:16px;\">" +
+          "<p style=\"margin:0 0 6px;color:#6b7899;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">" + escapeHtml(t.pide) + "</p>" +
+          "<p style=\"margin:0;color:#f0f4ff;font-size:18px;font-weight:700;\">" + escapeHtml(dato) + "</p></div>"
+        : "") +
       (t.descripcion
         ? "<div style=\"background:#161b2e;border-radius:12px;padding:16px;margin-bottom:16px;\">" +
           "<p style=\"margin:0 0 6px;color:#6b7899;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;\">Descripción</p>" +
@@ -866,6 +902,7 @@ function tarEnviarCorreoCompletada_(t, jefe, feedback, cierreTxt, aTiempo, fotoC
       "Asignada: " + (t.fechaAsignacion || "—"),
       "Fecha límite: " + (t.fechaLimite || "sin fecha límite"),
       "Cerrada: " + cierreTxt + (aTiempo === true ? " (a tiempo)" : aTiempo === false ? " (con retraso)" : ""),
+      conDato ? t.pide + ": " + dato : "",
       t.descripcion ? "\nDescripción:\n" + t.descripcion : "",
       "\nFeedback:\n" + feedback
     ].filter(function (linea) { return linea !== ""; }).join("\n");

@@ -206,9 +206,12 @@ const CABECERAS_DISPOSITIVOS = ["ID", "Tipo", "Servicio", "Numero Serie", "Estad
 const CABECERAS_HISTORIAL_DISPOSITIVOS = [
   "Fecha", "Hora", "ID", "Tipo", "Numero Serie", "Estado Anterior", "Estado Nuevo", "Observacion", "Jefe"
 ];
+// "Pide Dato" = etiqueta de un dato que hay que escribir para completar la tarea (p. ej. «Flete auditado»); vacío = no
+// pide nada. "Dato" = lo que escribió quien la completó. Las hojas anteriores a estas dos columnas se amplían solas.
 const CABECERAS_TAREAS = [
   "ID", "Titulo", "Descripcion", "Asignado a", "Prioridad", "Fecha Asignacion", "Fecha Limite",
-  "Estado", "Feedback", "Fecha Cierre", "Cerrada por", "Correo Enviado", "Foto Tarea", "Foto Cierre"
+  "Estado", "Feedback", "Fecha Cierre", "Cerrada por", "Correo Enviado", "Foto Tarea", "Foto Cierre",
+  "Pide Dato", "Dato"
 ];
 
 // Fotos de las tareas (opcionales, al crearla y al cerrarla). Sin Drive: la foto, ya reducida
@@ -220,8 +223,11 @@ const CABECERAS_TAREAS_FOTOS = ["Foto ID", "Parte", "Total", "Datos"];
 // TareasRecurrentes.gs). "Ultima Generada" evita duplicar si el disparador se ejecuta dos veces el mismo día.
 // "Dias" = qué días de la semana se genera, en letras: L M X(miércoles) J V S D (p. ej. "LMXJV"). Vacío = L-V
 // (así funcionaban todas las plantillas anteriores a esta columna).
+// "Asignado a" puede ser un jefe, "TODOS" o "JEFE DE TARDE" (cada día va al jefe con turno de tarde en el cuadrante).
+// "Pide Dato" = dato que hay que escribir para completar la tarea generada (p. ej. «Flete auditado»).
 const CABECERAS_TAREAS_RECURRENTES = [
-  "ID", "Titulo", "Descripcion", "Asignado a", "Prioridad", "Activa", "Creada por", "Fecha Creacion", "Ultima Generada", "Dias"
+  "ID", "Titulo", "Descripcion", "Asignado a", "Prioridad", "Activa", "Creada por", "Fecha Creacion", "Ultima Generada", "Dias",
+  "Pide Dato"
 ];
 
 // Tareas para el futuro: se crean ya, pero no llegan a los jefes (ni se les avisa) hasta su "Fecha Aplicar"
@@ -455,7 +461,7 @@ function prepararHojaHistorialDispositivos_(sheet) {
 
 function prepararHojaTareas_(sheet) {
   escribirCabeceras(sheet, CABECERAS_TAREAS);
-  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
 }
 
 function prepararHojaTareasFotos_(sheet) {
@@ -465,7 +471,7 @@ function prepararHojaTareasFotos_(sheet) {
 
 function prepararHojaTareasRecurrentes_(sheet) {
   escribirCabeceras(sheet, CABECERAS_TAREAS_RECURRENTES);
-  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 }
 
 function prepararHojaTareasProgramadas_(sheet) {

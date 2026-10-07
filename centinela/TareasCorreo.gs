@@ -19,7 +19,8 @@ function tarDestinatariosCorreo_(asignadoA) {
 }
 
 // t = { id, titulo, descripcion, asignadoA, prioridad, fechaLimite ("dd/MM/yyyy" o ""), tipo, creador,
-//       dias (letras, solo recurrente), fotoUri (opcional) }
+//       dias (letras, solo recurrente), fotoUri (opcional), pide (dato que se pide al completarla, opcional),
+//       deTarde (true si la plantilla se asigna cada día al jefe de tarde) }
 function tarEnviarCorreoNueva_(t) {
   try {
     const para = tarDestinatariosCorreo_(t.asignadoA);
@@ -38,7 +39,7 @@ function tarEnviarCorreoNueva_(t) {
     let etiqueta, emoji, acento, subtitulo, prefijoAsunto, tipoChip, nota;
     if (tipo === "recurrente") {
       etiqueta = "Nueva tarea recurrente"; emoji = "🔁"; acento = "#8b5cf6"; prefijoAsunto = "♻️ Nueva tarea recurrente";   // ♻️
-      subtitulo = "Es una tarea recurrente: se " + (global ? "asignará a todos los jefes" : "te asignará") + " automáticamente " + dias + ". Este es el primer aviso; los siguientes días aparecerá en Centinela sin más correos.";
+      subtitulo = "Es una tarea recurrente: se " + (global ? "asignará a todos los jefes" : (t.deTarde ? "asignará cada día al jefe de equipo que esté de tarde, y hoy eres tú," : "te asignará")) + " automáticamente " + dias + ". Este es el primer aviso; los siguientes días aparecerá en Centinela sin más correos.";
       tipoChip = { texto: "🔁 Se repite " + dias, tono: "info" };
     } else if (tipo === "programada") {
       etiqueta = "Tarea programada · ya activa"; emoji = "📅"; acento = "#14b8a6"; prefijoAsunto = "⏰ Tarea programada, activa hoy";   // ⏰
@@ -52,6 +53,7 @@ function tarEnviarCorreoNueva_(t) {
     nota = global
       ? "Es una tarea global: en cuanto uno de los jefes la cierre, deja de aparecer a los demás."
       : "Ábrela en Centinela para marcarla como completada o indicar por qué no se ha podido hacer.";
+    if (t.pide) nota += " Para completarla tendrás que anotar: " + t.pide + ".";
 
     const chips = [
       alta ? { texto: "🔥 Prioridad alta", tono: "alerta" } : { texto: "🟢 Prioridad normal", tono: "ok" },
@@ -66,6 +68,7 @@ function tarEnviarCorreoNueva_(t) {
       { icono: tipo === "manual" ? "🙋" : "🤖", etiqueta: "Creada por", valor: tipo === "manual" ? (t.creador || "Supervisor") : (tipo === "recurrente" ? "Automática (plantilla recurrente)" : (t.creador ? t.creador + " (programada)" : "Programada")) }
     ];
     if (tipo === "recurrente") filas.push({ icono: "🔁", etiqueta: "Se repite", valor: dias });
+    if (t.pide) filas.push({ icono: "📝", etiqueta: "Al completarla anota", valor: t.pide });
 
     const fotoBlob = t.fotoUri ? dataUriABlob(t.fotoUri, "foto_tarea.jpg") : null;
     const cfg = {

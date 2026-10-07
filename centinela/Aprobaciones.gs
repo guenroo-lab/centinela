@@ -116,6 +116,7 @@ function apLeer_(sheet) {
 }
 
 function apNombreDestino_(asignado) {
+  if (asignado === TAREA_JEFE_TARDE) return "El jefe de tarde (según el cuadrante)";
   return asignado === TAREA_GLOBAL ? "Todos los jefes (global)" : String(asignado || "—");
 }
 
@@ -127,6 +128,7 @@ function apDetalle_(tipo, d) {
     filas.push({ icono: "👤", etiqueta: "Asignada a", valor: apNombreDestino_(d.asignado_a) });
     filas.push({ icono: "🔁", etiqueta: "Se repite", valor: trecDiasTexto_(d.dias) });
     filas.push({ icono: "🚦", etiqueta: "Prioridad", valor: d.prioridad || "Normal" });
+    if (d.pide) filas.push({ icono: "📝", etiqueta: "Al completar anota", valor: d.pide });
     texto = d.descripcion || "";
   } else if (tipo === "tarea_global" || tipo === "programada_global") {
     filas.push({ icono: "🌐", etiqueta: "Asignada a", valor: apNombreDestino_(d.asignado_a) });

@@ -22,7 +22,14 @@
 //  Columnas de la hoja Tareas_Recurrentes (1-indexadas):
 //  1 ID | 2 Titulo | 3 Descripcion | 4 Asignado a | 5 Prioridad | 6 Activa (Sí/No) |
 //  7 Creada por | 8 Fecha Creacion | 9 Ultima Generada (dd/MM/yyyy, vacío = nunca) |
-//  10 Dias (letras L M X J V S D; vacío = L-V, como las plantillas anteriores a esta columna)
+//  10 Dias (letras L M X J V S D; vacío = L-V, como las plantillas anteriores a esta columna) |
+//  11 Pide Dato (etiqueta del dato que hay que escribir para completar cada tarea generada, p. ej. «Flete auditado»)
+//
+//  ASIGNADO A: un jefe, "TODOS" (global) o "JEFE DE TARDE" (TAREA_JEFE_TARDE): cada día se asigna al jefe de equipo que
+//  tenga turno T en el cuadrante ese día (el partido P no cuenta). Si no hay exactamente uno con T, o no se puede
+//  leer el cuadrante y no hay copia de hoy, la tarea de ese día va a TODOS. La copia (propiedad trec_tarde_v1) se
+//  guarda cada vez que se lee el cuadrante: así, si abre la app primero una cuenta sin acceso al cuadrante, se
+//  reparte igualmente bien.
 // ============================================================
 
 const TREC_DIAS_ = "LMXJVSD";                 // en el orden de la semana; X = miércoles
@@ -32,6 +39,9 @@ const TREC_PROP_ESTADO_ = "trec_estado_v1";      // resumen de la última pasada
 const TREC_PROP_DIA_OK_ = "trec_dia_ok_v1";      // yyyy-MM-dd del último día en que la pasada terminó sin fallos
 const TREC_PROP_INTENTO_ = "trec_intento_v1";    // ms del último intento que falló (para no reintentar en bucle)
 const TREC_REINTENTO_MS_ = 30 * 60 * 1000;
+const TREC_PROP_TARDE_ = "trec_tarde_v1";        // copia de qué jefes tienen turno de tarde los próximos días (yyyy-MM-dd -> [jefes])
+const TREC_TARDE_DIAS_COPIA_ = 14;               // cuántos días por delante se guardan en esa copia
+const TREC_ALIAS_TARDE_ = ["jefe de tarde", "jefe tarde", "tarde", "jefe de equipo de tarde"];
 
 // ── Días de la semana ────────────────────────────────────────
 
@@ -78,6 +88,7 @@ function trecObtenerHoja_() {
 // defecto Sí: solo se considera inactiva si la celda dice explícitamente "No".
 function trecLeer_(sheet) {
   const datos = sheet.getDataRange().getValues();
+  const mesPrimero = tarSheetMesPrimero_(sheet);
   const filas = [];
   for (let i = 1; i < datos.length; i++) {
     const f = datos[i];
@@ -89,22 +100,30 @@ function trecLeer_(sheet) {
       id: idNum,
       titulo: titulo,
       descripcion: tarTexto_(f[2]),
-      asignadoA: tarNombreCanonico_(tarTexto_(f[3])),
+      asignadoA: trecAsignado_(tarTexto_(f[3])),
       prioridad: tarPrioridadCanonica_(f[4]),
       activa: tarNormalizar_(f[5]) !== "no",
       creadaPor: tarTexto_(f[6]),
-      fechaCreacion: tarTexto_(f[7], "dd/MM/yyyy"),
-      ultimaGenerada: tarTexto_(f[8], "dd/MM/yyyy"),
-      dias: trecDiasDe_(tarTexto_(f[9]))
+      fechaCreacion: tarTextoFecha_(f[7], false, mesPrimero),
+      ultimaGenerada: tarTextoFecha_(f[8], false, mesPrimero),
+      dias: trecDiasDe_(tarTexto_(f[9])),
+      pide: tarTexto_(f[10])
     });
   }
   return filas;
 }
 
+// "Asignado a" de una plantilla: un jefe (nombre canónico), "TODOS" o "JEFE DE TARDE" (también si lo escribieron a mano).
+function trecAsignado_(texto) {
+  if (TREC_ALIAS_TARDE_.indexOf(tarNormalizar_(texto)) > -1) return TAREA_JEFE_TARDE;
+  return tarNombreCanonico_(texto);
+}
+
 function trecParaCliente_(r) {
   return {
     id: r.id, titulo: r.titulo, descripcion: r.descripcion, asignadoA: r.asignadoA,
-    global: r.asignadoA === TAREA_GLOBAL, prioridad: r.prioridad, activa: r.activa,
+    global: r.asignadoA === TAREA_GLOBAL, deTarde: r.asignadoA === TAREA_JEFE_TARDE, pide: r.pide,
+    prioridad: r.prioridad, activa: r.activa,
     creadaPor: r.creadaPor, fechaCreacion: r.fechaCreacion, ultimaGenerada: r.ultimaGenerada,
     dias: r.dias, diasTexto: trecDiasTexto_(r.dias)
   };
@@ -162,15 +181,24 @@ function trecValidarNueva_(data) {
   const descripcion = tarLimpiarLargo_(data.descripcion, TAREA_MAX_DESCRIPCION, "La descripción");
 
   if (!data.asignado_a) throw new Error("Elige a qué jefe de equipo se asigna.");
-  if (data.asignado_a !== TAREA_GLOBAL && JEFES_EQUIPO.indexOf(data.asignado_a) === -1) {
+  let asignadoA = data.asignado_a;
+  if (TREC_ALIAS_TARDE_.indexOf(tarNormalizar_(asignadoA)) > -1) asignadoA = TAREA_JEFE_TARDE;
+  if (asignadoA !== TAREA_GLOBAL && asignadoA !== TAREA_JEFE_TARDE && JEFES_EQUIPO.indexOf(asignadoA) === -1) {
     throw new Error("Jefe de equipo no reconocido: " + data.asignado_a);
   }
+  const pide = tarLimpiarPide_(data.pide);
   const prioridad = data.prioridad || "Normal";
   if (prioridad !== "Normal" && prioridad !== "Alta") throw new Error("Prioridad no válida: " + prioridad);
   // Días: los que manda el cliente; si no manda ninguno, lunes a viernes. Sin ningún día válido no tiene sentido.
   const dias = data.dias === undefined || data.dias === null ? TREC_DIAS_POR_DEFECTO_ : trecDiasCanonicos_(data.dias);
   if (!dias) throw new Error("Elige al menos un día de la semana.");
-  return { titulo: titulo, descripcion: descripcion, asignadoA: data.asignado_a, prioridad: prioridad, dias: dias };
+  return { titulo: titulo, descripcion: descripcion, asignadoA: asignadoA, prioridad: prioridad, dias: dias, pide: pide };
+}
+
+function trecNombreDestino_(asignadoA) {
+  if (asignadoA === TAREA_GLOBAL) return "todos los jefes";
+  if (asignadoA === TAREA_JEFE_TARDE) return "el jefe de tarde";
+  return asignadoA;
 }
 
 function crearTareaRecurrente(data) {
@@ -182,10 +210,10 @@ function crearTareaRecurrente(data) {
   const perfil = perfilActual_();
   if (perfilNecesitaAprobacion_("recurrentes", perfil)) {
     return apSolicitarYResponder_("recurrente", v.titulo,
-      { titulo: v.titulo, descripcion: v.descripcion, asignado_a: v.asignadoA, prioridad: v.prioridad, dias: v.dias }, "", perfil);
+      { titulo: v.titulo, descripcion: v.descripcion, asignado_a: v.asignadoA, prioridad: v.prioridad, dias: v.dias, pide: v.pide }, "", perfil);
   }
   const r = trecCrearValidada_(v, perfilCreador_(perfil, data.creador));
-  if (r.success) actividadRegistrar_("recurrente", "Plantilla #" + r.id + " «" + v.titulo + "» → " + (v.asignadoA === TAREA_GLOBAL ? "todos los jefes" : v.asignadoA) + " · " + trecDiasTexto_(v.dias), perfil);
+  if (r.success) actividadRegistrar_("recurrente", "Plantilla #" + r.id + " «" + v.titulo + "» → " + trecNombreDestino_(v.asignadoA) + " · " + trecDiasTexto_(v.dias) + (v.pide ? " · pide: " + v.pide : ""), perfil);
   return r;
 }
 
@@ -203,7 +231,7 @@ function trecCrearValidada_(v, creador) {
     filas.forEach(function (r) { if (r.id > maxId) maxId = r.id; });
     nuevoId = maxId + 1;
     const hoyTxt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
-    h.sheet.appendRow([nuevoId, v.titulo, v.descripcion, v.asignadoA, v.prioridad, "Sí", creador || "Supervisor", hoyTxt, "", v.dias]);
+    h.sheet.appendRow([nuevoId, v.titulo, v.descripcion, v.asignadoA, v.prioridad, "Sí", creador || "Supervisor", hoyTxt, "", v.dias, v.pide || ""]);
     SpreadsheetApp.flush();
   } catch (e) {
     Logger.log("❌ Error creando tarea recurrente: " + e.message);
@@ -357,12 +385,56 @@ function trecTrabajaEseDia_(turnosMapa, id, fechaIso) {
   return TREC_CODIGOS_TRABAJA_.indexOf(trecPrimerToken_(valor)) > -1;
 }
 
-// { porJefe, leido }. porJefe[jefe]: true trabaja, false consta ausente, null no se pudo saber
+// Código de turno de ese id ese día ("M", "T", "P"…; "" si no hay), en mayúsculas y sin el «+2h».
+function trecCodigoDia_(turnosMapa, id, fechaIso) {
+  return trecPrimerToken_(turnosMapa[id + "_" + fechaIso]);
+}
+
+// yyyy-MM-dd + n días (sin zonas horarias: solo calendario).
+function trecSumarDiasIso_(iso, n) {
+  const p = String(iso).split("-");
+  const d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n));
+  return d.getUTCFullYear() + "-" + ("0" + (d.getUTCMonth() + 1)).slice(-2) + "-" + ("0" + d.getUTCDate()).slice(-2);
+}
+
+// Qué jefes tienen turno de TARDE (T) cada uno de los próximos días, para repartir bien la tarea del «jefe de
+// tarde» aunque la abra primero una cuenta que no puede leer el cuadrante. Solo se guardan los días con algún turno
+// publicado para los jefes (si no, «nadie con T» no se distinguiría de «cuadrante aún sin publicar»).
+function trecGuardarCopiaTarde_(ids, turnosMapa, hoyIso) {
+  try {
+    const dias = {};
+    for (let k = 0; k < TREC_TARDE_DIAS_COPIA_; k++) {
+      const iso = trecSumarDiasIso_(hoyIso, k);
+      const codigos = JEFES_EQUIPO.map(function (j) { return ids[j] ? trecCodigoDia_(turnosMapa, ids[j], iso) : ""; });
+      if (!codigos.some(function (c) { return c; })) continue;
+      dias[iso] = JEFES_EQUIPO.filter(function (j) { return ids[j] && trecCodigoDia_(turnosMapa, ids[j], iso) === "T"; });
+    }
+    PropertiesService.getScriptProperties().setProperty(TREC_PROP_TARDE_, JSON.stringify({ dias: dias }));
+  } catch (e) {
+    Logger.log("⚠️ No se pudo guardar la copia de los turnos de tarde: " + e.message);
+  }
+}
+
+// Jefes con turno de tarde ese día según la copia guardada, o null si no hay copia de ese día.
+function trecLeerCopiaTarde_(iso) {
+  try {
+    const crudo = PropertiesService.getScriptProperties().getProperty(TREC_PROP_TARDE_);
+    if (!crudo) return null;
+    const c = JSON.parse(crudo);
+    return c && c.dias && Array.isArray(c.dias[iso]) ? c.dias[iso] : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// { porJefe, leido, tardes }. porJefe[jefe]: true trabaja, false consta ausente, null no se pudo saber
 // (jefe no encontrado en el cuadrante — se genera igual, no se le penaliza por eso). leido=false si
-// la cuenta que ejecuta no pudo abrir el cuadrante: entonces nadie se filtra.
+// la cuenta que ejecuta no pudo abrir el cuadrante: entonces nadie se filtra. tardes = jefes con turno T hoy
+// (solo si se leyó el cuadrante).
 function trecEstadoJefesHoy_(fechaIso) {
   const porJefe = {};
   let leido = true;
+  let tardes = [];
   try {
     const ss = SpreadsheetApp.openById(CONFIG.CUADRANTE_SHEET_ID);
     const ids = trecIdsJefesEnCuadrante_(ss);
@@ -371,19 +443,33 @@ function trecEstadoJefesHoy_(fechaIso) {
       const id = ids[jefe];
       porJefe[jefe] = id ? trecTrabajaEseDia_(turnosMapa, id, fechaIso) : null;
     });
+    tardes = JEFES_EQUIPO.filter(function (jefe) { return ids[jefe] && trecCodigoDia_(turnosMapa, ids[jefe], fechaIso) === "T"; });
+    trecGuardarCopiaTarde_(ids, turnosMapa, fechaIso);
   } catch (e) {
     // Sin acceso al cuadrante: se genera para todos sin filtrar (mejor de más que dejar de avisar).
     Logger.log("⚠️ Tareas recurrentes: no se pudo leer el cuadrante de turnos (" + e.message + "); hoy se genera sin filtrar vacaciones/bajas.");
     JEFES_EQUIPO.forEach(function (jefe) { porJefe[jefe] = null; });
     leido = false;
+    tardes = [];
   }
-  return { porJefe: porJefe, leido: leido };
+  return { porJefe: porJefe, leido: leido, tardes: tardes };
 }
 
-// Global (TODOS): basta con que uno trabaje (o no se sepa de ninguno) para generarla.
+// A quién va hoy una plantilla «JEFE DE TARDE». { asignado, motivo }: el jefe con turno T si hay exactamente uno;
+// si no (nadie, varios, cuadrante ilegible sin copia de hoy), TODOS y el motivo.
+function trecResolverTarde_(cuad, hoyIso) {
+  let tardes = null;
+  if (cuad.leido) tardes = cuad.tardes;
+  else tardes = trecLeerCopiaTarde_(hoyIso);
+  if (!tardes) return { asignado: TAREA_GLOBAL, motivo: "no se pudo leer el cuadrante de turnos" };
+  if (tardes.length === 1) return { asignado: tardes[0], motivo: "" };
+  return { asignado: TAREA_GLOBAL, motivo: tardes.length ? "hay varios jefes con turno de tarde" : "ningún jefe tiene turno de tarde hoy" };
+}
+
+// Global (TODOS) y «jefe de tarde»: basta con que uno trabaje (o no se sepa de ninguno) para generarla.
 // Un jefe concreto: se genera salvo que conste explícitamente ausente ese día.
 function trecDebeGenerarHoy_(r, estadoJefes) {
-  if (r.asignadoA === TAREA_GLOBAL) {
+  if (r.asignadoA === TAREA_GLOBAL || r.asignadoA === TAREA_JEFE_TARDE) {
     return Object.keys(estadoJefes).length === 0 || Object.keys(estadoJefes).some(function (j) { return estadoJefes[j] !== false; });
   }
   return estadoJefes[r.asignadoA] !== false;
@@ -448,30 +534,42 @@ function tareasAutoGenerar_(origen) {
     const aAvisar = [];
     try {
       trecCandidatas_(trecLeer_(hr.sheet), hoyTxt, letra).forEach(function (r) {
+        const esTarde = r.asignadoA === TAREA_JEFE_TARDE;
         const resumen = { plantilla: r.id, titulo: r.titulo, asignadoA: r.asignadoA };
         if (!trecDebeGenerarHoy_(r, cuad.porJefe)) {
-          estado.saltadas.push({ plantilla: r.id, titulo: r.titulo, motivo: (r.asignadoA === TAREA_GLOBAL ? "ningún jefe" : r.asignadoA) + " no trabaja hoy según el cuadrante (vacaciones, baja o libre)" });
+          estado.saltadas.push({ plantilla: r.id, titulo: r.titulo, motivo: ((r.asignadoA === TAREA_GLOBAL || esTarde) ? "ningún jefe" : r.asignadoA) + " no trabaja hoy según el cuadrante (vacaciones, baja o libre)" });
           Logger.log("⏭️ Tareas recurrentes: #" + r.id + " (" + r.titulo + ") no se genera hoy: " + r.asignadoA + " no trabaja.");
           return;
         }
+        // «Jefe de tarde»: hoy va al jefe con turno T en el cuadrante (o a TODOS si no se puede saber quién).
+        let asignadoHoy = r.asignadoA;
+        if (esTarde) {
+          const res = trecResolverTarde_(cuad, hoyIso);
+          asignadoHoy = res.asignado;
+          resumen.asignadoA = asignadoHoy;
+          resumen.deTarde = true;
+          if (res.motivo) resumen.motivoAsignacion = res.motivo;
+        }
         const anterior = r.ultimaGenerada;
         try {
-          hr.sheet.getRange(r.fila, 9).setValue(hoyTxt);
+          hr.sheet.getRange(r.fila, 9).setNumberFormat("@").setValue(hoyTxt);
         } catch (e) {
           estado.fallidas.push({ plantilla: r.id, titulo: r.titulo, error: "No se pudo marcar la plantilla: " + e.message });
           return;
         }
         try {
-          const idTarea = tarInsertarEnLock_(ht.sheet, null, { titulo: r.titulo, descripcion: r.descripcion, asignadoA: r.asignadoA, prioridad: r.prioridad, limiteTxt: hoyTxt, foto: "" });
+          // ¿Es la primera vez que ESTA persona recibe esta tarea? (la plantilla puede ir rotando de jefe)
+          const primeraParaEste = anterior === "" || (esTarde && !tarLeer_(ht.sheet).some(function (x) { return x.titulo === r.titulo && x.asignadoA === asignadoHoy; }));
+          const idTarea = tarInsertarEnLock_(ht.sheet, null, { titulo: r.titulo, descripcion: r.descripcion, asignadoA: asignadoHoy, prioridad: r.prioridad, limiteTxt: hoyTxt, foto: "", pide: r.pide });
           resumen.tarea = idTarea;
-          resumen.primera = anterior === "";
+          resumen.primera = primeraParaEste;
           estado.creadas.push(resumen);
           aAvisar.push({
-            tipo: "recurrente", primera: anterior === "", plantilla: r.id, ref: resumen,
-            t: { id: idTarea, titulo: r.titulo, descripcion: r.descripcion, asignadoA: r.asignadoA, prioridad: r.prioridad, fechaLimite: hoyTxt, tipo: "recurrente", dias: r.dias }
+            tipo: "recurrente", primera: primeraParaEste, plantilla: r.id, ref: resumen,
+            t: { id: idTarea, titulo: r.titulo, descripcion: r.descripcion, asignadoA: asignadoHoy, prioridad: r.prioridad, fechaLimite: hoyTxt, tipo: "recurrente", dias: r.dias, pide: r.pide, deTarde: esTarde && asignadoHoy !== TAREA_GLOBAL }
           });
         } catch (e) {
-          try { hr.sheet.getRange(r.fila, 9).setValue(anterior); } catch (e2) { Logger.log("⚠️ No se pudo deshacer la marca de la plantilla #" + r.id + ": " + e2.message); }
+          try { hr.sheet.getRange(r.fila, 9).setNumberFormat("@").setValue(anterior); } catch (e2) { Logger.log("⚠️ No se pudo deshacer la marca de la plantilla #" + r.id + ": " + e2.message); }
           estado.fallidas.push({ plantilla: r.id, titulo: r.titulo, error: e.message });
           Logger.log("❌ No se pudo generar la tarea recurrente #" + r.id + " (" + r.titulo + "): " + e.message);
         }
