@@ -238,6 +238,8 @@
     <button type="button" class="tar-opcion sel" id="trecPrioNormal" onclick="trecElegirPrio('Normal')">Normal</button>
     <button type="button" class="tar-opcion" id="trecPrioAlta" onclick="trecElegirPrio('Alta')">Alta</button>
   </div>
+  <label for="trecDesde">Empieza el <small>(opcional; si lo dejas vacío, empieza ya)</small></label>
+  <input type="date" class="tar-input" id="trecDesde">
   <label for="trecPide">Dato a anotar al completar <small>(opcional)</small></label>
   <input type="text" class="tar-input" id="trecPide" maxlength="40" placeholder="Ej. Flete auditado" autocomplete="off" onkeydown="if (event.key === 'Enter') trecCrear()">
   <p style="margin:6px 0 14px;font-size:11.5px;color:var(--text-500);line-height:1.5;">Si lo rellenas, el jefe no podrá completar la tarea sin escribirlo; sale en el correo de cierre y en el historial.</p>
@@ -1154,6 +1156,7 @@
           '<span class="trec-badge ' + (r.activa ? 'on' : 'off') + '">' + (r.activa ? 'Activa' : 'Inactiva') + '</span>' +
           (r.prioridad === 'Alta' ? '<span class="trec-badge">Alta</span>' : '') +
           (r.pide ? '<span class="trec-badge">📝 Pide: ' + tarEsc(r.pide) + '</span>' : '') +
+          (r.desde ? '<span class="trec-badge">🗓️ Desde el ' + tarEsc(r.desde) + '</span>' : '') +
           destinatario +
         '<br>' + generada + '<br>Creada por ' + tarEsc(r.creadaPor || '—') + ' el ' + tarEsc(r.fechaCreacion || '—') + '</div></div>' +
         '<button type="button" class="trec-toggle' + (r.activa ? '' : ' activar') + '" id="trecBtnToggle-' + r.id + '" onclick="trecActivarDesactivar(' + r.id + ', ' + !r.activa + ')">' + (r.activa ? 'Desactivar' : 'Activar') + '</button></div>' +
@@ -1246,6 +1249,7 @@
     const titulo = document.getElementById('trecTitulo').value.trim();
     const descripcion = document.getElementById('trecDesc').value.trim();
     const pide = document.getElementById('trecPide').value.trim();
+    const desde = document.getElementById('trecDesde').value;      // yyyy-mm-dd o ''
     if (!titulo) { showToast('❌ Escribe un título'); return; }
     if (!trecJefe) { showToast('❌ Elige a qué jefe de equipo se asigna (o a todos)'); return; }
     if (!trecDiasNuevo) { showToast('❌ Elige al menos un día de la semana'); return; }
@@ -1261,10 +1265,11 @@
       .withSuccessHandler(function (r) {
         restaurar();
         if (r && r.success) {
-          showToast(r.pendiente ? r.mensaje : trecMensajeGeneracion(r, '✅ Plantilla creada: ' + (r.diasTexto || trecTextoDias(diasElegidos))));
+          showToast(r.pendiente ? r.mensaje : trecMensajeGeneracion(r, '✅ Plantilla creada: ' + (r.diasTexto || trecTextoDias(diasElegidos)) + (r.desde ? ', empieza el ' + r.desde : '')));
           document.getElementById('trecTitulo').value = '';
           document.getElementById('trecDesc').value = '';
           document.getElementById('trecPide').value = '';
+          document.getElementById('trecDesde').value = '';
           trecJefe = '';
           trecPrio = 'Normal';
           trecDiasNuevo = 'LMXJV';
@@ -1278,7 +1283,7 @@
         }
       })
       .withFailureHandler(function (err) { restaurar(); showToast(tarErrorServidor(err)); })
-      .crearTareaRecurrente({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: trecPrio, dias: diasElegidos.split(''), pide: pide, creador: (CentinelaState.jefe || 'Supervisor') });
+      .crearTareaRecurrente({ titulo: titulo, descripcion: descripcion, asignado_a: jefeElegido, prioridad: trecPrio, dias: diasElegidos.split(''), pide: pide, desde: desde, creador: (CentinelaState.jefe || 'Supervisor') });
   }
 
   function trecActivarDesactivar(id, activa) {

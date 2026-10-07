@@ -225,9 +225,10 @@ const CABECERAS_TAREAS_FOTOS = ["Foto ID", "Parte", "Total", "Datos"];
 // (así funcionaban todas las plantillas anteriores a esta columna).
 // "Asignado a" puede ser un jefe, "TODOS" o "JEFE DE TARDE" (cada día va al jefe con turno de tarde en el cuadrante).
 // "Pide Dato" = dato que hay que escribir para completar la tarea generada (p. ej. «Flete auditado»).
+// "Desde" = primer día en que puede generar (dd/MM/yyyy); vacío = ya.
 const CABECERAS_TAREAS_RECURRENTES = [
   "ID", "Titulo", "Descripcion", "Asignado a", "Prioridad", "Activa", "Creada por", "Fecha Creacion", "Ultima Generada", "Dias",
-  "Pide Dato"
+  "Pide Dato", "Desde"
 ];
 
 // Tareas para el futuro: se crean ya, pero no llegan a los jefes (ni se les avisa) hasta su "Fecha Aplicar"
@@ -471,7 +472,7 @@ function prepararHojaTareasFotos_(sheet) {
 
 function prepararHojaTareasRecurrentes_(sheet) {
   escribirCabeceras(sheet, CABECERAS_TAREAS_RECURRENTES);
-  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 }
 
 function prepararHojaTareasProgramadas_(sheet) {

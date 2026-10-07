@@ -23,7 +23,8 @@
 //  1 ID | 2 Titulo | 3 Descripcion | 4 Asignado a | 5 Prioridad | 6 Activa (Sí/No) |
 //  7 Creada por | 8 Fecha Creacion | 9 Ultima Generada (dd/MM/yyyy, vacío = nunca) |
 //  10 Dias (letras L M X J V S D; vacío = L-V, como las plantillas anteriores a esta columna) |
-//  11 Pide Dato (etiqueta del dato que hay que escribir para completar cada tarea generada, p. ej. «Flete auditado»)
+//  11 Pide Dato (etiqueta del dato que hay que escribir para completar cada tarea generada, p. ej. «Flete auditado») |
+//  12 Desde (dd/MM/yyyy; primer día en que puede generar; vacío = ya)
 //
 //  ASIGNADO A: un jefe, "TODOS" (global) o "JEFE DE TARDE" (TAREA_JEFE_TARDE): cada día se asigna al jefe de equipo que
 //  tenga turno T en el cuadrante ese día (el partido P no cuenta). Si no hay exactamente uno con T, o no se puede
@@ -95,6 +96,7 @@ function trecLeer_(sheet) {
     const idNum = parseInt(tarTexto_(f[0]), 10);
     const titulo = tarTexto_(f[1]);
     if (isNaN(idNum) || !titulo) continue;
+    const desdeClave = tarClaveFecha_(tarTextoFecha_(f[11], false, mesPrimero));
     filas.push({
       fila: i + 1,
       id: idNum,
@@ -107,7 +109,9 @@ function trecLeer_(sheet) {
       fechaCreacion: tarTextoFecha_(f[7], false, mesPrimero),
       ultimaGenerada: tarTextoFecha_(f[8], false, mesPrimero),
       dias: trecDiasDe_(tarTexto_(f[9])),
-      pide: tarTexto_(f[10])
+      pide: tarTexto_(f[10]),
+      desde: desdeClave === null ? "" : tarClaveATexto_(desdeClave),
+      desdeClave: desdeClave
     });
   }
   return filas;
@@ -122,7 +126,7 @@ function trecAsignado_(texto) {
 function trecParaCliente_(r) {
   return {
     id: r.id, titulo: r.titulo, descripcion: r.descripcion, asignadoA: r.asignadoA,
-    global: r.asignadoA === TAREA_GLOBAL, deTarde: r.asignadoA === TAREA_JEFE_TARDE, pide: r.pide,
+    global: r.asignadoA === TAREA_GLOBAL, deTarde: r.asignadoA === TAREA_JEFE_TARDE, pide: r.pide, desde: r.desde,
     prioridad: r.prioridad, activa: r.activa,
     creadaPor: r.creadaPor, fechaCreacion: r.fechaCreacion, ultimaGenerada: r.ultimaGenerada,
     dias: r.dias, diasTexto: trecDiasTexto_(r.dias)
@@ -192,7 +196,16 @@ function trecValidarNueva_(data) {
   // Días: los que manda el cliente; si no manda ninguno, lunes a viernes. Sin ningún día válido no tiene sentido.
   const dias = data.dias === undefined || data.dias === null ? TREC_DIAS_POR_DEFECTO_ : trecDiasCanonicos_(data.dias);
   if (!dias) throw new Error("Elige al menos un día de la semana.");
-  return { titulo: titulo, descripcion: descripcion, asignadoA: asignadoA, prioridad: prioridad, dias: dias, pide: pide };
+  // «Empieza el»: opcional. Una fecha que ya pasó (p. ej. una petición aprobada días después) equivale a empezar ya.
+  let desde = "";
+  const desdeEntrada = String(data.desde == null ? "" : data.desde).trim();
+  if (desdeEntrada) {
+    const clave = tarClaveFecha_(desdeEntrada);
+    if (clave === null) throw new Error("La fecha en la que empieza no es válida.");
+    if (Math.floor(clave / 10000) > Math.floor(tarHoyClave_() / 10000) + 1) throw new Error("La fecha en la que empieza está demasiado lejos.");
+    if (clave >= tarHoyClave_()) desde = tarClaveATexto_(clave);
+  }
+  return { titulo: titulo, descripcion: descripcion, asignadoA: asignadoA, prioridad: prioridad, dias: dias, pide: pide, desde: desde };
 }
 
 function trecNombreDestino_(asignadoA) {
@@ -210,10 +223,10 @@ function crearTareaRecurrente(data) {
   const perfil = perfilActual_();
   if (perfilNecesitaAprobacion_("recurrentes", perfil)) {
     return apSolicitarYResponder_("recurrente", v.titulo,
-      { titulo: v.titulo, descripcion: v.descripcion, asignado_a: v.asignadoA, prioridad: v.prioridad, dias: v.dias, pide: v.pide }, "", perfil);
+      { titulo: v.titulo, descripcion: v.descripcion, asignado_a: v.asignadoA, prioridad: v.prioridad, dias: v.dias, pide: v.pide, desde: v.desde }, "", perfil);
   }
   const r = trecCrearValidada_(v, perfilCreador_(perfil, data.creador));
-  if (r.success) actividadRegistrar_("recurrente", "Plantilla #" + r.id + " «" + v.titulo + "» → " + trecNombreDestino_(v.asignadoA) + " · " + trecDiasTexto_(v.dias) + (v.pide ? " · pide: " + v.pide : ""), perfil);
+  if (r.success) actividadRegistrar_("recurrente", "Plantilla #" + r.id + " «" + v.titulo + "» → " + trecNombreDestino_(v.asignadoA) + " · " + trecDiasTexto_(v.dias) + (v.pide ? " · pide: " + v.pide : "") + (v.desde ? " · desde el " + v.desde : ""), perfil);
   return r;
 }
 
@@ -231,7 +244,12 @@ function trecCrearValidada_(v, creador) {
     filas.forEach(function (r) { if (r.id > maxId) maxId = r.id; });
     nuevoId = maxId + 1;
     const hoyTxt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
-    h.sheet.appendRow([nuevoId, v.titulo, v.descripcion, v.asignadoA, v.prioridad, "Sí", creador || "Supervisor", hoyTxt, "", v.dias, v.pide || ""]);
+    // Sin appendRow: la fila se pone en «texto sin formato» ANTES de escribirla (si no, en una hoja con idioma mes/día
+    // «08/10/2026» se guardaría como fecha del 10 de agosto).
+    const filaN = h.sheet.getLastRow() + 1;
+    if (filaN > h.sheet.getMaxRows()) h.sheet.insertRowsAfter(h.sheet.getMaxRows(), 1);
+    h.sheet.getRange(filaN, 2, 1, 11).setNumberFormat("@");
+    h.sheet.getRange(filaN, 1, 1, 12).setValues([[nuevoId, v.titulo, v.descripcion, v.asignadoA, v.prioridad, "Sí", creador || "Supervisor", hoyTxt, "", v.dias, v.pide || "", v.desde || ""]]);
     SpreadsheetApp.flush();
   } catch (e) {
     Logger.log("❌ Error creando tarea recurrente: " + e.message);
@@ -242,7 +260,7 @@ function trecCrearValidada_(v, creador) {
 
   // Si hoy es uno de sus días, se genera ya (y se avisa por correo): así no hay que esperar a mañana.
   const gen = tareasAutoGenerar_("plantilla");
-  return trecRespuestaConGeneracion_({ success: true, id: nuevoId, dias: v.dias, diasTexto: trecDiasTexto_(v.dias) }, gen, nuevoId);
+  return trecRespuestaConGeneracion_({ success: true, id: nuevoId, dias: v.dias, diasTexto: trecDiasTexto_(v.dias), desde: v.desde || "" }, gen, nuevoId);
 }
 
 // Añade a la respuesta de una acción sobre la plantilla `id` lo que pasó al generar: si generó hoy,
@@ -475,10 +493,10 @@ function trecDebeGenerarHoy_(r, estadoJefes) {
   return estadoJefes[r.asignadoA] !== false;
 }
 
-// Plantillas que hoy hay que generar: activas, de un día que toca y aún no generadas hoy.
-function trecCandidatas_(plantillas, hoyTxt, letra) {
+// Plantillas que hoy hay que generar: activas, de un día que toca, que ya han empezado («Desde») y aún no generadas hoy.
+function trecCandidatas_(plantillas, hoyTxt, letra, hoyClave) {
   return plantillas.filter(function (r) {
-    return r.activa && r.ultimaGenerada !== hoyTxt && r.dias.indexOf(letra) > -1;
+    return r.activa && r.ultimaGenerada !== hoyTxt && r.dias.indexOf(letra) > -1 && (r.desdeClave === null || r.desdeClave <= hoyClave);
   });
 }
 
@@ -517,7 +535,7 @@ function tareasAutoGenerar_(origen) {
     if (hp.error) return abortar(hp.error);
 
     // ¿Hay algo que hacer? (lectura sin bloqueo; dentro se vuelve a comprobar)
-    const hayRecurrentes = trecCandidatas_(trecLeer_(hr.sheet), hoyTxt, letra).length > 0;
+    const hayRecurrentes = trecCandidatas_(trecLeer_(hr.sheet), hoyTxt, letra, hoyClave).length > 0;
     const hayProgramadas = tprLeer_(hp.sheet).some(function (p) { return tprDebeAplicar_(p, hoyClave); });
     if (!hayRecurrentes && !hayProgramadas) {
       trecGuardarEstado_(estado, true, ahora);
@@ -533,7 +551,7 @@ function tareasAutoGenerar_(origen) {
     if (!lock) return abortar("No se pudo obtener el bloqueo; se reintentará.");
     const aAvisar = [];
     try {
-      trecCandidatas_(trecLeer_(hr.sheet), hoyTxt, letra).forEach(function (r) {
+      trecCandidatas_(trecLeer_(hr.sheet), hoyTxt, letra, hoyClave).forEach(function (r) {
         const esTarde = r.asignadoA === TAREA_JEFE_TARDE;
         const resumen = { plantilla: r.id, titulo: r.titulo, asignadoA: r.asignadoA };
         if (!trecDebeGenerarHoy_(r, cuad.porJefe)) {
