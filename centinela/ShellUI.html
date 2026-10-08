@@ -177,6 +177,9 @@
       <div class="tab-panel activo" id="tab-tareas" data-tab="tareas">
         <?!= include('TareasUI'); ?>
       </div>
+      <div class="tab-panel" id="tab-relevo" data-tab="relevo">
+        <?!= include('RelevoUI'); ?>
+      </div>
       <div class="tab-panel" id="tab-notas" data-tab="notas">
         <?!= include('NotasUI'); ?>
       </div>
@@ -225,6 +228,11 @@
       <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
       <span>Tareas</span>
       <i class="tab-badge" id="tabBadgeTareas"></i>
+    </a>
+    <a href="#" data-tab="relevo" onclick="event.preventDefault(); mostrarTab('relevo')">
+      <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      <span>Relevo</span>
+      <i class="tab-badge" id="tabBadgeRelevo"></i>
     </a>
     <a href="#" data-tab="notas" onclick="event.preventDefault(); mostrarTab('notas')">
       <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -359,6 +367,7 @@
       consumiblesSiVisible_();
       if (typeof tareasRecibirJefe === 'function') tareasRecibirJefe(jefe);
       if (typeof notasRecibirJefe === 'function') notasRecibirJefe(jefe);
+      if (typeof relevoRecibirJefe === 'function') relevoRecibirJefe(jefe);
     }
 
     function cambiarIdentidad() {
@@ -380,6 +389,7 @@
       // Que no quede en pantalla nada del jefe anterior (sus tareas, qué notas ha leído).
       if (typeof tareasAlCambiarIdentidad === 'function') tareasAlCambiarIdentidad();
       if (typeof notasAlCambiarIdentidad === 'function') notasAlCambiarIdentidad();
+      if (typeof relevoAlCambiarIdentidad === 'function') relevoAlCambiarIdentidad();
       if (typeof consumiblesAlCambiarIdentidad === 'function') consumiblesAlCambiarIdentidad();
     }
 
@@ -404,6 +414,7 @@
       if (id === 'dispositivos' && typeof dispositivosAlMostrar === 'function') dispositivosAlMostrar();
       if (id === 'tareas' && typeof tareasAlMostrar === 'function') tareasAlMostrar();
       if (id === 'notas' && typeof notasAlMostrar === 'function') notasAlMostrar();
+      if (id === 'relevo' && typeof relevoAlMostrar === 'function') relevoAlMostrar();
       if (id === 'aprobaciones' && typeof aprAlMostrar === 'function') aprAlMostrar();
       if (id === 'residuos' && typeof residuosAlMostrar === 'function') residuosAlMostrar();
       if (id === 'turnos' && typeof turnosAlMostrar === 'function') turnosAlMostrar();
@@ -454,6 +465,7 @@
         if (typeof personalActualizarSupervisor === 'function') personalActualizarSupervisor();
         if (typeof tareasAlCambiarModo === 'function') tareasAlCambiarModo();
         if (typeof notasAlCambiarModo === 'function') notasAlCambiarModo();
+        if (typeof relevoAlCambiarModo === 'function') relevoAlCambiarModo();
         if (typeof aprAlCambiarModo === 'function') aprAlCambiarModo();
       } else {
         showToast('❌ Contraseña incorrecta');
@@ -473,6 +485,7 @@
       if (typeof personalActualizarSupervisor === 'function') personalActualizarSupervisor();
       if (typeof tareasAlCambiarModo === 'function') tareasAlCambiarModo();
       if (typeof notasAlCambiarModo === 'function') notasAlCambiarModo();
+      if (typeof relevoAlCambiarModo === 'function') relevoAlCambiarModo();
       if (typeof aprAlCambiarModo === 'function') aprAlCambiarModo();
       if (!CentinelaState.jefe) cambiarIdentidad();
     }

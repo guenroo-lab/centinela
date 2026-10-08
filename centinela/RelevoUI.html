@@ -1,0 +1,1002 @@
+<style>
+  /* Relevo (cambio de turno). Cada tarjeta define --rt (color de relleno/borde) y --rt-text (color para TEXTO) según el turno. */
+  .rel-top { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .rel-acciones { display:flex; flex-wrap:wrap; gap:8px; }
+  .rel-btn { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; min-height:44px; min-width:44px; font-size:13px; font-weight:700; font-family:inherit; background:var(--ink-800); color:var(--text-300); transition:transform .15s ease, background .15s ease; white-space:nowrap; }
+  .rel-btn:active { transform:scale(.96); background:var(--ink-700); }
+  .rel-btn:disabled { opacity:.6; cursor:default; }
+  .rel-btn-principal { background:var(--accent); color:var(--accent-ink); }
+  .rel-btn-principal:active { background:var(--accent); }
+
+  .rel-sup-banner { display:none; align-items:center; justify-content:space-between; gap:10px; background:linear-gradient(160deg, var(--warn-bg) 0%, var(--ink-900) 140%); border:1px solid var(--warn-line); border-radius:var(--radius-card); padding:8px 8px 8px 14px; margin-bottom:14px; color:var(--warn-fg); font-size:13px; font-weight:700; }
+  .rel-sup-banner.visible { display:flex; }
+  .rel-sup-banner button { cursor:pointer; border:1px solid var(--warn-line); background:transparent; color:var(--warn-fg); border-radius:var(--radius-btn); padding:8px 12px; min-height:44px; font-size:12.5px; font-weight:700; font-family:inherit; }
+
+  .rel-resumen { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .rel-chip { display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:var(--radius-chip); border:1px solid var(--ink-700); background:var(--ink-900); color:var(--text-300); font-size:12.5px; font-weight:700; }
+  .rel-chip b { color:var(--text-100); font-variant-numeric:tabular-nums; }
+  .rel-chip.sin-leer { border-color:var(--accent-line); background:var(--accent-dim); color:var(--accent-text); }
+  .rel-chip.sin-leer b { color:inherit; }
+
+  /* Formulario */
+  .rel-form { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--accent-line); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:14px; margin-bottom:18px; display:none; }
+  .rel-form.abierto { display:block; }
+  @media (min-width: 900px) { .rel-form { max-width:680px; } }
+  .rel-form-tit { margin:0 0 4px; font-size:16px; font-weight:800; color:var(--text-100); }
+  .rel-form-sub { margin:0 0 6px; font-size:12.5px; color:var(--text-500); line-height:1.5; }
+  .rel-lbl { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-500); margin:16px 0 6px; }
+  .rel-lbl small { text-transform:none; letter-spacing:0; font-weight:600; }
+  .rel-input, .rel-textarea { width:100%; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); color:var(--text-100); padding:10px 12px; font-size:16px; font-family:inherit; box-sizing:border-box; color-scheme:dark; }
+  [data-kmode="light"] .rel-input, [data-kmode="light"] .rel-textarea { color-scheme:light; }
+  .rel-input { min-height:44px; }
+  .rel-textarea { min-height:64px; resize:vertical; line-height:1.45; }
+  .rel-textarea.alto { min-height:92px; }
+  .rel-input:focus, .rel-textarea:focus { outline:none; border-color:var(--accent); }
+  .rel-opciones { display:flex; flex-wrap:wrap; gap:6px; }
+  .rel-op { cursor:pointer; min-height:44px; min-width:48px; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:8px 14px; border-radius:var(--radius-chip); border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); font-size:13px; font-weight:800; font-family:inherit; }
+  .rel-op.sel { background:var(--accent-dim); border-color:var(--accent-line); color:var(--accent-text); }
+  .rel-op:disabled { opacity:.55; cursor:default; }
+  .rel-muelle-bloque { margin-top:10px; }
+  .rel-muelle-bloque > label { display:block; font-size:12.5px; font-weight:800; color:var(--text-300); margin-bottom:5px; }
+  /* En móvil cada punto ocupa dos líneas (el texto entero y debajo «cuándo» + quitar); en pantalla ancha, una. */
+  .rel-pend-fila { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:10px; }
+  .rel-pend-fila .rel-input.texto { flex:1 1 100%; min-width:0; }
+  .rel-pend-fila .rel-input.cuando { flex:1 1 0; min-width:0; }
+  .rel-pend-quitar { flex:0 0 44px; cursor:pointer; min-height:44px; border:1px solid var(--ink-700); background:transparent; color:var(--text-500); border-radius:var(--radius-btn); font-size:16px; font-family:inherit; }
+  @media (min-width: 900px) {
+    .rel-pend-fila .rel-input.texto { flex:1 1 0; }
+    .rel-pend-fila .rel-input.cuando { flex:0 0 170px; }
+  }
+  .rel-foto-btn { cursor:pointer; width:100%; min-height:48px; border:1px dashed var(--ink-600, var(--ink-700)); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:8px 12px; font-size:13.5px; font-weight:700; font-family:inherit; }
+  .rel-foto-prev { display:flex; align-items:center; gap:12px; background:var(--ink-950); border:1px solid var(--ink-700); border-radius:var(--radius-btn); padding:8px; }
+  .rel-foto-prev img { width:84px; height:84px; object-fit:cover; border-radius:8px; flex-shrink:0; }
+  .rel-foto-prev .info { flex:1; font-size:12px; color:var(--text-500); }
+  .rel-foto-prev button { cursor:pointer; min-height:44px; border:1px solid var(--ink-700); background:transparent; color:var(--text-300); border-radius:var(--radius-btn); padding:0 12px; font-size:12.5px; font-weight:700; font-family:inherit; }
+  .rel-hint { margin-top:10px; font-size:12.5px; color:var(--text-500); min-height:1.4em; }
+  .rel-hint.error { color:var(--danger-fg); font-weight:700; }
+  .rel-form-acc { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .rel-btn-publicar { flex:1 1 100%; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:14px; min-height:48px; font-size:15px; font-weight:800; font-family:inherit; background:var(--accent); color:var(--accent-ink); box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 55%, transparent), 0 1px 0 rgba(255,255,255,.15) inset; transition:transform .15s ease; }
+  .rel-btn-publicar:active { transform:scale(.98); }
+  .rel-btn-publicar:disabled { opacity:.6; cursor:default; }
+  .rel-link { cursor:pointer; border:none; background:none; color:var(--accent-text); font-weight:700; font-size:12.5px; padding:10px 4px; min-height:44px; text-decoration:underline; font-family:inherit; }
+  .rel-link.peligro { color:var(--danger-fg); }
+
+  /* Puntos abiertos */
+  .rel-abiertos { margin-bottom:18px; border:1px solid var(--warn-line); background:linear-gradient(160deg, var(--warn-bg) 0%, var(--ink-900) 160%); border-radius:var(--radius-card); padding:12px 14px; }
+  .rel-abiertos h2 { margin:0 0 8px; font-size:14px; font-weight:800; color:var(--warn-fg); }
+  .rel-ab-item { display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-top:1px solid color-mix(in srgb, var(--warn-line) 55%, transparent); }
+  .rel-ab-item:first-of-type { border-top:none; }
+  .rel-ab-txt { flex:1; min-width:0; font-size:14px; line-height:1.4; color:var(--text-100); overflow-wrap:anywhere; }
+  .rel-ab-txt .cuando { font-weight:800; color:var(--warn-fg); }
+  .rel-ab-meta { display:block; margin-top:3px; font-size:11.5px; color:var(--text-500); }
+  .rel-ab-meta.viejo { color:var(--warn-fg); font-weight:700; }
+  .rel-btn-hecho { flex:0 0 auto; cursor:pointer; min-height:44px; min-width:76px; border:1px solid color-mix(in srgb, var(--ok) 55%, transparent); background:color-mix(in srgb, var(--ok) 14%, var(--ink-950)); color:var(--ok); border-radius:var(--radius-btn); padding:6px 12px; font-size:13px; font-weight:800; font-family:inherit; }
+  .rel-btn-hecho:disabled { opacity:.6; cursor:default; }
+
+  /* Tarjetas */
+  .rel-t-M { --rt:#f59e0b; --rt-text:#fbbf24; }
+  .rel-t-T { --rt:#6366f1; --rt-text:#aab4ff; }
+  .rel-t-P { --rt:#14b8a6; --rt-text:#5eead4; }
+  .rel-t-X { --rt:var(--accent); --rt-text:var(--accent-text); }
+  [data-kmode="light"] .rel-t-M { --rt:#d97706; --rt-text:#92400e; }
+  [data-kmode="light"] .rel-t-T { --rt:#4f46e5; --rt-text:#3730a3; }
+  [data-kmode="light"] .rel-t-P { --rt:#0d9488; --rt-text:#115e59; }
+
+  .rel-lista { display:flex; flex-direction:column; gap:16px; }
+  @media (min-width: 900px) { .rel-lista { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:18px; align-items:start; } }
+  .rel-card { position:relative; overflow:hidden; isolation:isolate; border-radius:20px; border:1px solid color-mix(in srgb, var(--rt) 40%, var(--ink-800)); background:linear-gradient(155deg, color-mix(in srgb, var(--rt) 16%, var(--ink-850)) 0%, var(--ink-900) 64%); box-shadow:var(--shadow-card), 0 14px 34px -16px color-mix(in srgb, var(--rt) 70%, transparent); padding:18px 16px 14px; }
+  .rel-card::before { content:''; position:absolute; left:0; right:0; top:0; height:4px; background:linear-gradient(90deg, var(--rt), color-mix(in srgb, var(--rt) 25%, transparent)); z-index:2; }
+  .rel-card.ultimo { border-color:var(--rt); }
+  .rel-head { display:flex; align-items:center; gap:11px; }
+  .rel-icono { width:46px; height:46px; border-radius:15px; display:grid; place-items:center; font-size:23px; flex-shrink:0; background:color-mix(in srgb, var(--rt) 26%, var(--ink-900)); border:1px solid color-mix(in srgb, var(--rt) 50%, transparent); }
+  .rel-turno { font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--rt-text); }
+  .rel-cuando { font-size:12px; color:var(--text-500); margin-top:2px; }
+  .rel-cuando b { color:var(--text-300); }
+  .rel-pills { margin-left:auto; display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+  .rel-pill { font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:var(--radius-chip); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+  .rel-pill.ultimo { background:var(--ink-800); color:var(--text-300); }
+  .rel-pill.nuevo { background:var(--rt); color:#fff; }
+  .rel-pill.editado { background:transparent; border:1px solid var(--ink-700); color:var(--text-500); }
+  .rel-bloque { margin-top:14px; }
+  .rel-bloque-tit { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--rt-text); margin-bottom:5px; }
+  .rel-muelle { display:flex; gap:10px; align-items:flex-start; padding:7px 0; border-top:1px solid color-mix(in srgb, var(--rt) 18%, var(--ink-800)); }
+  .rel-muelle:first-of-type { border-top:none; }
+  .rel-muelle-n { flex:0 0 auto; min-width:34px; height:28px; border-radius:9px; display:grid; place-items:center; padding:0 6px; font-size:12.5px; font-weight:800; background:color-mix(in srgb, var(--rt) 22%, var(--ink-950)); color:var(--rt-text); }
+  .rel-muelle-t { flex:1; min-width:0; font-size:14.5px; line-height:1.5; color:var(--text-100); white-space:pre-line; overflow-wrap:anywhere; }
+  .rel-texto { margin:0; font-size:14.5px; line-height:1.6; color:var(--text-100); white-space:pre-line; overflow-wrap:anywhere; }
+  .rel-punto { display:flex; align-items:flex-start; gap:10px; padding:7px 0; border-top:1px solid color-mix(in srgb, var(--rt) 18%, var(--ink-800)); }
+  .rel-punto:first-of-type { border-top:none; }
+  .rel-punto .txt { flex:1; min-width:0; font-size:14.5px; line-height:1.45; color:var(--text-100); overflow-wrap:anywhere; }
+  .rel-punto .txt .cuando { font-weight:800; color:var(--rt-text); }
+  .rel-punto .txt .quien { display:block; margin-top:2px; font-size:11.5px; color:var(--text-500); }
+  .rel-punto.hecho .txt { color:var(--text-500); text-decoration:line-through; }
+  .rel-punto.hecho .txt .quien { text-decoration:none; color:var(--ok); }
+  .rel-foto { margin-top:12px; border-radius:14px; overflow:hidden; border:1px solid color-mix(in srgb, var(--rt) 28%, var(--ink-800)); background:var(--ink-950); min-height:56px; display:grid; place-items:center; }
+  .rel-foto img { display:block; width:100%; max-height:340px; object-fit:cover; cursor:zoom-in; }
+  .rel-foto .estado { padding:16px; font-size:12.5px; color:var(--text-500); text-align:center; }
+  .rel-foto .estado button { cursor:pointer; border:none; background:none; color:var(--accent-text); font-weight:700; font-size:12.5px; padding:0; text-decoration:underline; font-family:inherit; }
+  .rel-pie { margin-top:14px; padding-top:12px; border-top:1px solid color-mix(in srgb, var(--rt) 22%, var(--ink-800)); }
+  .rel-btn-enterado { width:100%; cursor:pointer; min-height:48px; border:none; border-radius:var(--radius-btn); font-size:14.5px; font-weight:800; font-family:inherit; background:var(--rt); color:#fff; box-shadow:0 6px 18px -8px var(--rt); transition:transform .15s ease; margin-bottom:10px; }
+  .rel-btn-enterado:active { transform:scale(.98); }
+  .rel-btn-enterado:disabled { opacity:.6; cursor:default; }
+  .rel-ok { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--ok); margin-bottom:10px; }
+  .rel-jefes { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .rel-jefe { font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:var(--radius-chip); border:1px solid var(--ink-700); color:var(--text-500); background:var(--ink-950); }
+  .rel-jefe.ok { border-color:color-mix(in srgb, var(--ok) 45%, transparent); color:var(--ok); }
+  .rel-acc { display:flex; flex-wrap:wrap; gap:8px; }
+  .rel-acc button { cursor:pointer; min-height:44px; border:1px solid var(--ink-700); background:transparent; color:var(--text-300); border-radius:var(--radius-btn); padding:8px 13px; font-size:12.5px; font-weight:700; font-family:inherit; }
+  .rel-acc button:active { background:var(--ink-800); }
+  .rel-acc button:disabled { opacity:.6; cursor:default; }
+  .rel-acc button.confirmar { border-color:var(--danger-line); background:var(--danger-bg); color:var(--danger-fg); }
+  .rel-vacio { text-align:center; padding:34px 18px; border:1px dashed var(--ink-700); border-radius:20px; color:var(--text-500); font-size:14px; line-height:1.6; }
+  .rel-vacio .gran { font-size:38px; display:block; margin-bottom:6px; }
+  .rel-vacio b { color:var(--text-300); }
+  .rel-aviso { color:var(--text-500); font-size:13px; margin:6px 0; }
+  .rel-aviso button { cursor:pointer; border:none; background:none; color:var(--accent-text); font-weight:700; font-size:13px; padding:0; text-decoration:underline; font-family:inherit; }
+
+  /* Visor de foto y cuadro de copia: cuelgan del <body> */
+  .rel-visor { position:fixed; inset:0; z-index:2100; background:rgba(0,0,0,.92); display:flex; align-items:center; justify-content:center; padding:14px; cursor:zoom-out; }
+  .rel-visor[hidden] { display:none; }
+  .rel-visor img { max-width:100%; max-height:92vh; border-radius:12px; }
+  .rel-visor button { position:absolute; top:12px; right:12px; min-width:44px; min-height:44px; cursor:pointer; border:none; border-radius:999px; background:rgba(255,255,255,.16); color:#fff; font-size:20px; font-family:inherit; }
+  .rel-copia-ov { position:fixed; inset:0; z-index:2100; background:rgba(4,6,12,.86); display:flex; align-items:center; justify-content:center; padding:18px 14px; }
+  .rel-copia-ov[hidden] { display:none; }
+  .rel-copia-caja { width:100%; max-width:520px; background:var(--ink-900); border:1px solid var(--ink-800); border-radius:var(--radius-card); padding:16px; box-shadow:var(--shadow-card); }
+  .rel-copia-caja p { margin:0 0 10px; font-size:13.5px; color:var(--text-300); line-height:1.5; }
+  .rel-copia-caja textarea { width:100%; min-height:220px; background:var(--ink-950); color:var(--text-100); border:1px solid var(--ink-700); border-radius:var(--radius-btn); padding:10px 12px; font-size:14px; font-family:inherit; box-sizing:border-box; line-height:1.5; }
+  .rel-copia-caja .fila { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+</style>
+
+<div class="rel-top">
+  <div>
+    <h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">🔄 Relevo</h1>
+    <p style="color:var(--text-500);font-size:13px;margin:0;" id="relSubtitulo">Lo que deja el turno que sale para el que entra.</p>
+  </div>
+  <div class="rel-acciones">
+    <button type="button" class="rel-btn rel-btn-principal" id="relBtnNuevo" style="display:none;" onclick="relAbrirForm(0)">✍️ Escribir relevo</button>
+    <button type="button" class="rel-btn" onclick="relCargar(false)" aria-label="Actualizar">↻</button>
+  </div>
+</div>
+
+<div class="rel-sup-banner" id="relSupBanner">
+  <span>🔒 Modo supervisor · puedes retirar cualquier relevo</span>
+  <button type="button" onclick="salirModoSupervisor()">Salir del modo supervisor</button>
+</div>
+
+<div class="rel-form" id="relForm"></div>
+
+<div class="rel-resumen" id="relResumen"></div>
+<div id="relAbiertos"></div>
+<div id="relLista" class="rel-lista"><p class="rel-aviso">Cargando…</p></div>
+<input type="file" id="relFotoInput" accept="image/*" style="display:none;" onchange="relAlElegirFoto(this)">
+
+<script>
+  const REL_TURNOS = {
+    M: { n: 'Mañana', i: '☀️' },
+    T: { n: 'Tarde', i: '🌆' },
+    P: { n: 'Partido', i: '🌓' }
+  };
+  const REL_REFRESCO_MS = 120000;
+  const REL_TIMEOUT_MS = 25000;
+  const REL_FOTO_MAX = 340000;      // caracteres de la data URI (el servidor admite 350.000)
+  const REL_MAX_PUNTOS = 10;
+  const REL_BORRADOR_CLAVE = 'centinela_relevo_borrador_';
+
+  let relDatos = null;          // última respuesta de obtenerRelevo
+  let relT0 = 0;                // Date.now() del dispositivo cuando llegó (para calcular "ahora" sin depender de su reloj)
+  let relCargando = false;
+  let relPeticion = 0;          // cuenta cada lectura del muro (descarta las respuestas viejas de la propia lectura)
+  let relEpoca = 0;             // cambia solo al cambiar de jefe o de modo (descarta TODO lo que llegue de la época anterior)
+  let relTimer = null;
+  let relTimeout = null;
+  let relFirma = '';
+  let relF = null;              // formulario abierto: { editId, turno, turnoManual, sel, muelles, zonas, paso, pend, foto, hint, hintError }
+  let relEnviando = false;
+  let relConfirmarRetirar = null;
+  let relBorradorTimer = null;
+  let relFotoCache = {};
+  let relFotoFallo = {};
+  let relFotoCargando = false;
+  let relOcupados = {};         // ids (enterado-, punto-) con una petición en curso
+
+  function relEsc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function relErrorServidor(err) { return '❌ Error del servidor: ' + (err && err.message ? err.message : err); }
+  function relJefe() { return CentinelaState.jefe || ''; }
+  function relEsSup() { return !!CentinelaState.supervisor; }
+  function relModo() { return relJefe() || relEsSup() ? 'activo' : 'sin'; }
+  function relAhora() { return relDatos ? relDatos.ahoraMs + (Date.now() - relT0) : Date.now(); }
+  function relP2(n) { return (n < 10 ? '0' : '') + n; }
+
+  // "hoy 09:15", "ayer 16:40" o "dd/MM 10:00" (hora del dispositivo).
+  function relCuando(ms) {
+    if (ms === null || ms === undefined) return '';
+    const d = new Date(ms), hoy = new Date();
+    const h = relP2(d.getHours()) + ':' + relP2(d.getMinutes());
+    const dia = function (x) { return x.getFullYear() * 10000 + (x.getMonth() + 1) * 100 + x.getDate(); };
+    const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
+    if (dia(d) === dia(hoy)) return 'hoy ' + h;
+    if (dia(d) === dia(ayer)) return 'ayer ' + h;
+    return relP2(d.getDate()) + '/' + relP2(d.getMonth() + 1) + ' ' + h;
+  }
+  // "yyyy-MM-dd HH:mm" (hora del servidor) -> ms, o null
+  function relParseFecha(txt) {
+    const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(String(txt || ''));
+    return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : null;
+  }
+  function relDiaCorto(ms) {
+    const d = new Date(ms == null ? Date.now() : ms);
+    const dias = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    return dias[d.getDay()] + ' ' + relP2(d.getDate()) + '/' + relP2(d.getMonth() + 1);
+  }
+  function relClaseTurno(t) { return REL_TURNOS[t] ? 'rel-t-' + t : 'rel-t-X'; }
+  function relEnterado(p, jefe) {
+    return (p.enterados || []).some(function (e) { return e.jefe === jefe; });
+  }
+  function relSinLeer() {
+    if (!relDatos || !relJefe()) return 0;
+    return (relDatos.partes || []).filter(function (p) { return !relEnterado(p, relJefe()); }).length;
+  }
+  function relActualizarBadge() {
+    const b = document.getElementById('tabBadgeRelevo');
+    if (!b) return;
+    const n = relSinLeer();
+    if (n > 0) { b.textContent = n > 9 ? '9+' : String(n); b.style.display = 'block'; }
+    else { b.style.display = 'none'; }
+  }
+  function relPuedeEditar(p) {
+    if (!relDatos || !relJefe() || p.autor !== relJefe() || p.publicadoMs == null) return false;
+    return relAhora() - p.publicadoMs <= relDatos.editarMin * 60000;
+  }
+  function relPuedeRetirar(p) { return relEsSup() || relPuedeEditar(p); }
+
+  // ── Ganchos del cascarón ─────────────────────────────────
+  function relevoAlMostrar() { relCargar(false); relProgramarRefresco(); }
+  function relevoRecibirJefe() { relLimpiar(); relCargar(true); relProgramarRefresco(); }
+  function relevoAlCambiarIdentidad() { relLimpiar(); }
+  function relevoAlCambiarModo() { relLimpiar(); relCargar(true); relProgramarRefresco(); }
+
+  // Un único temporizador: se para y se vuelve a armar en la MISMA función; relTick no lo toca.
+  function relDetenerRefresco() {
+    if (relTimer !== null) { clearInterval(relTimer); relTimer = null; }
+  }
+  function relProgramarRefresco() {
+    relDetenerRefresco();
+    if (relModo() === 'sin') return;
+    relTimer = setInterval(relTick, REL_REFRESCO_MS);
+  }
+  // Se refresca también con la pestaña en segundo plano: la insignia depende de ello.
+  function relTick() {
+    if (relModo() === 'sin' || document.hidden || relCargando || relEnviando) return;
+    const a = document.activeElement;
+    if (a && a.closest && a.closest('#relForm')) return;     // no pisar lo que se está escribiendo
+    relCargar(true);
+  }
+
+  function relLimpiar() {
+    relGuardarBorradorAhora();           // lo escrito a medias se queda como borrador de su autor
+    relDetenerRefresco();
+    relPeticion++;
+    relEpoca++;
+    if (relTimeout !== null) { clearTimeout(relTimeout); relTimeout = null; }
+    relCargando = false;
+    relEnviando = false;
+    relDatos = null;
+    relFirma = '';
+    relF = null;
+    relConfirmarRetirar = null;
+    relFotoCache = {};
+    relFotoFallo = {};
+    relFotoCargando = false;
+    relOcupados = {};
+    relCerrarVisor();
+    relCerrarCopia();
+    document.getElementById('relForm').classList.remove('abierto');
+    document.getElementById('relForm').innerHTML = '';
+    document.getElementById('relLista').innerHTML = '<p class="rel-aviso">Cargando…</p>';
+    document.getElementById('relResumen').innerHTML = '';
+    document.getElementById('relAbiertos').innerHTML = '';
+    relActualizarBadge();
+    relAplicarModo();
+  }
+
+  function relAplicarModo() {
+    document.getElementById('relSupBanner').classList.toggle('visible', relEsSup());
+    document.getElementById('relBtnNuevo').style.display = relJefe() ? '' : 'none';
+    if (!relJefe()) { document.getElementById('relForm').classList.remove('abierto'); relF = null; }
+    document.getElementById('relSubtitulo').textContent = relJefe()
+      ? 'Lo que deja el turno que sale para el que entra. Escribe el tuyo al terminar.'
+      : 'Lo que deja el turno que sale para el que entra. Para escribir uno, elige tu nombre.';
+  }
+
+  // ── Carga ────────────────────────────────────────────────
+  function relCargar(silencioso) {
+    relAplicarModo();
+    if (relModo() === 'sin') {
+      document.getElementById('relLista').innerHTML = '<p class="rel-aviso">Identifícate para ver los relevos.</p>';
+      return;
+    }
+    if (relCargando) return;
+    relCargando = true;
+    const peticion = ++relPeticion;
+    const cont = document.getElementById('relLista');
+    const fallo = function (texto) {
+      relFirma = '';
+      cont.innerHTML = '<p class="rel-aviso">' + relEsc(texto) + ' <button type="button" onclick="relCargar(false)">Reintentar</button></p>';
+    };
+    // Si el servidor no contesta nunca, no se queda en «Cargando…» para siempre.
+    if (relTimeout !== null) clearTimeout(relTimeout);
+    relTimeout = setTimeout(function () {
+      relTimeout = null;
+      if (peticion !== relPeticion || !relCargando) return;
+      relPeticion++;
+      relCargando = false;
+      if (!silencioso || !relDatos) fallo('El servidor tarda demasiado en contestar.');
+    }, REL_TIMEOUT_MS);
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (peticion !== relPeticion) return;     // cambió la identidad, el modo o se agotó el tiempo
+        if (relTimeout !== null) { clearTimeout(relTimeout); relTimeout = null; }
+        relCargando = false;
+        if (!r || !r.ok) { if (!silencioso || !relDatos) fallo('No se pudieron leer los relevos (' + ((r && r.error) || 'respuesta vacía') + ').'); return; }
+        const firma = JSON.stringify(r.partes) + JSON.stringify(r.abiertosFuera) + Math.floor(r.ahoraMs / 300000);
+        const cambio = firma !== relFirma;
+        relFirma = firma;
+        relDatos = r;
+        relT0 = Date.now();
+        relActualizarBadge();
+        if (cambio) relPintar();
+      })
+      .withFailureHandler(function (err) {
+        if (peticion !== relPeticion) return;
+        if (relTimeout !== null) { clearTimeout(relTimeout); relTimeout = null; }
+        relCargando = false;
+        if (!silencioso || !relDatos) fallo(relErrorServidor(err));
+      })
+      .obtenerRelevo({});
+  }
+
+  // ── Fotos (se piden aparte y se guardan en memoria) ──────
+  function relUriFoto(uri) {
+    return typeof uri === 'string' && uri.length <= 350000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/]+={0,2}$/.test(uri) ? uri : '';
+  }
+  function relHtmlFoto(id) {
+    if (relFotoCache[id]) return '<img src="' + relFotoCache[id] + '" alt="Foto del relevo" onclick="relVerFoto(' + id + ')">';
+    if (relFotoFallo[id]) return '<div class="estado">📷 No se pudo cargar la foto. <button type="button" onclick="relReintentarFoto(' + id + ')">Reintentar</button></div>';
+    return '<div class="estado">📷 Cargando foto…</div>';
+  }
+  function relPintarFoto(id) {
+    const els = document.querySelectorAll('[data-rel-foto="' + id + '"]');
+    for (let i = 0; i < els.length; i++) els[i].innerHTML = relHtmlFoto(id);
+  }
+  function relCargarFotos() {
+    if (relFotoCargando || !relDatos) return;
+    const pendiente = (relDatos.partes || []).filter(function (p) { return p.tieneFoto && !relFotoCache[p.id] && !relFotoFallo[p.id] && document.querySelector('[data-rel-foto="' + p.id + '"]'); })[0];
+    if (!pendiente) return;
+    relFotoCargando = true;
+    const id = pendiente.id, epoca = relEpoca;
+    const fin = function () { relFotoCargando = false; if (epoca === relEpoca) relCargarFotos(); };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (epoca !== relEpoca) { relFotoCargando = false; return; }
+        if (r && r.ok && relUriFoto(r.foto)) relFotoCache[id] = r.foto; else relFotoFallo[id] = (r && r.error) || 'foto no válida';
+        relPintarFoto(id);
+        fin();
+      })
+      .withFailureHandler(function (err) {
+        if (epoca !== relEpoca) { relFotoCargando = false; return; }
+        relFotoFallo[id] = (err && err.message) || 'error';
+        relPintarFoto(id);
+        fin();
+      })
+      .obtenerFotoRelevo({ id: id });
+  }
+  function relReintentarFoto(id) {
+    delete relFotoFallo[id];
+    relPintarFoto(id);
+    relCargarFotos();
+  }
+  function relAsegurarVisor() {
+    let v = document.getElementById('relVisor');
+    if (v) return v;
+    v = document.createElement('div');
+    v.id = 'relVisor';
+    v.className = 'rel-visor';
+    v.hidden = true;
+    v.setAttribute('role', 'dialog');
+    v.setAttribute('aria-label', 'Foto ampliada');
+    v.innerHTML = '<button type="button" aria-label="Cerrar la foto">✕</button><img alt="Foto ampliada">';
+    v.onclick = function () { relCerrarVisor(); };
+    document.body.appendChild(v);
+    return v;
+  }
+  function relVerFoto(id) {
+    if (!relFotoCache[id]) return;
+    const v = relAsegurarVisor();
+    v.querySelector('img').src = relFotoCache[id];
+    v.hidden = false;
+  }
+  function relCerrarVisor() {
+    const v = document.getElementById('relVisor');
+    if (v) { v.hidden = true; v.querySelector('img').removeAttribute('src'); }
+  }
+
+  // ── Texto para copiar (mensaje de WhatsApp) ──────────────
+  // p = { turno, autor, publicadoMs, muelles:{}, zonas, paso, pendientes:[{texto,cuando,estado}] }
+  function relTextoMensaje(p) {
+    const L = [];
+    const t = REL_TURNOS[p.turno];
+    L.push('🔄 *RELEVO' + (t ? ' · ' + t.n : '') + '* · ' + relDiaCorto(p.publicadoMs));
+    if (p.autor) L.push('👤 ' + p.autor);
+    Object.keys(p.muelles || {}).sort().forEach(function (n) { if (p.muelles[n]) L.push('📍 *Muelle ' + n + ':* ' + p.muelles[n]); });
+    if (p.zonas) L.push('🧱 *Zonas pendientes:* ' + p.zonas);
+    if (p.paso) L.push('⚠️ *Qué ha pasado:* ' + p.paso);
+    const abiertos = (p.pendientes || []).filter(function (x) { return x.estado !== 'hecho' && x.texto; });
+    if (abiertos.length) {
+      L.push('👀 *Estar pendiente de:*');
+      abiertos.forEach(function (x) { L.push('• ' + x.texto + (x.cuando ? ' (' + x.cuando + ')' : '')); });
+    }
+    return L.join('\n');
+  }
+  function relCopiarViejo(txt) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, txt.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (e) { return false; }
+  }
+  function relCopiarTexto(txt) {
+    return new Promise(function (resolve) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () { resolve(true); }, function () { resolve(relCopiarViejo(txt)); });
+      } else {
+        resolve(relCopiarViejo(txt));
+      }
+    });
+  }
+  // Si el navegador no deja copiar, se enseña el texto para copiarlo a mano (cuadro propio, sin diálogos del navegador).
+  function relMostrarCopia(txt) {
+    let o = document.getElementById('relCopiaOv');
+    if (!o) {
+      o = document.createElement('div');
+      o.id = 'relCopiaOv';
+      o.className = 'rel-copia-ov';
+      o.hidden = true;
+      o.setAttribute('role', 'dialog');
+      o.setAttribute('aria-modal', 'true');
+      o.innerHTML = '<div class="rel-copia-caja"><p>No he podido copiarlo solo. Mantén pulsado el texto, elige «Seleccionar todo» y copia.</p><textarea id="relCopiaTxt" readonly></textarea>' +
+        '<div class="fila"><button type="button" class="rel-btn" id="relCopiaSel">Seleccionar todo</button><button type="button" class="rel-btn rel-btn-principal" id="relCopiaCerrar">Cerrar</button></div></div>';
+      document.body.appendChild(o);
+      document.getElementById('relCopiaCerrar').onclick = function () { relCerrarCopia(); };
+      document.getElementById('relCopiaSel').onclick = function () { const t = document.getElementById('relCopiaTxt'); t.focus(); t.select(); };
+    }
+    document.getElementById('relCopiaTxt').value = txt;
+    o.hidden = false;
+  }
+  function relCerrarCopia() {
+    const o = document.getElementById('relCopiaOv');
+    if (o) o.hidden = true;
+  }
+  function relCopiarMensaje(txt) {
+    relCopiarTexto(txt).then(function (ok) {
+      if (ok) showToast('📋 Copiado: ya puedes pegarlo en WhatsApp');
+      else relMostrarCopia(txt);
+    });
+  }
+  function relCopiarParte(id) {
+    const p = (relDatos && relDatos.partes || []).filter(function (x) { return x.id === id; })[0];
+    if (p) relCopiarMensaje(relTextoMensaje(p));
+  }
+
+  // ── Tarjetas ─────────────────────────────────────────────
+  // Un punto de «estar pendiente de». ctx = { sinBoton } para no repetir el botón donde no hace falta.
+  function relPuntoHtml(d) {
+    const ocupado = !!relOcupados['punto-' + d.id];
+    const cuando = d.cuando ? ' <span class="cuando">· ' + relEsc(d.cuando) + '</span>' : '';
+    if (d.estado === 'hecho') {
+      return '<div class="rel-punto hecho"><span aria-hidden="true">✅</span><div class="txt">' + relEsc(d.texto) + cuando +
+        '<span class="quien">Hecho por ' + relEsc(d.hechoPor || '—') + (d.hecho ? ' · ' + relEsc(relCuando(relParseFecha(d.hecho))) : '') + '</span></div>' +
+        '<button type="button" class="rel-link" ' + (ocupado ? 'disabled ' : '') + 'onclick="relMarcarPunto(' + d.id + ', false)">↩ Reabrir</button></div>';
+    }
+    return '<div class="rel-punto"><span aria-hidden="true">⬜</span><div class="txt">' + relEsc(d.texto) + cuando + '</div>' +
+      '<button type="button" class="rel-btn-hecho" id="relBtnPunto-' + d.id + '" ' + (ocupado ? 'disabled ' : '') + 'onclick="relMarcarPunto(' + d.id + ', true)">' + (ocupado ? '…' : '✓ Hecho') + '</button></div>';
+  }
+
+  function relTarjeta(p, indice) {
+    const t = REL_TURNOS[p.turno];
+    const jefe = relJefe();
+    const sinLeer = !!jefe && !relEnterado(p, jefe);
+    const ahora = relAhora();
+
+    let cuerpo = '';
+    const nums = Object.keys(p.muelles || {}).sort();
+    if (nums.length) {
+      cuerpo += '<div class="rel-bloque"><div class="rel-bloque-tit">📍 Muelles</div>' + nums.map(function (n) {
+        return '<div class="rel-muelle"><span class="rel-muelle-n">M' + relEsc(n) + '</span><div class="rel-muelle-t">' + relEsc(p.muelles[n]) + '</div></div>';
+      }).join('') + '</div>';
+    }
+    if (p.zonas) cuerpo += '<div class="rel-bloque"><div class="rel-bloque-tit">🧱 Zonas pendientes</div><p class="rel-texto">' + relEsc(p.zonas) + '</p></div>';
+    if (p.paso) cuerpo += '<div class="rel-bloque"><div class="rel-bloque-tit">⚠️ Qué ha pasado</div><p class="rel-texto">' + relEsc(p.paso) + '</p></div>';
+    if ((p.pendientes || []).length) {
+      cuerpo += '<div class="rel-bloque"><div class="rel-bloque-tit">👀 Estar pendiente de</div>' + p.pendientes.map(relPuntoHtml).join('') + '</div>';
+    }
+    if (p.tieneFoto) cuerpo += '<div class="rel-foto" data-rel-foto="' + p.id + '">' + relHtmlFoto(p.id) + '</div>';
+
+    // Pie: Enterado (si eres otro jefe), quién lo ha leído (autor y supervisor) y acciones.
+    let pie = '';
+    const esAutor = !!jefe && p.autor === jefe;
+    if (jefe && !esAutor) {
+      const mio = (p.enterados || []).filter(function (x) { return x.jefe === jefe; })[0];
+      pie += mio
+        ? '<div class="rel-ok">✅ Enterado' + (mio.fecha ? ' · ' + relEsc(relCuando(relParseFecha(mio.fecha))) : '') + '</div>'
+        : '<button type="button" class="rel-btn-enterado" id="relBtnEnt-' + p.id + '" onclick="relMarcarEnterado(' + p.id + ')">✓ Enterado</button>';
+    }
+    if (esAutor || relEsSup()) {
+      const jefes = (relDatos && relDatos.jefes) || [];
+      pie += '<div class="rel-jefes">' + jefes.filter(function (j) { return j !== p.autor; }).map(function (j) {
+        const e = (p.enterados || []).filter(function (x) { return x.jefe === j; })[0];
+        return '<span class="rel-jefe' + (e ? ' ok' : '') + '">' + (e ? '✓ ' : '○ ') + relEsc(j) + (e && e.fecha ? ' · ' + relEsc(e.fecha.slice(11)) : '') + '</span>';
+      }).join('') + '</div>';
+    }
+    const acc = ['<button type="button" onclick="relCopiarParte(' + p.id + ')">📋 Copiar para WhatsApp</button>'];
+    if (relPuedeEditar(p)) acc.push('<button type="button" onclick="relAbrirForm(' + p.id + ')">✏️ Corregir</button>');
+    if (relPuedeRetirar(p)) {
+      const conf = relConfirmarRetirar === p.id;
+      acc.push('<button type="button" class="' + (conf ? 'confirmar' : '') + '" id="relBtnRet-' + p.id + '" onclick="relRetirar(' + p.id + ')">' + (conf ? '¿Seguro? Pulsa otra vez' : '🗑 Retirar') + '</button>');
+    }
+    pie = '<div class="rel-pie">' + pie + '<div class="rel-acc">' + acc.join('') + '</div></div>';
+
+    return '<article class="rel-card ' + relClaseTurno(p.turno) + (indice === 0 ? ' ultimo' : '') + '">' +
+      '<div class="rel-head"><span class="rel-icono" aria-hidden="true">' + (t ? t.i : '🔄') + '</span>' +
+      '<div><div class="rel-turno">Relevo' + (t ? ' de ' + relEsc(t.n.toLowerCase()) : '') + '</div>' +
+      '<div class="rel-cuando">' + relEsc(relCuando(p.publicadoMs) || p.publicado) + ' · <b>' + relEsc(p.autor) + '</b></div></div>' +
+      '<div class="rel-pills">' + (indice === 0 ? '<span class="rel-pill ultimo">Último</span>' : '') + (sinLeer ? '<span class="rel-pill nuevo">Nuevo</span>' : '') + (p.editado ? '<span class="rel-pill editado">Editado</span>' : '') + '</div></div>' +
+      cuerpo + pie + '</article>';
+  }
+
+  // Todos los puntos abiertos (los de las tarjetas y los de relevos más viejos), el más reciente primero.
+  function relPuntosAbiertos() {
+    if (!relDatos) return [];
+    const res = [];
+    (relDatos.partes || []).forEach(function (p) {
+      (p.pendientes || []).forEach(function (d) {
+        if (d.estado === 'abierto') res.push({ d: d, autor: p.autor, turno: p.turno, ms: p.publicadoMs });
+      });
+    });
+    (relDatos.abiertosFuera || []).forEach(function (d) {
+      res.push({ d: d, autor: d.parteAutor, turno: d.parteTurno, ms: d.partePublicadoMs });
+    });
+    res.sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); });
+    return res;
+  }
+
+  function relPintar() {
+    const d = relDatos || { partes: [], abiertosFuera: [] };
+    const sin = relSinLeer();
+    const abiertos = relPuntosAbiertos();
+
+    let resumen = '<span class="rel-chip"><b>' + d.partes.length + '</b> ' + (d.partes.length === 1 ? 'relevo' : 'relevos') + ' · ' + (d.diasMuro || 7) + ' días</span>';
+    if (relJefe()) resumen += sin > 0 ? '<span class="rel-chip sin-leer"><b>' + sin + '</b> sin leer</span>' : (d.partes.length ? '<span class="rel-chip">✅ Estás al día</span>' : '');
+    if (abiertos.length) resumen += '<span class="rel-chip sin-leer"><b>' + abiertos.length + '</b> ' + (abiertos.length === 1 ? 'punto abierto' : 'puntos abiertos') + '</span>';
+    document.getElementById('relResumen').innerHTML = resumen;
+
+    const ahora = relAhora();
+    document.getElementById('relAbiertos').innerHTML = abiertos.length
+      ? '<section class="rel-abiertos" aria-label="Puntos abiertos"><h2>👀 Pendientes abiertos (' + abiertos.length + ')</h2>' + abiertos.map(function (x) {
+        const dias = x.ms ? Math.floor((ahora - x.ms) / 86400000) : 0;
+        const ocupado = !!relOcupados['punto-' + x.d.id];
+        const t = REL_TURNOS[x.turno];
+        return '<div class="rel-ab-item"><div class="rel-ab-txt">' + relEsc(x.d.texto) + (x.d.cuando ? ' <span class="cuando">· ' + relEsc(x.d.cuando) + '</span>' : '') +
+          '<span class="rel-ab-meta' + (dias >= 1 ? ' viejo' : '') + '">de ' + relEsc(x.autor) + (t ? ' · ' + relEsc(t.n.toLowerCase()) : '') + ' · ' + relEsc(relCuando(x.ms)) + (dias >= 1 ? ' · lleva ' + dias + (dias === 1 ? ' día' : ' días') + ' abierto' : '') + '</span></div>' +
+          '<button type="button" class="rel-btn-hecho" ' + (ocupado ? 'disabled ' : '') + 'onclick="relMarcarPunto(' + x.d.id + ', true)">' + (ocupado ? '…' : '✓ Hecho') + '</button></div>';
+      }).join('') + '</section>'
+      : '';
+
+    const lista = document.getElementById('relLista');
+    if (!d.partes.length) {
+      lista.innerHTML = '<div class="rel-vacio"><span class="gran">📭</span>' +
+        (relJefe() ? '<b>Todavía no hay ningún relevo.</b><br>Cuando termines tu turno, pulsa <b>✍️ Escribir relevo</b> y cuéntale al siguiente cómo lo dejas.' : '<b>Todavía no hay ningún relevo.</b><br>Cuando un jefe lo escriba al terminar su turno lo verás aquí.') + '</div>';
+    } else {
+      lista.innerHTML = d.partes.map(function (p, i) { return relTarjeta(p, i); }).join('');
+    }
+    relCargarFotos();
+  }
+
+  // ── Acciones ─────────────────────────────────────────────
+  function relRecargarTras() {
+    relFirma = '';
+    relCargando = false;
+    relCargar(true);
+  }
+  function relMarcarEnterado(id) {
+    if (relOcupados['ent-' + id]) return;
+    relOcupados['ent-' + id] = true;
+    const btn = document.getElementById('relBtnEnt-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+    const restaurar = function () { delete relOcupados['ent-' + id]; if (btn) { btn.disabled = false; btn.textContent = '✓ Enterado'; } };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        delete relOcupados['ent-' + id];
+        if (r && r.success) {
+          showToast('✅ Marcado como enterado');
+          const p = (relDatos && relDatos.partes || []).filter(function (x) { return x.id === id; })[0];
+          if (p && !relEnterado(p, relJefe())) {
+            const d = new Date();
+            p.enterados = (p.enterados || []).concat([{ jefe: relJefe(), fecha: d.getFullYear() + '-' + relP2(d.getMonth() + 1) + '-' + relP2(d.getDate()) + ' ' + relP2(d.getHours()) + ':' + relP2(d.getMinutes()) }]);
+          }
+          relFirma = '';
+          relActualizarBadge();
+          relPintar();
+        } else {
+          restaurar();
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+          if (r && /ya no está disponible/.test(r.error || '')) relRecargarTras();
+        }
+      })
+      .withFailureHandler(function (err) { restaurar(); showToast(relErrorServidor(err)); })
+      .marcarRelevoEnterado({ id: id, jefe: relJefe() });
+  }
+  function relBuscarPunto(id) {
+    if (!relDatos) return null;
+    let res = null;
+    (relDatos.partes || []).forEach(function (p) { (p.pendientes || []).forEach(function (d) { if (d.id === id) res = d; }); });
+    (relDatos.abiertosFuera || []).forEach(function (d) { if (d.id === id) res = d; });
+    return res;
+  }
+  function relMarcarPunto(id, hecho) {
+    if (relOcupados['punto-' + id]) return;
+    relOcupados['punto-' + id] = true;
+    relPintar();
+    google.script.run
+      .withSuccessHandler(function (r) {
+        delete relOcupados['punto-' + id];
+        if (r && r.success) {
+          showToast(hecho ? '✅ Punto marcado como hecho' : '↩ Punto reabierto');
+          const d = relBuscarPunto(id);
+          if (d) {
+            d.estado = hecho ? 'hecho' : 'abierto';
+            d.hechoPor = hecho ? (r.hechoPor || relJefe() || 'Supervisor') : '';
+            d.hecho = hecho ? (r.hecho || '') : '';
+          }
+          relFirma = '';
+          relPintar();
+        } else {
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+          relPintar();
+          if (r && /ya no existe|se ha retirado/.test(r.error || '')) relRecargarTras();
+        }
+      })
+      .withFailureHandler(function (err) { delete relOcupados['punto-' + id]; showToast(relErrorServidor(err)); relPintar(); })
+      .marcarPendienteRelevo({ id: id, jefe: relJefe(), hecho: hecho, supervisor: relEsSup() });
+  }
+  // Dos pasos, como anular una tarea: el primer toque pide confirmar, el segundo retira.
+  function relRetirar(id) {
+    if (relConfirmarRetirar !== id) { relConfirmarRetirar = id; relPintar(); return; }
+    const btn = document.getElementById('relBtnRet-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = 'Retirando…'; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        relConfirmarRetirar = null;
+        showToast(r && r.success ? '🗑 Relevo retirado' : '❌ ' + ((r && r.error) || 'Error desconocido'));
+        relRecargarTras();
+      })
+      .withFailureHandler(function (err) { relConfirmarRetirar = null; showToast(relErrorServidor(err)); relPintar(); })
+      .retirarRelevo({ id: id, jefe: relJefe(), supervisor: relEsSup() });
+  }
+
+  // ── Formulario ───────────────────────────────────────────
+  function relFormVacio() {
+    return { editId: 0, dueno: relJefe(), turno: '', turnoManual: false, sel: (relDatos && relDatos.muellesDefecto ? relDatos.muellesDefecto : [2, 3, 4]).slice(), muelles: {}, zonas: '', paso: '', pend: [{ id: 0, texto: '', cuando: '' }], foto: '', hint: '', hintError: false };
+  }
+  function relTurnoPorHora() { return new Date().getHours() < 14 ? 'M' : 'T'; }
+
+  function relAbrirForm(editId) {
+    if (!relJefe()) { showToast('Elige tu nombre para escribir un relevo'); return; }
+    relF = relFormVacio();
+    if (editId) {
+      const p = (relDatos && relDatos.partes || []).filter(function (x) { return x.id === editId; })[0];
+      if (!p || !relPuedeEditar(p)) { relF = null; showToast('❌ Ya no se puede corregir este relevo'); return; }
+      relF.editId = editId;
+      relF.turno = p.turno;
+      relF.turnoManual = true;
+      relF.sel = Object.keys(p.muelles || {}).map(Number).sort();
+      relF.muelles = {};
+      Object.keys(p.muelles || {}).forEach(function (n) { relF.muelles[n] = p.muelles[n]; });
+      relF.zonas = p.zonas || '';
+      relF.paso = p.paso || '';
+      relF.pend = (p.pendientes || []).map(function (d) { return { id: d.id, texto: d.texto, cuando: d.cuando || '' }; });
+      if (!relF.pend.length) relF.pend = [{ id: 0, texto: '', cuando: '' }];
+    } else {
+      const b = relLeerBorrador();
+      if (b) {
+        relF.turno = b.turno || '';
+        relF.turnoManual = !!b.turno;
+        relF.sel = b.sel;
+        relF.muelles = b.muelles;
+        relF.zonas = b.zonas;
+        relF.paso = b.paso;
+        relF.pend = b.pend.length ? b.pend : relF.pend;
+        relF.hint = 'Recuperé lo que dejaste a medias en este dispositivo.';
+      }
+      relCargarTurno();
+    }
+    document.getElementById('relForm').classList.add('abierto');
+    relPintarForm();
+    document.getElementById('relForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function relCerrarForm() {
+    relGuardarBorradorAhora();
+    relF = null;
+    document.getElementById('relForm').classList.remove('abierto');
+    document.getElementById('relForm').innerHTML = '';
+  }
+
+  // El turno de hoy según el cuadrante; si no se puede leer, por la hora. El jefe siempre puede cambiarlo.
+  function relCargarTurno() {
+    const f = relF;
+    if (!f || f.turno) { return; }
+    const aplicar = function (turno) {
+      if (relF !== f || f.turnoManual || f.turno) return;
+      f.turno = REL_TURNOS[turno] ? turno : relTurnoPorHora();
+      relPintarTurnos();
+    };
+    google.script.run
+      .withSuccessHandler(function (r) { aplicar(r && r.ok && r.leido ? r.turno : ''); })
+      .withFailureHandler(function () { aplicar(''); })
+      .obtenerTurnoRelevo({ jefe: relJefe() });
+  }
+
+  function relPintarTurnos() {
+    const cont = document.getElementById('relFTurnos');
+    if (!cont || !relF) return;
+    const bloqueado = relF.editId > 0;
+    cont.innerHTML = Object.keys(REL_TURNOS).map(function (k) {
+      return '<button type="button" class="rel-op' + (relF.turno === k ? ' sel' : '') + '" aria-pressed="' + (relF.turno === k) + '" ' + (bloqueado ? 'disabled ' : '') + 'onclick="relElegirTurno(\'' + k + '\')">' + REL_TURNOS[k].i + ' ' + REL_TURNOS[k].n + '</button>';
+    }).join('');
+  }
+
+  function relPintarForm() {
+    const f = relF;
+    const cont = document.getElementById('relForm');
+    if (!f) { cont.innerHTML = ''; return; }
+    const muellesLista = (relDatos && relDatos.muelles) || [1, 2, 3, 4];
+    const edit = f.editId > 0;
+    let h = '<h2 class="rel-form-tit">' + (edit ? '✏️ Corregir tu relevo' : '✍️ Nuevo relevo') + '</h2>' +
+      '<p class="rel-form-sub">' + (edit ? 'Al corregirlo, los demás tendrán que volver a marcarlo como enterado.' : 'Cuéntale al siguiente cómo dejas el turno. Se guarda como borrador en este dispositivo mientras lo escribes.') + '</p>';
+    h += '<span class="rel-lbl">Turno que termina</span><div class="rel-opciones" id="relFTurnos"></div>';
+    h += '<span class="rel-lbl">📍 Muelles <small>(siempre se da dato del 2, 3 y 4)</small></span><div class="rel-opciones">' + muellesLista.map(function (n) {
+      const sel = f.sel.indexOf(n) > -1;
+      return '<button type="button" class="rel-op' + (sel ? ' sel' : '') + '" aria-pressed="' + sel + '" onclick="relToggleMuelle(' + n + ')">Muelle ' + n + '</button>';
+    }).join('') + '</div>';
+    f.sel.slice().sort().forEach(function (n) {
+      h += '<div class="rel-muelle-bloque"><label for="relFM-' + n + '">Muelle ' + n + '</label><textarea class="rel-textarea" id="relFM-' + n + '" maxlength="300" rows="2" placeholder="Cómo queda: carga, palets, camión…" oninput="relAlEscribirMuelle(' + n + ', this.value)">' + relEsc(f.muelles[String(n)] || '') + '</textarea></div>';
+    });
+    h += '<span class="rel-lbl" id="relFZonasLbl">🧱 Zonas pendientes</span><textarea class="rel-textarea" id="relFZonas" maxlength="600" aria-labelledby="relFZonasLbl" placeholder="Zonas a medias, sitios con cosas sin colocar…" oninput="relAlEscribir(\'zonas\', this.value)">' + relEsc(f.zonas) + '</textarea>';
+    h += '<span class="rel-lbl" id="relFPasoLbl">⚠️ Qué ha pasado</span><textarea class="rel-textarea alto" id="relFPaso" maxlength="800" aria-labelledby="relFPasoLbl" placeholder="Averías, incidencias, cualquier cosa que tenga que saber el siguiente…" oninput="relAlEscribir(\'paso\', this.value)">' + relEsc(f.paso) + '</textarea>';
+    h += '<span class="rel-lbl">👀 Estar pendiente de <small>(se queda abierto hasta que alguien lo marque como hecho)</small></span>';
+    f.pend.forEach(function (p, i) {
+      h += '<div class="rel-pend-fila"><input type="text" class="rel-input texto" id="relFPT-' + i + '" maxlength="160" autocomplete="off" aria-label="Qué hay que vigilar (punto ' + (i + 1) + ')" placeholder="Qué hay que vigilar" value="' + relEsc(p.texto) + '" oninput="relAlEscribirPunto(' + i + ', \'texto\', this.value)">' +
+        '<input type="text" class="rel-input cuando" id="relFPC-' + i + '" maxlength="40" autocomplete="off" aria-label="Para cuándo (punto ' + (i + 1) + ')" placeholder="Cuándo (opcional)" value="' + relEsc(p.cuando) + '" oninput="relAlEscribirPunto(' + i + ', \'cuando\', this.value)">' +
+        '<button type="button" class="rel-pend-quitar" aria-label="Quitar este punto" onclick="relQuitarPunto(' + i + ')">✕</button></div>';
+    });
+    h += '<button type="button" class="rel-btn" onclick="relAnadirPunto()" ' + (f.pend.length >= REL_MAX_PUNTOS ? 'disabled' : '') + '>➕ Añadir punto</button>';
+    if (!edit) {
+      h += '<span class="rel-lbl">📷 Foto <small>(opcional)</small></span><div id="relFFotoZona"></div>';
+    }
+    h += '<div class="rel-hint' + (f.hintError ? ' error' : '') + '" id="relFHint" role="status">' + relEsc(f.hint) + '</div>';
+    h += '<div class="rel-form-acc"><button type="button" class="rel-btn-publicar" id="relFPublicar" onclick="relPublicar()">' + (edit ? 'Guardar la corrección' : 'Publicar relevo') + '</button>' +
+      '<button type="button" class="rel-btn" onclick="relCopiarForm()">📋 Copiar como mensaje</button>' +
+      '<button type="button" class="rel-btn" onclick="relCerrarForm()">Cancelar</button>' +
+      (edit ? '' : '<button type="button" class="rel-link peligro" id="relFVaciar" onclick="relVaciarForm()">🧹 Empezar de cero</button>') + '</div>';
+    cont.innerHTML = h;
+    relPintarTurnos();
+    if (!edit) relPintarFotoForm();
+  }
+
+  function relPonerHint(texto, error) {
+    if (!relF) return;
+    relF.hint = texto || '';
+    relF.hintError = !!error;
+    const el = document.getElementById('relFHint');
+    if (el) { el.textContent = relF.hint; el.classList.toggle('error', relF.hintError); }
+  }
+  function relElegirTurno(k) { if (!relF || relF.editId) return; relF.turno = k; relF.turnoManual = true; relPintarTurnos(); relProgramarBorrador(); }
+  function relToggleMuelle(n) {
+    if (!relF) return;
+    const i = relF.sel.indexOf(n);
+    if (i > -1) relF.sel.splice(i, 1); else relF.sel.push(n);
+    relF.sel.sort();
+    relPintarForm();
+    relProgramarBorrador();
+  }
+  function relAlEscribirMuelle(n, v) { if (!relF) return; relF.muelles[String(n)] = v; relProgramarBorrador(); }
+  function relAlEscribir(campo, v) { if (!relF) return; relF[campo] = v; relProgramarBorrador(); }
+  function relAlEscribirPunto(i, campo, v) { if (!relF || !relF.pend[i]) return; relF.pend[i][campo] = v; relProgramarBorrador(); }
+  function relAnadirPunto() {
+    if (!relF || relF.pend.length >= REL_MAX_PUNTOS) return;
+    relF.pend.push({ id: 0, texto: '', cuando: '' });
+    relPintarForm();
+    const el = document.getElementById('relFPT-' + (relF.pend.length - 1));
+    if (el) el.focus();
+  }
+  function relQuitarPunto(i) {
+    if (!relF) return;
+    relF.pend.splice(i, 1);
+    if (!relF.pend.length) relF.pend.push({ id: 0, texto: '', cuando: '' });
+    relPintarForm();
+    relProgramarBorrador();
+  }
+  function relVaciarForm() {
+    const b = document.getElementById('relFVaciar');
+    if (!b) return;
+    if (b.getAttribute('data-conf') !== '1') { b.setAttribute('data-conf', '1'); b.textContent = '¿Seguro? Pulsa otra vez'; return; }
+    relBorrarBorrador();
+    const turno = relF.turno, manual = relF.turnoManual;
+    relF = relFormVacio();
+    relF.turno = turno; relF.turnoManual = manual;
+    relPintarForm();
+  }
+
+  // Los datos del formulario tal como los espera el servidor.
+  function relDatosForm() {
+    const f = relF;
+    const muelles = {};
+    f.sel.forEach(function (n) {
+      const t = String(f.muelles[String(n)] || '').trim();
+      if (t) muelles[String(n)] = t;
+    });
+    const pendientes = f.pend.map(function (p) { return { id: p.id || 0, texto: String(p.texto || '').trim(), cuando: String(p.cuando || '').trim() }; })
+      .filter(function (p) { return p.texto || p.cuando; });
+    const d = { jefe: relJefe(), turno: f.turno, muelles: muelles, zonas: String(f.zonas || '').trim(), paso: String(f.paso || '').trim(), pendientes: pendientes };
+    if (f.editId) d.id = f.editId; else if (f.foto) d.foto = f.foto;
+    return d;
+  }
+  function relTieneContenido(d, conFoto) {
+    return Object.keys(d.muelles).length > 0 || !!d.zonas || !!d.paso || d.pendientes.some(function (p) { return p.texto; }) || !!conFoto;
+  }
+
+  function relCopiarForm() {
+    if (!relF) return;
+    const d = relDatosForm();
+    if (!relTieneContenido(d, !!relF.foto)) { relPonerHint('Escribe algo antes de copiarlo.', true); return; }
+    relCopiarMensaje(relTextoMensaje({ turno: d.turno, autor: relJefe(), publicadoMs: Date.now(), muelles: d.muelles, zonas: d.zonas, paso: d.paso, pendientes: d.pendientes }));
+  }
+
+  function relPublicar() {
+    if (!relF || relEnviando) return;
+    const d = relDatosForm();
+    const edit = relF.editId > 0;
+    const conFoto = !!relF.foto || (edit && ((relDatos.partes || []).filter(function (p) { return p.id === relF.editId; })[0] || {}).tieneFoto);
+    if (!relTieneContenido(d, conFoto)) { relPonerHint('El relevo está vacío: cuenta algo (un muelle, una zona, qué ha pasado o algo a vigilar).', true); showToast('Falta contenido en el relevo'); return; }
+    if (d.pendientes.some(function (p) { return !p.texto; })) { relPonerHint('Un punto a vigilar tiene «cuándo» pero no dice qué vigilar.', true); return; }
+    relPonerHint('', false);
+    relEnviando = true;
+    const btn = document.getElementById('relFPublicar');
+    if (btn) { btn.disabled = true; btn.textContent = edit ? 'Guardando…' : 'Publicando…'; }
+    const restaurar = function () { relEnviando = false; const b = document.getElementById('relFPublicar'); if (b) { b.disabled = false; b.textContent = edit ? 'Guardar la corrección' : 'Publicar relevo'; } };
+    const epoca = relEpoca;
+    const srv = google.script.run
+      .withSuccessHandler(function (r) {
+        if (epoca !== relEpoca) { relEnviando = false; return; }
+        if (r && r.success) {
+          relEnviando = false;
+          relBorrarBorrador();
+          relF = null;
+          document.getElementById('relForm').classList.remove('abierto');
+          document.getElementById('relForm').innerHTML = '';
+          showToast(edit ? '✅ Relevo corregido' : '✅ Relevo publicado: el siguiente turno ya puede leerlo');
+          relRecargarTras();
+        } else {
+          restaurar();
+          relPonerHint((r && r.error) || 'No se pudo guardar.', true);
+          showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
+        }
+      })
+      .withFailureHandler(function (err) {
+        if (epoca !== relEpoca) { relEnviando = false; return; }
+        restaurar();
+        relPonerHint(relErrorServidor(err), true);
+        showToast(relErrorServidor(err));
+      });
+    if (edit) srv.editarRelevo(d); else srv.publicarRelevo(d);
+  }
+
+  // ── Foto del formulario (se reduce aquí: lado mayor 1280 px, JPEG) ───────────
+  function relComprimirFoto(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || !/^image\//.test(file.type || '')) { reject(new Error('El archivo no es una imagen.')); return; }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        const ancho = img.naturalWidth || img.width, alto = img.naturalHeight || img.height;
+        if (!ancho || !alto) { reject(new Error('No se pudo leer la imagen.')); return; }
+        let lado = 1280;
+        for (let intento = 0; intento < 5; intento++) {
+          const k = Math.min(1, lado / Math.max(ancho, alto));
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(ancho * k));
+          c.height = Math.max(1, Math.round(alto * k));
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff';                 // una PNG con transparencia no debe quedar negra
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          for (let q = 0.75; q >= 0.39; q -= 0.1) {
+            const d = c.toDataURL('image/jpeg', q);
+            if (d.length <= REL_FOTO_MAX) { resolve(d); return; }
+          }
+          lado = Math.round(lado * 0.75);
+        }
+        reject(new Error('La foto es demasiado grande.'));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No se pudo abrir la imagen.')); };
+      img.src = url;
+    });
+  }
+  function relAbrirSelectorFoto() {
+    const inp = document.getElementById('relFotoInput');
+    inp.value = '';
+    inp.click();
+  }
+  function relAlElegirFoto(input) {
+    const file = input.files && input.files[0];
+    if (!file || !relF) return;
+    showToast('⏳ Preparando foto…');
+    relComprimirFoto(file).then(function (uri) { if (relF) { relF.foto = uri; relPintarFotoForm(); } })
+      .catch(function (err) { showToast('❌ ' + ((err && err.message) || 'No se pudo preparar la foto')); });
+  }
+  function relQuitarFoto() { if (relF) { relF.foto = ''; relPintarFotoForm(); } }
+  function relPintarFotoForm() {
+    const z = document.getElementById('relFFotoZona');
+    if (!z || !relF) return;
+    z.innerHTML = relF.foto
+      ? '<div class="rel-foto-prev"><img src="' + relF.foto + '" alt="Foto elegida"><div class="info">Foto lista (' + Math.round(relF.foto.length * 0.75 / 1024) + ' KB)</div>' +
+        '<button type="button" onclick="relAbrirSelectorFoto()">Cambiar</button><button type="button" onclick="relQuitarFoto()">Quitar</button></div>'
+      : '<button type="button" class="rel-foto-btn" onclick="relAbrirSelectorFoto()">📷 Adjuntar una foto</button>';
+  }
+
+  // ── Borrador en este dispositivo (comodidad: nunca es el único sitio donde queda algo importante) ─────────
+  // El borrador es de quien abrió el formulario (no de quien esté identificado cuando se guarda: al pulsar «Cambiar»
+  // el nombre ya ha cambiado y el texto a medias se guardaría en el cajón del siguiente).
+  function relClaveBorrador(dueno) { return REL_BORRADOR_CLAVE + ((dueno === undefined ? relJefe() : dueno) || 'sin'); }
+  function relLeerBorrador() {
+    try {
+      const t = localStorage.getItem(relClaveBorrador());
+      if (!t) return null;
+      const b = JSON.parse(t);
+      if (!b || typeof b !== 'object' || !b.guardado || Date.now() - b.guardado > 20 * 3600000) return null;
+      const muelles = {};
+      if (b.muelles && typeof b.muelles === 'object') Object.keys(b.muelles).forEach(function (k) { if (typeof b.muelles[k] === 'string') muelles[k] = b.muelles[k]; });
+      const sel = Array.isArray(b.sel) ? b.sel.map(Number).filter(function (n) { return n >= 1 && n <= 4; }) : [];
+      const pend = Array.isArray(b.pend) ? b.pend.slice(0, REL_MAX_PUNTOS).map(function (p) { return { id: 0, texto: String((p && p.texto) || ''), cuando: String((p && p.cuando) || '') }; }) : [];
+      const vacio = !Object.keys(muelles).some(function (k) { return muelles[k]; }) && !b.zonas && !b.paso && !pend.some(function (p) { return p.texto; });
+      if (vacio) return null;
+      return { turno: REL_TURNOS[b.turno] ? b.turno : '', sel: sel, muelles: muelles, zonas: String(b.zonas || ''), paso: String(b.paso || ''), pend: pend };
+    } catch (e) { return null; }
+  }
+  function relGuardarBorradorAhora() {
+    if (relBorradorTimer !== null) { clearTimeout(relBorradorTimer); relBorradorTimer = null; }
+    if (!relF || relF.editId) return;
+    try {
+      localStorage.setItem(relClaveBorrador(relF.dueno), JSON.stringify({ guardado: Date.now(), turno: relF.turnoManual ? relF.turno : '', sel: relF.sel, muelles: relF.muelles, zonas: relF.zonas, paso: relF.paso, pend: relF.pend }));
+    } catch (e) { /* sin almacenamiento: el relevo se escribe igual */ }
+  }
+  function relProgramarBorrador() {
+    if (relBorradorTimer !== null) clearTimeout(relBorradorTimer);
+    relBorradorTimer = setTimeout(relGuardarBorradorAhora, 600);
+  }
+  function relBorrarBorrador() {
+    if (relBorradorTimer !== null) { clearTimeout(relBorradorTimer); relBorradorTimer = null; }
+    try { localStorage.removeItem(relClaveBorrador(relF ? relF.dueno : undefined)); } catch (e) { /* nada */ }
+  }
+</script>

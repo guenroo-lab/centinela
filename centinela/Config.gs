@@ -140,6 +140,8 @@ const CONFIG = {
   SHEET_NAME_TAREAS_PROGRAMADAS: "Tareas_Programadas",
   SHEET_NAME_NOTAS: "Notas",
   SHEET_NAME_NOTAS_FOTOS: "Notas_Fotos",
+  SHEET_NAME_RELEVO: "Relevo",
+  SHEET_NAME_RELEVO_PENDIENTES: "Relevo_Pendientes",
   SHEET_NAME_APROBACIONES: "Aprobaciones",
   SHEET_NAME_APROBACIONES_FOTOS: "Aprobaciones_Fotos",
   SHEET_NAME_ACTIVIDAD: "Actividad",
@@ -260,7 +262,14 @@ const CABECERAS_NOTAS = [
 ];
 
 // Fotos de las notas, troceadas como las de Tareas: [Foto ID (= ID de la nota), Parte, Total, Datos].
+// La pestaña Relevo guarda aquí también las suyas, con el ID «R<id del relevo>».
 const CABECERAS_NOTAS_FOTOS = ["Foto ID", "Parte", "Total", "Datos"];
+
+// Relevo de turno entre jefes de equipo (ver Relevo.gs). Fecha y Publicado/Editado van como texto "yyyy-MM-dd[ HH:mm]".
+// Muelles = JSON {"2":"texto",…}. Enterados = "Jefe=yyyy-MM-dd HH:mm;…". Estado: Activo / Retirado. Foto = Sí si hay foto en Notas_Fotos.
+const CABECERAS_RELEVO = ["ID", "Fecha", "Turno", "Autor", "Publicado", "Muelles", "Zonas", "Que paso", "Enterados", "Estado", "Foto", "Editado"];
+// Puntos «estar pendiente de» de cada relevo: siguen Abierto hasta que alguien los marca Hecho (Estado: Abierto / Hecho / Retirado).
+const CABECERAS_RELEVO_PENDIENTES = ["ID", "Parte", "Texto", "Cuando", "Estado", "Creado por", "Creado", "Hecho por", "Hecho el"];
 
 // Zonas a fotografiar por rol de turno, editables por el supervisor (ver TurnoConfig.gs).
 // Vacía = todavía nadie ha editado nada: se usan las zonas por defecto de TURNOS (Config.gs).
@@ -503,6 +512,16 @@ function prepararHojaNotas_(sheet) {
 function prepararHojaNotasFotos_(sheet) {
   escribirCabeceras(sheet, CABECERAS_NOTAS_FOTOS);
   formatoTextoColumnas_(sheet, [1, 4]);
+}
+
+function prepararHojaRelevo_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_RELEVO);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+}
+
+function prepararHojaRelevoPendientes_(sheet) {
+  escribirCabeceras(sheet, CABECERAS_RELEVO_PENDIENTES);
+  formatoTextoColumnas_(sheet, [2, 3, 4, 5, 6, 7, 8, 9]);
 }
 
 function prepararHojaPeticionesConsumibles_(sheet) {
