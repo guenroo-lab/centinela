@@ -4,13 +4,46 @@
 //  cliente), añade un comentario y se manda un correo a José Lachambre y a Pedro Gil.
 //  Cada petición se apunta en la hoja Peticiones_Consumibles: así se ve qué se pidió ya
 //  y nadie duplica el aviso (mismo problema que con el SAT de Maquinaria).
+//  EXCEPCIÓN: «Etiquetas de SIE» (solo Marbella y Mijas) no va en ese correo: por cada tienda marcada sale un correo
+//  URGENTE para los mandos de esa tienda, con Plataforma en copia (CONS_SIE_*). Si alguno falla, la petición queda
+//  apuntada como «NO enviado» y el aviso dice cuál.
 //
 //  El catálogo vive AQUÍ y el cliente lo recibe en obtenerPeticionesConsumibles():
 //  para añadir un consumible basta una línea en CONS_CATALOGO_.
 // ============================================================
 
+// ── Etiquetas de SIE (solo Marbella y Mijas) ─────────────────
+// Este consumible NO va en el correo general: cada tienda marcada recibe SU correo urgente, PARA los mandos de esa
+// tienda y con Plataforma en copia (más Pedro y José Antonio, como en cualquier correo de la app).
+// Mandos = las listas de «Ocupación Tiendas SIE» (hoja Configuración, B6 Mijas y B7 Marbella; en el traspaso de ese
+// proyecto; allí hay un `salvador.gonzalez22` dudoso, aquí va `gonzalez2`, el de los correos de Cargas). Si cambia
+// alguien, se cambia AQUÍ.
+const CONS_SIE_ID_ = "etiq_sie";
+const CONS_SIE_TIENDAS_ = ["Marbella", "Mijas"];
+const CONS_SIE_MANDOS_ = {
+  "Marbella": ["francisco-damian.sedeno@leroymerlin.es", "miguel-angel.gonzalez5@leroymerlin.es", "logistica.marbella@leroymerlin.es"],
+  "Mijas": ["hector.andres@leroymerlin.es", "salvador.gonzalez2@leroymerlin.es", "carlos.fuentes@leroymerlin.es", "logistica.mijas@leroymerlin.es"]
+};
+// Plataforma en copia: la misma lista de administración de los correos de Cargas (CARGAS_CORREOS_.ADMINISTRACION, copia
+// aquí para que este módulo no dependa de aquel archivo).
+const CONS_SIE_PLATAFORMA_ = [
+  "Pedro.gil@ext.leroymerlin.es",
+  "david.delcampo@ext.leroymerlin.es",
+  "jose-manuel.lachambre@leroymerlin.es",
+  "jose-antonio.alcaide@ext.leroymerlin.es",
+  "administracion.alm-malaga@leroymerlin.es",
+  "daniel.simo@ext.leroymerlin.es",
+  "daniel.arrastio@ext.leroymerlin.es",
+  "francisco-javier.camara@ext.leroymerlin.es",
+  "sebastian.gelvis@ext.leroymerlin.es"
+];
+
 const CONS_CATALOGO_ = [
   { id: "etiq_pc", nombre: "Etiquetas de pedido cliente", emoji: "🏷️", tiendas: true },
+  {
+    id: CONS_SIE_ID_, nombre: "Etiquetas de SIE", emoji: "🧾", tiendas: true, tiendasLista: CONS_SIE_TIENDAS_,
+    ayuda: "Sale un correo URGENTE para los mandos de cada tienda que marques, con Plataforma en copia."
+  },
   { id: "film", nombre: "Film transparente", emoji: "🎞️" },
   { id: "cinta", nombre: "Cinta adhesiva", emoji: "📼" },
   { id: "burbujas", nombre: "Papel de burbujas", emoji: "🎈" },
@@ -75,6 +108,9 @@ function consLimpiarPeticion_(data) {
       (Array.isArray(it.tiendas) ? it.tiendas : []).forEach(function (t) {
         const canon = consTiendaCanonica_(t);
         if (!canon) throw new Error("Tienda no válida: " + t);
+        if (def.tiendasLista && def.tiendasLista.indexOf(canon) === -1) {
+          throw new Error("«" + def.nombre + "» solo se pide para " + def.tiendasLista.join(" o ") + ".");
+        }
         if (lista.indexOf(canon) === -1) lista.push(canon);
       });
     }
@@ -177,6 +213,45 @@ function consEnviarCorreo_(jefe, items, comentario, fechaStr, horaStr) {
   });
 }
 
+// Correo URGENTE de etiquetas de SIE para UNA tienda: PARA sus mandos, con Plataforma en copia (ccConResponsables_ añade
+// además a José Antonio y Pedro sin repetir a nadie). GmailApp lo manda con la cuenta de quien usa la app, así que quien
+// responda se lo contesta a esa persona. Devuelve true/false y nunca lanza.
+function consEnviarCorreoSie_(jefe, tienda, comentario, fechaStr, horaStr) {
+  const para = CONS_SIE_MANDOS_[tienda];
+  if (!para || !para.length) {
+    Logger.log("⚠️ Etiquetas de SIE: no hay destinatarios para " + tienda);
+    return false;
+  }
+  const lugar = "LM " + tienda;
+  const cfg = {
+    acento: "#e30613",
+    emoji: "🏷️",
+    etiqueta: "Petición urgente · Etiquetas de SIE",
+    titulo: "Hacen falta etiquetas de SIE para " + lugar,
+    subtitulo: jefe + " (Plataforma Málaga) pide que se repongan las etiquetas de SIE de " + lugar + " con la mayor brevedad posible.",
+    preheader: "Urgente · etiquetas de SIE para " + lugar + " — " + jefe,
+    chips: [
+      { texto: "⏰ Lo antes posible", tono: "alerta" },
+      { texto: "🏬 " + lugar, tono: "info" },
+      { texto: "👤 " + jefe, tono: "neutro" },
+      { texto: "🕒 " + fechaStr + " · " + horaStr.slice(0, 5), tono: "neutro" }
+    ],
+    filas: [
+      { icono: "🏷️", etiqueta: "Qué se pide", valor: "Etiquetas de SIE" },
+      { icono: "📍", etiqueta: "Tienda", pills: [{ texto: tienda, color: CONS_COLORES_TIENDA_[tienda] }] }
+    ],
+    bloques: [{ icono: "⏰", titulo: "Con la mayor brevedad posible", texto: "Hace falta reponer las etiquetas de SIE de " + lugar + ". Por favor, gestionadlo cuanto antes.", acento: "#e30613" }]
+      .concat(comentario ? [{ icono: "💬", titulo: "Comentario de " + jefe, texto: comentario, acento: "#4c7dff" }] : []),
+    nota: "Confirma que lo has visto respondiendo a este correo: la respuesta le llegará a " + jefe + "."
+  };
+  return correoPremiumEnviar_({
+    para: para,
+    cc: CONS_SIE_PLATAFORMA_,
+    asunto: "❗ URGENTE · Etiquetas de SIE · " + lugar + " · " + jefe,     // ❗ (plano básico: se ve bien en Gmail)
+    cfg: cfg
+  });
+}
+
 // ¿Ya se mandó (bien) esta misma petición hace un instante? Solo mira las últimas filas y solo las
 // que sí llegaron por correo: si el envío falló, volver a intentarlo tiene que estar permitido.
 function consDuplicadaReciente_(sheet, quien, itemsJson, comentario, ahora) {
@@ -203,7 +278,13 @@ function consDuplicadaReciente_(sheet, quien, itemsJson, comentario, ahora) {
 function obtenerPeticionesConsumibles() {
   const base = {
     ok: true,
-    catalogo: CONS_CATALOGO_.map(function (d) { return { id: d.id, nombre: d.nombre, emoji: d.emoji || "", tiendas: !!d.tiendas, texto: !!d.texto }; }),
+    catalogo: CONS_CATALOGO_.map(function (d) {
+      return {
+        id: d.id, nombre: d.nombre, emoji: d.emoji || "", tiendas: !!d.tiendas, texto: !!d.texto,
+        tiendasLista: d.tiendasLista ? d.tiendasLista.slice() : null,     // null = todas las tiendas
+        ayuda: d.ayuda || ""
+      };
+    }),
     tiendas: CONS_TIENDAS_.slice(),
     avisaA: CONS_AVISA_A_,
     peticiones: []
@@ -275,7 +356,22 @@ function procesarPeticionConsumibles(data) {
       return { success: false, error: "Esa misma petición ya se acaba de enviar. No hace falta repetirla." };
     }
 
-    const emailOk = consEnviarCorreo_(limpia.quien, limpia.items, limpia.comentario, fechaStr, horaStr);
+    // Las etiquetas de SIE no van en el correo general: cada tienda marcada recibe el suyo. El resto sale como siempre.
+    const sieItem = limpia.items.filter(function (it) { return it.id === CONS_SIE_ID_; })[0] || null;
+    const generales = limpia.items.filter(function (it) { return it.id !== CONS_SIE_ID_; });
+    const avisos = [];
+    if (generales.length && !consEnviarCorreo_(limpia.quien, generales, limpia.comentario, fechaStr, horaStr)) {
+      avisos.push("El correo NO se pudo enviar: avisa a " + CONS_AVISA_A_ + ".");
+    }
+    const sie = [];
+    if (sieItem) {
+      sieItem.tiendas.forEach(function (tienda) {
+        const ok = consEnviarCorreoSie_(limpia.quien, tienda, limpia.comentario, fechaStr, horaStr);
+        sie.push({ tienda: tienda, ok: ok });
+        if (!ok) avisos.push("El aviso de etiquetas de SIE a LM " + tienda + " NO se pudo enviar: avisa tú a los mandos de la tienda.");
+      });
+    }
+    const emailOk = avisos.length === 0;
 
     let guardado = true;
     try {
@@ -286,13 +382,12 @@ function procesarPeticionConsumibles(data) {
       guardado = false;
     }
 
-    const avisos = [];
-    if (!emailOk) avisos.push("El correo NO se pudo enviar: avisa a " + CONS_AVISA_A_ + ".");
     if (!guardado) avisos.push("No se pudo apuntar en el historial de peticiones.");
     const success = emailOk || guardado;
     return {
       success: success,
       emailEnviado: emailOk,
+      sie: sie,
       error: success ? undefined : avisos.join(" | "),
       avisos: avisos
     };

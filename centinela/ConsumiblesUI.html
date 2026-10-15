@@ -23,7 +23,8 @@
   .cons-sub-tit { font-size:12px; color:var(--text-500); margin:10px 0 8px; font-weight:600; }
   .cons-sub-tit small { font-weight:500; }
   .cons-tiendas { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  @media (min-width: 700px) { .cons-tiendas { grid-template-columns:repeat(4, 1fr); } }
+  @media (min-width: 700px) { .cons-tiendas { grid-template-columns:repeat(4, 1fr); } .cons-tiendas.cons-dos { grid-template-columns:repeat(2, minmax(0, 240px)); } }
+  .cons-ayuda { margin:10px 0 0; font-size:12.5px; font-weight:600; line-height:1.45; color:var(--warn-fg); background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:var(--radius-btn); padding:8px 10px; }
   .cons-tienda { --th:var(--text-500); cursor:pointer; min-height:46px; display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--ink-700); background:var(--ink-950); color:var(--text-300); border-radius:var(--radius-btn); padding:8px 6px; font-size:13.5px; font-weight:700; font-family:inherit; transition:all .15s ease; }
   .cons-tienda:active { transform:scale(.96); }
   .cons-tienda .dot { width:10px; height:10px; border-radius:50%; background:var(--th); flex:none; }
@@ -49,6 +50,7 @@
   .cons-enviar { width:100%; margin-top:14px; cursor:pointer; border:none; border-radius:var(--radius-btn); padding:14px; min-height:50px; font-size:15px; font-weight:800; font-family:inherit; background:var(--accent); color:var(--accent-ink); box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 55%, transparent), 0 1px 0 rgba(255,255,255,.15) inset; transition:transform .15s ease; }
   .cons-enviar:active { transform:scale(.98); }
   .cons-enviar:disabled { opacity:.6; cursor:default; }
+  .cons-enviar.confirmar { background:var(--danger-bg); color:var(--danger-fg); border:1px solid var(--danger-line); box-shadow:none; line-height:1.35; }
 
   .cons-hist-tit { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:26px 0 4px; }
   .cons-hist-tit h2 { font-size:15px; font-weight:800; margin:0; }
@@ -86,7 +88,7 @@
   <div class="cons-items" id="consItems"></div>
 
   <label class="cons-label" for="consComentario">Comentario <small>(opcional)</small></label>
-  <textarea class="cons-textarea" id="consComentario" maxlength="500" placeholder="Cantidad, urgencia, para qué zona…" onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); consSolicitar(); }"></textarea>
+  <textarea class="cons-textarea" id="consComentario" maxlength="500" placeholder="Cantidad, urgencia, para qué zona…" oninput="consAlComentar()" onkeydown="if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); consSolicitar(); }"></textarea>
 
   <div class="cons-aviso" id="consAviso" hidden role="note"></div>
   <p class="cons-error" id="consError" hidden role="alert"></p>
@@ -103,6 +105,7 @@
 
 <script>
   var CONS_REFRESCO_MS = 20000;
+  var CONS_SIE_ID = 'etiq_sie';   // el id de «Etiquetas de SIE» en el catálogo del servidor (CONS_SIE_ID_)
 
   var consCatalogo = [];
   var consTiendas = [];
@@ -112,6 +115,7 @@
   var consCargando = false;
   var consRecargar = false;      // se pidió recargar mientras había otra carga en vuelo
   var consEnviando = false;
+  var consConfirmando = false;   // «Etiquetas de SIE» avisa a gente de las tiendas: el primer toque en Solicitar pide confirmar
   var consUltimaCarga = 0;
 
   function consEsc(t) {
@@ -134,6 +138,13 @@
     return null;
   }
   function consEl(id) { return document.getElementById(id); }
+  // Las tiendas a elegir en un consumible: las suyas (Etiquetas de SIE: solo Marbella y Mijas) o todas.
+  function consTiendasDe(def) { return (def && def.tiendasLista && def.tiendasLista.length) ? def.tiendasLista : consTiendas; }
+  // Las tiendas marcadas en «Etiquetas de SIE» (a quienes llegará el correo urgente), o [] si no está marcado.
+  function consTiendasSie() {
+    var s = consSel[CONS_SIE_ID];
+    return s ? s.tiendas.slice() : [];
+  }
 
   // ── Carga (catálogo + últimas peticiones) ──────────────────
   function consumiblesAlMostrar() {
@@ -195,11 +206,13 @@
         '<button type="button" class="cons-item-btn" id="consBtn_' + it.id + '" aria-pressed="false" onclick="consAlternar(\'' + it.id + '\')">' +
         '<span class="cons-check" aria-hidden="true"></span><span class="cons-item-nombre">' + consEsc(it.nombre) + '</span></button>';
       if (it.tiendas) {
+        var lista = consTiendasDe(it);
         h += '<div class="cons-sub" id="consSub_' + it.id + '" hidden>' +
-          '<p class="cons-sub-tit">¿De qué tienda? <small>Puedes marcar varias</small></p><div class="cons-tiendas">' +
-          consTiendas.map(function (t, i) {
+          '<p class="cons-sub-tit">¿De qué tienda? <small>Puedes marcar varias</small></p><div class="cons-tiendas' + (lista.length === 2 ? ' cons-dos' : '') + '">' +
+          lista.map(function (t, i) {
             return '<button type="button" class="cons-tienda ' + consClaseTienda(t) + '" id="consT_' + it.id + '_' + i + '" aria-pressed="false" onclick="consAlternarTienda(\'' + it.id + '\',' + i + ')"><span class="dot"></span>' + consEsc(t) + '</button>';
-          }).join('') + '</div></div>';
+          }).join('') + '</div>' +
+          (it.ayuda ? '<p class="cons-ayuda" role="note">📧 ' + consEsc(it.ayuda) + '</p>' : '') + '</div>';
       }
       if (it.texto) {
         h += '<div class="cons-sub" id="consSub_' + it.id + '" hidden>' +
@@ -213,6 +226,7 @@
 
   function consAlternar(id) {
     if (consEnviando) return;
+    consConfirmando = false;
     if (consSel[id]) delete consSel[id];
     else {
       // Al volver a marcarlo, el campo puede conservar lo escrito antes: el estado parte de lo que se ve.
@@ -229,7 +243,8 @@
 
   function consAlternarTienda(id, i) {
     if (consEnviando || !consSel[id]) return;
-    var nombre = consTiendas[i];
+    consConfirmando = false;
+    var nombre = consTiendasDe(consDef(id))[i];
     var pos = consSel[id].tiendas.indexOf(nombre);
     if (pos >= 0) consSel[id].tiendas.splice(pos, 1);
     else consSel[id].tiendas.push(nombre);
@@ -238,9 +253,17 @@
   }
 
   function consAlEscribir(id, valor) {
+    consConfirmando = false;
     if (consSel[id]) consSel[id].texto = valor;
     consLimpiarError();
-    consPintarAviso();
+    consPintar();               // también devuelve el botón a «Solicitar» si estaba pidiendo confirmar
+  }
+
+  // Tocar el comentario con la confirmación pendiente la cancela: se confirma con el texto definitivo.
+  function consAlComentar() {
+    if (!consConfirmando) return;
+    consConfirmando = false;
+    consPintar();
   }
 
   function consLimpiarError() {
@@ -259,13 +282,24 @@
       var sub = consEl('consSub_' + it.id);
       if (sub) sub.hidden = !sel;
       if (it.tiendas) {
-        consTiendas.forEach(function (t, i) {
+        consTiendasDe(it).forEach(function (t, i) {
           var b = consEl('consT_' + it.id + '_' + i);
           if (b) b.setAttribute('aria-pressed', sel && consSel[it.id].tiendas.indexOf(t) >= 0 ? 'true' : 'false');
         });
       }
     });
-    if (!consEnviando) consEl('consBtnEnviar').textContent = total ? 'Solicitar (' + total + ')' : 'Solicitar';
+    if (!consEnviando) {
+      var boton = consEl('consBtnEnviar');
+      var sie = consTiendasSie();
+      if (consConfirmando && sie.length) {
+        boton.textContent = '¿Seguro? Se avisa ya a los mandos de LM ' + sie.join(' y LM ') + ' · Pulsa otra vez';
+        boton.classList.add('confirmar');
+      } else {
+        consConfirmando = false;
+        boton.classList.remove('confirmar');
+        boton.textContent = total ? 'Solicitar (' + total + ')' : 'Solicitar';
+      }
+    }
     consPintarAviso();
   }
 
@@ -348,6 +382,14 @@
     }
     consLimpiarError();
 
+    // Las etiquetas de SIE avisan por correo URGENTE a gente de las tiendas: un toque de más no debe mandarlo.
+    if (consTiendasSie().length && !consConfirmando) {
+      consConfirmando = true;
+      consPintar();
+      return;
+    }
+    consConfirmando = false;
+
     var items = [];
     consCatalogo.forEach(function (it) {
       var s = consSel[it.id];
@@ -374,7 +416,10 @@
         terminar();
         if (r && r.success) {
           consReiniciar();
-          showToast(r.emailEnviado ? '✅ Petición enviada' : '⚠️ Guardada, pero el correo NO salió: ' + ((r.avisos && r.avisos[0]) || 'avisa a los responsables'));
+          var sieOk = (r.sie || []).filter(function (x) { return x.ok; }).map(function (x) { return 'LM ' + x.tienda; });
+          showToast(r.emailEnviado
+            ? '✅ Petición enviada' + (sieOk.length ? ' · etiquetas de SIE avisadas a ' + sieOk.join(' y ') : '')
+            : '⚠️ Guardada, pero un correo NO salió: ' + ((r.avisos && r.avisos[0]) || 'avisa a los responsables'));
           consCargar(true);
         } else {
           showToast('❌ ' + ((r && r.error) || 'Error desconocido'));
@@ -389,6 +434,7 @@
 
   function consReiniciar() {
     consSel = {};
+    consConfirmando = false;
     consEl('consComentario').value = '';
     consCatalogo.forEach(function (it) {
       var t = consEl('consTexto_' + it.id);
