@@ -161,6 +161,9 @@ const CONFIG = {
   // HODOS (proyecto aparte, deployment de producción): Centinela solo LEE de él
   // (doGet?accion=pendientesTienda) para imprimir la "silueta" de la tienda.
   HODOS_WEBAPP_URL: "https://script.google.com/macros/s/AKfycbwpv1biSoYqG_OuhQx9_rC6izIEGqaz9vIdD8VTYFAU_qkJ-provc7fm61JslVO2XRQ/exec",
+  // «Ocupación Tiendas SIE» (proyecto aparte, deployment de producción): Centinela solo LEE de ella
+  // (doGet?accion=ocupacion) para enseñar los volúmenes de almacenamiento. Registrar se hace desde Kairos.
+  OCUPACION_SIE_URL: "https://script.google.com/macros/s/AKfycbw1ssfsAFEHBS1mm0ya_pE3nNOJALrqPqfXbK0lmQ9uQVZJVk2OqOF2lzV98VdPcTRZ1g/exec",
   RECISUR_PARA: "info@recisur.com, rocio@recisur.com",
   RECISUR_CC: ["administracion.alm-malaga@leroymerlin.es"].concat(CORREOS_JEFES_EQUIPO, CORREOS_RESPONSABLES).join(", "),
   // Limite de bytes CRUDOS de fotos antes de adjuntarlas. Gmail permite 25 MB

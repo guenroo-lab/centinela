@@ -1,0 +1,219 @@
+<style>
+  /* ——— Ocupación SIE (solo lectura) ——— */
+  .ocs-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:4px; }
+  .ocs-sub { color:var(--text-500); font-size:13px; margin:0 0 4px; }
+  .ocs-btn { cursor:pointer; border:none; border-radius:var(--radius-btn); padding:10px 14px; font-size:13px; font-weight:700; background:var(--ink-800); color:var(--text-300); white-space:nowrap; transition:transform .15s ease; }
+  .ocs-btn:active { transform:scale(.96); background:var(--ink-700); }
+  .ocs-btn:disabled { opacity:.6; }
+  .ocs-origen { font-size:11.5px; color:var(--text-600); margin:0 0 12px; }
+  .ocs-origen.copia { color:var(--warn-fg); }
+  .ocs-error { background:var(--danger-bg); border:1px solid var(--danger-line); color:var(--danger-fg); border-radius:var(--radius-card); padding:14px; font-size:13px; line-height:1.45; }
+  .ocs-error a { color:inherit; font-weight:800; }
+  .ocs-aviso { margin:8px 0 12px; padding:10px 12px; border-radius:var(--radius-btn); background:var(--warn-bg); color:var(--warn-fg); border:1px solid var(--warn-line); font-size:13px; line-height:1.4; }
+  .ocs-vacio { color:var(--text-500); font-size:13px; padding:16px; }
+
+  .ocs-tarjetas { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:10px; }
+  .ocs-card { background:linear-gradient(160deg, var(--ink-850) 0%, var(--ink-900) 100%); border:1px solid var(--ink-800); border-left:5px solid var(--th); border-radius:var(--radius-card); box-shadow:var(--shadow-card); padding:14px 16px; }
+  .ocs-card.ocs-t-mijas { --th:#9a6ee0; }
+  .ocs-card.ocs-t-marbella { --th:#3f9be0; }
+  .ocs-cab { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:800; color:var(--text-100); }
+  .ocs-cab .dot { width:10px; height:10px; border-radius:50%; background:var(--th); display:inline-block; }
+  .ocs-nivel { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:var(--radius-chip); white-space:nowrap; display:inline-block; }
+  .ocs-nivel.ok { background:var(--ink-800); color:var(--ok); }
+  .ocs-nivel.aviso { background:var(--warn-bg); color:var(--warn-fg); }
+  .ocs-nivel.peligro { background:var(--danger-bg); color:var(--danger-fg); }
+  .ocs-pct { font-size:42px; font-weight:800; line-height:1.1; margin:6px 0 4px; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--text-100); }
+  .ocs-barra { position:relative; height:10px; border-radius:999px; background:var(--ink-800); overflow:hidden; margin:6px 0 8px; }
+  .ocs-barra > div { height:100%; border-radius:999px; }
+  .ocs-barra > div.bajo, .ocs-barra > div.normal { background:var(--ok); }
+  .ocs-barra > div.alto { background:#f0a020; }
+  .ocs-barra > div.critico { background:#dc1a23; }
+  .ocs-barra > i { position:absolute; top:0; bottom:0; width:2px; background:var(--text-600); opacity:.7; }
+  .ocs-datos { font-size:13.5px; color:var(--text-300); font-weight:600; }
+  .ocs-var { font-size:12.5px; color:var(--text-500); margin-top:5px; line-height:1.5; }
+  .ocs-var b.sube { color:var(--warn-fg); }
+  .ocs-var b.baja { color:var(--ok); }
+  .ocs-meta { font-size:12px; color:var(--text-500); margin:6px 0; }
+  .ocs-h { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-500); margin:16px 0 6px; }
+  .ocs-grafico { margin:6px 0; padding:12px; background:var(--ink-900); border:1px solid var(--ink-800); border-radius:var(--radius-card); }
+  .ocs-grafico svg { max-width:100%; height:auto; display:block; }
+  .ocs-leyenda { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-500); font-weight:700; margin-top:6px; }
+  .ocs-leyenda .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .ocs-tabla-caja { overflow-x:auto; }
+  table.ocs-tabla { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+  table.ocs-tabla th { text-align:left; font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-500); padding:6px 8px; border-bottom:1px solid var(--ink-700); white-space:nowrap; }
+  table.ocs-tabla td { padding:8px; border-bottom:1px solid var(--ink-800); color:var(--text-300); white-space:nowrap; }
+  table.ocs-tabla td.num, table.ocs-tabla th.num { text-align:right; }
+  table.ocs-tabla td b { color:var(--text-100); }
+</style>
+
+<h1 style="font-size:19px;font-weight:800;margin:0 0 4px;">📊 Ocupación SIE</h1>
+
+<div class="ocs-top">
+  <p class="ocs-sub">Huecos del almacén SIE de Mijas y Marbella según el último registro de los operarios. Solo consulta: se registra desde Kairos (menú «Ocupación SIE»).</p>
+  <button type="button" class="ocs-btn" id="ocsBtnRecargar" onclick="ocsCargar(true)">↻ Actualizar</button>
+</div>
+<p class="ocs-origen" id="ocsOrigen"></p>
+
+<div id="ocsContenido"><p class="ocs-vacio">Cargando…</p></div>
+
+<script>
+  let ocsDatos = null;
+  let ocsCargadoEn = 0;
+  let ocsCargando = false;
+  let ocsAnchoPintado = 0;
+  const OCS_RECARGA_MS = 5 * 60 * 1000;
+  const OCS_TIENDAS = [
+    { nombre: 'Mijas',    clase: 'ocs-t-mijas',    color: '#9a6ee0', libres: 'libresMijas',    ocupados: 'ocupadosMijas',    pct: 'pctMijas',    nivel: 'nivelMijas',    capacidad: 'totalMijas' },
+    { nombre: 'Marbella', clase: 'ocs-t-marbella', color: '#3f9be0', libres: 'libresMarbella', ocupados: 'ocupadosMarbella', pct: 'pctMarbella', nivel: 'nivelMarbella', capacidad: 'totalMarbella' }
+  ];
+  const OCS_NIVELES = {
+    bajo:    { txt: 'Baja',    cls: 'ok' },
+    normal:  { txt: 'Normal',  cls: 'ok' },
+    alto:    { txt: 'Alta',    cls: 'aviso' },
+    critico: { txt: 'Crítica', cls: 'peligro' }
+  };
+
+  function ocsEsc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function ocsPct(p) { return (Math.round(p * 10) / 10).toFixed(1).replace('.', ',') + ' %'; }
+  function ocsNum(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function ocsPp(v) {
+    const r = Math.round(v * 10) / 10;
+    const txt = (r > 0 ? '+' : '') + r.toFixed(1).replace('.', ',') + ' pp';
+    const cls = r > 0.4 ? 'sube' : (r < -0.4 ? 'baja' : '');
+    return '<b class="' + cls + '">' + (r > 0.4 ? '▲ ' : (r < -0.4 ? '▼ ' : '= ')) + txt + '</b>';
+  }
+  function ocsEstado(e) {
+    if (e === 'ENVIADO')   return { txt: 'Informes enviados', cls: 'ok' };
+    if (e === 'PENDIENTE') return { txt: 'En cola · salen en unos minutos', cls: 'aviso' };
+    if (e === 'ERROR')     return { txt: 'Falló el envío', cls: 'peligro' };
+    if (e === 'CADUCADO')  return { txt: 'Caducado sin enviar', cls: 'peligro' };
+    return { txt: e || '—', cls: '' };
+  }
+
+  function ocupacionSieAlMostrar() {
+    if (!ocsDatos || (Date.now() - ocsCargadoEn) > OCS_RECARGA_MS) ocsCargar(false);
+    else if (Math.abs(ocsAnchoPintado - ocsAnchoDisponible()) > 40) ocsRender();   // la ventana cambió de tamaño con la pestaña oculta
+  }
+
+  function ocsAnchoDisponible() {
+    const c = document.getElementById('ocsContenido');
+    return Math.max(0, (c ? c.clientWidth : 0) - 26);   // 26 px = relleno y borde de la caja de la gráfica
+  }
+
+  function ocsCargar(forzar) {
+    if (ocsCargando) return;
+    ocsCargando = true;
+    const boton = document.getElementById('ocsBtnRecargar');
+    boton.disabled = true;
+    if (!ocsDatos || forzar) document.getElementById('ocsContenido').innerHTML = '<p class="ocs-vacio">Cargando…</p>';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        ocsCargando = false; boton.disabled = false;
+        if (r && r.ok) { ocsDatos = r; ocsCargadoEn = Date.now(); ocsRender(); }
+        else ocsError(r);
+      })
+      .withFailureHandler(function (err) {
+        ocsCargando = false; boton.disabled = false;
+        ocsError({ error: 'Error del servidor: ' + (err && err.message ? err.message : err) });
+      })
+      .obtenerOcupacionSie(!!forzar);
+  }
+
+  function ocsError(r) {
+    ocsDatos = null;
+    document.getElementById('ocsOrigen').textContent = '';
+    let html = '<div class="ocs-error">' + ocsEsc((r && r.error) || 'No se pudieron cargar los datos de ocupación.');
+    if (r && r.permisoFalta && r.autorizarUrl) {
+      html += '<br><br>Te falta un permiso: <a href="' + ocsEsc(r.autorizarUrl) + '" target="_blank" rel="noopener">autorizar Centinela</a> y pulsa Actualizar.';
+    }
+    document.getElementById('ocsContenido').innerHTML = html + '</div>';
+  }
+
+  function ocsTarjeta(d, t, fila, anterior, hace4) {
+    const pct = fila[t.pct];
+    const niv = OCS_NIVELES[fila[t.nivel]] || OCS_NIVELES.normal;
+    let vars = '';
+    if (anterior) vars += 'Frente al registro anterior: ' + ocsPp(pct - anterior[t.pct]);
+    if (hace4) vars += (vars ? '<br>' : '') + 'Frente a 4 registros atrás: ' + ocsPp(pct - hace4[t.pct]);
+    return '<div class="ocs-card ' + t.clase + '">' +
+      '<div class="ocs-cab"><span class="dot"></span>' + ocsEsc(t.nombre) + ' <span class="ocs-nivel ' + niv.cls + '">' + ocsEsc(niv.txt) + '</span></div>' +
+      '<div class="ocs-pct">' + ocsPct(pct) + '</div>' +
+      '<div class="ocs-barra"><div class="' + ocsEsc(fila[t.nivel]) + '" style="width:' + Math.max(0, Math.min(100, pct)) + '%;"></div><i style="left:70%;"></i><i style="left:90%;"></i></div>' +
+      '<div class="ocs-datos">' + ocsNum(fila[t.ocupados]) + ' ocupados · ' + ocsNum(fila[t.libres]) + ' libres · de ' + ocsNum(d.config[t.capacidad]) + ' huecos</div>' +
+      (vars ? '<div class="ocs-var">' + vars + '</div>' : '') +
+    '</div>';
+  }
+
+  // Se dibuja a tamaño real (ancho disponible) para que los números midan siempre lo mismo.
+  function ocsGrafico(d, ancho) {
+    const h = d.historial.slice(-26);
+    if (h.length < 2) return '<p class="ocs-vacio">La gráfica aparece cuando hay al menos dos registros.</p>';
+    const W = Math.max(280, Math.min(1100, Math.round(Number(ancho) || 600))), H = 200, izq = 30, der = 12, arriba = 14, abajo = 26;
+    const x = function (i) { return izq + i * (W - izq - der) / (h.length - 1); };
+    const y = function (p) { return arriba + (100 - p) * (H - arriba - abajo) / 100; };
+    let lineas = '', puntas = '';
+    OCS_TIENDAS.forEach(function (t) {
+      const pts = h.map(function (f, i) { return x(i).toFixed(1) + ',' + y(f[t.pct]).toFixed(1); }).join(' ');
+      lineas += '<polyline points="' + pts + '" fill="none" style="stroke:' + t.color + ';" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+      puntas += '<circle cx="' + x(h.length - 1).toFixed(1) + '" cy="' + y(h[h.length - 1][t.pct]).toFixed(1) + '" r="4.5" style="fill:' + t.color + ';"/>';
+    });
+    const guias = [0, 40, 70, 90, 100].map(function (p) {
+      const marca = (p === 70 || p === 90);
+      return '<line x1="' + izq + '" x2="' + (W - der) + '" y1="' + y(p) + '" y2="' + y(p) + '" style="stroke:var(--ink-700);" stroke-width="1"' + (marca ? ' stroke-dasharray="5 4"' : '') + '/>' +
+        '<text x="' + (izq - 6) + '" y="' + (y(p) + 4) + '" text-anchor="end" font-size="11" style="fill:var(--text-500);">' + p + '</text>';
+    }).join('');
+    const ejeX = '<text x="' + izq + '" y="' + (H - 6) + '" font-size="11" style="fill:var(--text-500);">' + ocsEsc((h[0].fecha || '').slice(0, 5)) + '</text>' +
+      '<text x="' + (W - der) + '" y="' + (H - 6) + '" text-anchor="end" font-size="11" style="fill:var(--text-500);">' + ocsEsc((h[h.length - 1].fecha || '').slice(0, 5)) + '</text>';
+    return '<div class="ocs-grafico"><svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Evolución del porcentaje de ocupación de Mijas y Marbella">' +
+      guias + lineas + puntas + ejeX + '</svg>' +
+      '<div class="ocs-leyenda">' + OCS_TIENDAS.map(function (t) { return '<span><span class="dot" style="background:' + t.color + ';"></span>' + ocsEsc(t.nombre) + '</span>'; }).join('') +
+      '<span>- - 70 % y 90 %: umbrales de alerta</span></div></div>';
+  }
+
+  function ocsTabla(d) {
+    const filas = d.historial.slice(-12).reverse();
+    return '<div class="ocs-tabla-caja"><table class="ocs-tabla"><thead><tr><th>Fecha</th><th>Quién</th>' +
+      '<th class="num">Mijas</th><th class="num">Marbella</th><th>Informes</th></tr></thead><tbody>' +
+      filas.map(function (f) {
+        const est = ocsEstado(f.estado);
+        return '<tr><td>' + ocsEsc(f.fecha) + ' ' + ocsEsc(f.hora) + '</td><td>' + ocsEsc(f.registradoPor || '—') + '</td>' +
+          '<td class="num"><b>' + ocsPct(f.pctMijas) + '</b> · ' + ocsNum(f.libresMijas) + ' libres</td>' +
+          '<td class="num"><b>' + ocsPct(f.pctMarbella) + '</b> · ' + ocsNum(f.libresMarbella) + ' libres</td>' +
+          '<td><span class="ocs-nivel ' + est.cls + '">' + ocsEsc(est.txt) + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function ocsRender() {
+    const d = ocsDatos;
+    if (!d) return;
+    const origen = document.getElementById('ocsOrigen');
+    origen.className = 'ocs-origen' + (d.origen === 'copia' ? ' copia' : '');
+    origen.textContent = d.origen === 'copia'
+      ? 'Copia guardada (la app de Ocupación no ha respondido ahora) · leída el ' + d.ahora
+      : 'Leído en vivo el ' + d.ahora;
+
+    const h = d.historial, n = h.length;
+    let html = d.modoTest ? '<div class="ocs-aviso">🧪 <b>Modo pruebas</b> en la app de Ocupación: los informes solo le llegan a Pedro, no a los responsables.</div>' : '';
+    if (!n) {
+      document.getElementById('ocsContenido').innerHTML = html + '<p class="ocs-vacio">Todavía no hay registros de ocupación.</p>';
+      return;
+    }
+    const ult = h[n - 1], ant = n > 1 ? h[n - 2] : null, h4 = n > 4 ? h[n - 5] : null;
+    const est = ocsEstado(ult.estado);
+    html += '<div class="ocs-tarjetas">' + OCS_TIENDAS.map(function (t) { return ocsTarjeta(d, t, ult, ant, h4); }).join('') + '</div>';
+    html += '<p class="ocs-meta">Último registro: <b>' + ocsEsc(ult.fecha) + ' ' + ocsEsc(ult.hora) + '</b> · ' + ocsEsc(ult.registradoPor || 'sin nombre') +
+      ' · <span class="ocs-nivel ' + est.cls + '">' + ocsEsc(est.txt) + '</span></p>';
+    const contenido = document.getElementById('ocsContenido');
+    contenido.innerHTML = html;                    // primero se pinta, luego se mide el ancho real para la gráfica
+    ocsAnchoPintado = ocsAnchoDisponible();
+    contenido.insertAdjacentHTML('beforeend',
+      '<div class="ocs-h">Evolución</div>' + ocsGrafico(d, ocsAnchoPintado) +
+      '<div class="ocs-h">Últimos registros</div>' + ocsTabla(d));
+  }
+
+  window.addEventListener('resize', function () {
+    const panel = document.getElementById('tab-ocupacionsie');
+    if (ocsDatos && panel && panel.classList.contains('activo') && Math.abs(ocsAnchoPintado - ocsAnchoDisponible()) > 40) ocsRender();
+  });
+</script>
